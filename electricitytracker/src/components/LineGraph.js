@@ -90,8 +90,8 @@ const LineGraph = () => {
         type: 'line',
         yMin: 0,
         yMax: Math.max(...currentMonthData, ...previousMonthData),
-        xMin: maxDiffIndex + 0.5,
-        xMax: maxDiffIndex + 0.5,
+        xMin: maxDiffIndex,
+        xMax: maxDiffIndex,
         borderColor: 'rgba(0, 255, 0, 0.7)',
         borderWidth: 2,
         label: {
@@ -105,8 +105,8 @@ const LineGraph = () => {
         type: 'line',
         yMin: 0,
         yMax: Math.max(...currentMonthData, ...previousMonthData),
-        xMin: minDiffIndex + 0.5,
-        xMax: minDiffIndex + 0.5,
+        xMin: minDiffIndex,
+        xMax: minDiffIndex,
         borderColor: 'rgba(0, 0, 255, 0.7)',
         borderWidth: 2,
         label: {
