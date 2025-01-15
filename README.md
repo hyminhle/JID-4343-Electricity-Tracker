@@ -4,6 +4,11 @@
 **Brief Summary**:  
 The Electricity Consumption Tracker is a web application designed to help users monitor and visualize their electricity consumption. The application displays data through a line graph and provides relevant statistics about energy usage, including the average daily consumption, total cost, and more. The data can be uploaded via CSV files for different months, and the system generates real-time visualizations to help users make informed decisions about energy usage.
 
+**Required Installations**
+Running the code will require users to install these applications first into their virtual environment:
+- pip install flask flask-cors matplotlib panda
+- npm install chart.js axios chartjs-plugin-annotation
+
 # Release Notes
 
 ## Release 0.0.0
