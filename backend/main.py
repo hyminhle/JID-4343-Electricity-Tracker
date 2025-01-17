@@ -5,12 +5,30 @@ import pandas as pd
 import re
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import mysql.connector
+
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 # Add database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:ElectricitySLB15#@localhost/electricitydata'
 db = SQLAlchemy(app)
+
+class ElectricityData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.String(20), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    consumption = db.Column(db.Float, nullable=False)
+    building = db.Column(db.String(50), nullable=False)
+
+    def __init__(self, month, date, consumption, building):
+        self.month = month
+        self.date = date
+        self.consumption = consumption
+        self.building = building
+# Create tables 
+with app.app_context():
+    db.create_all()
 
 # Define global variable for data
 monthly_data = {}
@@ -20,15 +38,19 @@ def parse_csv(file):
         # Read the CSV file
         df = pd.read_csv(file)
 
+        building_info = df.loc[0, 'Group']
+        building_number = re.search(r'Building\s(\d+)', building_info).group(1)
+
         # Extract the date columns (assumes the first two columns are not part of the date-based data)
-        dates = df.columns[2:]
+        date_columns = df.columns[2:]
 
         # Extract the consumption data and ensure it's converted to a list of floats
         consumption_data = df.iloc[0, 2:].astype(float)
 
         # Extract the month from the first date
-        first_date = dates[0]
+        first_date = date_columns[0]
         month_number = first_date.split('/')[0]  # Extract the first part (month) from the date string
+
 
         # Map numeric month to month name
         months = {
@@ -43,12 +65,25 @@ def parse_csv(file):
         if not any(consumption_data):  # Check if the list has valid non-zero data
             return None, "No valid consumption data found in the file."
 
+        # Input data into database
+        for date, consumption in zip(date_columns, consumption_data):
+            formatted_date = datetime.strptime(date, '%m/%d/%Y %H:%M').date()
+            new_entry = ElectricityData(
+                month=month_name,
+                date=formatted_date,
+                consumption=consumption,
+                building=f"Building {building_number}"
+            )
+            db.session.add(new_entry)
+        db.session.commit()
+
         # Store the data for the month
         monthly_data[month_name] = consumption_data
 
         return month_name, consumption_data
 
     except Exception as e:
+        db.session.rollback()
         return None, f"Error processing file: {str(e)}"
 
 @app.route('/upload', methods=['POST'])
