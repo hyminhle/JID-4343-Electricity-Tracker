@@ -3,13 +3,20 @@ import numpy as np
 from flask_cors import CORS
 import pandas as pd
 import re
+from prophet import Prophet
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from predictor import Predictor
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 # Define global variable for data
 monthly_data = {}
+model = None  # Global variable for the model
 
+# Function to parse uploaded CSV files
 def parse_csv(file):
     try:
         # Read the CSV file
@@ -126,110 +133,11 @@ def get_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-####
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import OneHotEncoder
-import glob
-import os
-
-# Function to load and preprocess data
-def load_and_prepare_data(file_paths):
-    data_frames = []
-    
-    for file in file_paths:
-        df = pd.read_csv(file)
-        df_melted = df.melt(id_vars=["Group", "Resource"], var_name="Date", value_name="Consumption")
-        df_melted["Date"] = pd.to_datetime(df_melted["Date"], format="%m/%d/%Y %H:%M")
-        data_frames.append(df_melted[["Date", "Consumption"]])
-
-    # Combine all data
-    combined_data = pd.concat(data_frames, ignore_index=True)
-    combined_data = combined_data.sort_values(by="Date")
-    return combined_data
-
-# Function to create features
-def create_features(data):
-    data["Day"] = data["Date"].dt.day
-    data["Year"] = data["Date"].dt.year
-    data["Month"] = data["Date"].dt.month
-    data["DayOfWeek"] = data["Date"].dt.dayofweek
-
-    # Lag features (previous day consumption)
-    data["Lag_1"] = data["Consumption"].shift(1)
-    data["Lag_7"] = data["Consumption"].shift(7)
-
-    # Drop rows with NaN values (caused by lagging)
-    data = data.dropna()
-    return data
-
-# Function to train the model and make predictions
-def train_and_predict(data, target_month, target_year):
-    # Filter data for the target month
-    train_data = data[data["Month"] == target_month]
-
-    # Features and target
-    X = train_data[["Day", "Year", "DayOfWeek", "Lag_1", "Lag_7"]]
-    y = train_data["Consumption"]
-
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train the model
-    model = GradientBoostingRegressor(random_state=42)
-    model.fit(X_train, y_train)
-
-    # Evaluate the model
-    y_pred = model.predict(X_test)
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    print(f"Model RMSE: {rmse}")
-
-    # Generate predictions for the target year
-    future_days = pd.DataFrame({
-        "Day": range(1, 32),  # Days in the month
-        "Year": [target_year] * 31,
-        "DayOfWeek": [(pd.Timestamp(year=target_year, month=target_month, day=d).dayofweek) for d in range(1, 32)],
-        "Lag_1": [np.nan] * 31,  # Placeholder, should be filled with the last known consumption value
-        "Lag_7": [np.nan] * 31,  # Placeholder, should be filled with appropriate lag values
-    })
-
-    # Fill lag features with the most recent data
-    last_week_data = train_data.iloc[-7:]
-    future_days.loc[:6, "Lag_1"] = last_week_data["Consumption"].values[-7:]
-    future_days.loc[:6, "Lag_7"] = last_week_data["Consumption"].values[:-1]
-
-    # Predict
-    predictions = model.predict(future_days.dropna())
-    future_days["Prediction"] = predictions
-
-    return future_days[["Day", "Prediction"]]
-
-# Main script
-if __name__ == "__main__":
-    # Path to CSV files
-    csv_files = glob.glob(os.path.join("data", "*.csv"))  # Adjust path to your files
-
-    # Load and prepare data
-    data = load_and_prepare_data(csv_files)
-    data = create_features(data)
-
-    # Train the model and predict for August 2025
-    target_month = 8  # August
-    target_year = 2025
-
-    predictions = train_and_predict(data, target_month, target_year)
-
-    # Display predictions
-    print(predictions)
-
-    # Save predictions to CSV
-    predictions.to_csv("august_2025_predictions.csv", index=False)
+@app.route('/predict', methods=['POST'])
+def predict_future():
+    predictor = Predictor(monthly_data)
+    return predictor.predict()
 
 
-####
 if __name__ == '__main__':
     app.run(debug=True)
