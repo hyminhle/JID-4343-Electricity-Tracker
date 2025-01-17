@@ -1,0 +1,119 @@
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Import Roboto font */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Global styles */
+body {
+  margin: 0;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f2f5;
+  color: #2c3e50;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Input styles */
+input[type="file"] {
+  font-family: inherit;
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  visibility: hidden;
+  display: none;
+}
+
+input[type="file"]::before {
+  content: 'Select CSV File';
+  display: inline-block;
+  background: #007bff;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+input[type="file"]:hover::before {
+  background: #0056b3;
+}
+
+input[type="file"]:active::before {
+  background: #004085;
+}
+
+/* Button hover effects */
+button:not(:disabled):hover {
+  filter: brightness(90%);
+}
+
+/* Transitions */
+button, input[type="file"]::before {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus styles */
+button:focus, input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+  
+  input[type="file"]::before {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+/* App styles */
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%; /* Fit the full viewport width */
+  height: 100%; /* Fit the full viewport height */
+}
+
+.App-logo {
+  height: 20vmin; /* Adjust size for better fit */
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
