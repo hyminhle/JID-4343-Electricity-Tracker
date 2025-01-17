@@ -3,9 +3,14 @@ import numpy as np
 from flask_cors import CORS
 import pandas as pd
 import re
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+# Add database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:ElectricitySLB15#@localhost/electricitydata'
+db = SQLAlchemy(app)
 
 # Define global variable for data
 monthly_data = {}
