@@ -14,7 +14,7 @@ import threading
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 # Add database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:ElectricitySLB15#@localhost/electricitydata'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://SLB_admin:ElectricitySLB15#@electricitydata-db.cve2k4qgkm75.us-east-2.rds.amazonaws.com/electricitydata'
 db = SQLAlchemy(app)
 
 # Add cache
