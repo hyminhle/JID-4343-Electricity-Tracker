@@ -193,34 +193,45 @@ def get_stats():
 def refresh_cache():
     try:
         with app.app_context():  # Ensure the application context is set up
-            # Fetch data from database
+            # Fetch all data from the database
             data = ElectricityData.query.all()
-            for entry in data:
-                formatted_date = entry.date  
-                year = formatted_date.year
-                day = formatted_date.day
-                month = formatted_date.month  
 
-                # Create a cache key with the year, month, day, and building
-                cache_key = f"electricity_data_{year}_{month}_{day}_{entry.building}"
+            # Group data by year, month, and building
+            grouped_data = {}
+            for entry in data:
+                formatted_date = entry.date
+                year = formatted_date.year
+                month = formatted_date.month
+                day = formatted_date.day
+                building = entry.building
+
+                # Create a cache key for the specific day
+                cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
                 formatted_data = {
                     'month': entry.month,
                     'date': entry.date,
                     'consumption': entry.consumption,
                     'building': entry.building
                 }
-
-                # Store the fetched data in the cache for this specific combination
+                # Store the fetched data in the cache for the specific day
                 cache.set(cache_key, formatted_data)
-            
-            #print("Cache contents after refresh:")
-            #for key in cache.cache._cache.keys():
-            #    print(f"{key}: {cache.get(key)}")
+
+                # Group data for all days in the month
+                month_key = (year, month, building)
+                if month_key not in grouped_data:
+                    grouped_data[month_key] = []
+                grouped_data[month_key].append(formatted_data)
+
+            # Cache the grouped data for each month
+            for (year, month, building), monthly_data in grouped_data.items():
+                monthly_cache_key = f"electricity_data_{year}_{month}_all_{building}"
+                cache.set(monthly_cache_key, monthly_data)
 
             print(f"Cache refreshed at {datetime.now()}")  # Log when cache is refreshed
 
     except Exception as e:
         print(f"Error refreshing cache: {e}")
+
 
 refresh_cache()  # Initial cache refresh
 
@@ -239,36 +250,28 @@ def start_scheduler_with_context():
 @app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
 def fetch_data_by_params(year, month, day, building):
     with app.app_context(): 
-        cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
+
+        if day == 0:
+            cache_key = f"electricity_data_{year}_{month}_all_{building}"
+        else:
+            cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
     
-        # Check if data is already cached for this combination
         cached_data = cache.get(cache_key)
     
         if cached_data:
             print("Cache contents:")
-            for key in cached_data:
-                print(f"{key}: {cached_data[key]}")
+            if isinstance(cached_data, list):
+                for entry in cached_data:
+                    print(entry)
+            else:
+                for key in cached_data:
+                    print(f"{key}: {cached_data[key]}")
             return jsonify({'source': 'cache', 'data': cached_data})
     
-        if not fetch_data_by_params:
-            return jsonify({'error': 'No data found for the specified parameters'}), 404
-        '''
-        # If not in cache, fetch from database
-        data = ElectricityData.query.filter_by(
-            date=datetime(year, month, day),
-            building=building
-        ).all()
     
-        if not data:
-            return jsonify({'error': 'No data found for the specified parameters'}), 404
-    
-        formatted_data = [{'month': entry.month, 'date': entry.date, 'consumption': entry.consumption, 'building': entry.building} for entry in data]
-    
-        # Cache the fetched data
-        cache.set(cache_key, formatted_data, timeout=300)
-    
-        return jsonify({'source': 'database', 'data': formatted_data})
-        '''
+        print(f"No cache data found for key: {cache_key}")
+        return jsonify({'error': 'No data found for the specified parameters'}), 404
+       
 
 
 if __name__ == '__main__':
