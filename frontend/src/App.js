@@ -1,58 +1,25 @@
 import React from 'react';
-import FileUpload from './components/FileUpload';
-import LineGraph from './components/LineGraph';
 import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Dashboard from './components/Dashboard';
+import Submit from './components/Submit';
+import Graph from './components/Graph';
+import Sidebar from './components/Sidebar';
 
 function App() {
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f0f2f5',
-      padding: '40px 20px',
-      fontFamily: "'Roboto', 'Segoe UI', sans-serif"
-    }}>
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-      }}>
-        <header style={{
-          marginBottom: '30px',
-          textAlign: 'center'
-        }}>
-          <h1 style={{
-            color: '#2c3e50',
-            fontSize: '32px',
-            fontWeight: '500',
-            margin: '0 0 10px 0'
-          }}>
-            Electricity Consumption Tracker
-          </h1>
-          <p style={{
-            color: '#6c757d',
-            fontSize: '16px',
-            margin: 0
-          }}>
-          </p>
-        </header>
-
-        <main>
-          <FileUpload />
-          <LineGraph />
-        </main>
-
-        <footer style={{
-          marginTop: '40px',
-          textAlign: 'center',
-          color: '#6c757d',
-          fontSize: '14px',
-          borderTop: '1px solid #dee2e6',
-          paddingTop: '20px'
-        }}>
-          <p style={{ margin: 0 }}>
-          </p>
-        </footer>
+    <Router>
+      <div className="App">
+        <Sidebar />
+        <div className="main-content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/submit" element={<Submit />} />
+            <Route path="/graph" element={<Graph />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </Router>
   );
 }
 

@@ -1,0 +1,57 @@
+.submit-page {
+  padding: 2rem;
+}
+
+.submit-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.upload-card, .preview-card {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.upload-instructions {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.upload-instructions h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.upload-instructions ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.upload-instructions li {
+  margin-bottom: 0.5rem;
+  color: #666;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.upload-instructions li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #2c3e50;
+}
+
+.preview-content {
+  min-height: 200px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+} 
