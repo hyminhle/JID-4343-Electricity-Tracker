@@ -14,7 +14,7 @@ import threading
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 # Add database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:ElectricitySLB15#@localhost/electricitydata'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://SLB_admin:ElectricitySLB15#@electricitydata-db.cve2k4qgkm75.us-east-2.rds.amazonaws.com/electricitydata'
 db = SQLAlchemy(app)
 
 # Add cache
@@ -234,8 +234,6 @@ def start_scheduler_with_context():
     with app.app_context():
         start_scheduler()
 
-# Run scheduler in a separate thread with app context
-threading.Thread(target=start_scheduler_with_context).start()
 
 
 @app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
@@ -274,4 +272,5 @@ def fetch_data_by_params(year, month, day, building):
 
 
 if __name__ == '__main__':
+    threading.Thread(target=start_scheduler_with_context).start()
     app.run(debug=True)
