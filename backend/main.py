@@ -234,8 +234,6 @@ def start_scheduler_with_context():
     with app.app_context():
         start_scheduler()
 
-# Run scheduler in a separate thread with app context
-threading.Thread(target=start_scheduler_with_context).start()
 
 
 @app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
@@ -274,4 +272,5 @@ def fetch_data_by_params(year, month, day, building):
 
 
 if __name__ == '__main__':
+    threading.Thread(target=start_scheduler_with_context).start()
     app.run(debug=True)
