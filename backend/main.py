@@ -216,6 +216,7 @@ def refresh_cache():
                 # Store the fetched data in the cache for the specific day
                 cache.set(cache_key, formatted_data)
 
+
                 # Group data for all days in the month
                 month_key = (year, month, building)
                 if month_key not in grouped_data:
@@ -275,5 +276,7 @@ def fetch_data_by_params(year, month, day, building):
 
 
 if __name__ == '__main__':
+    
+# Run scheduler in a separate thread with app context
     threading.Thread(target=start_scheduler_with_context).start()
     app.run(debug=True)
