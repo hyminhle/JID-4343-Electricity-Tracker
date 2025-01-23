@@ -215,7 +215,7 @@ def refresh_cache():
             
             #print("Cache contents after refresh:")
             #for key in cache.cache._cache.keys():
-            #    print(f"{key}: {cache.get(key)}")
+               #print(f"{key}: {cache.get(key)}")
 
             print(f"Cache refreshed at {datetime.now()}")  # Log when cache is refreshed
 
@@ -272,5 +272,7 @@ def fetch_data_by_params(year, month, day, building):
 
 
 if __name__ == '__main__':
+    
+# Run scheduler in a separate thread with app context
     threading.Thread(target=start_scheduler_with_context).start()
     app.run(debug=True)
