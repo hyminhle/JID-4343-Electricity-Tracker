@@ -23,7 +23,8 @@ const LineGraph = () => {
         const data = await response.json();
         console.log('Available Data:', data);
         setAvailableData(data);
-        setSelectedBuilding(Object.keys(data)[0] || '');
+        // Removed the line that auto-selects the building
+        // setSelectedBuilding(Object.keys(data)[0] || '');
       } catch (error) {
         console.log('Error fetching available data:', error);
         setAvailableData({});
@@ -131,7 +132,7 @@ const LineGraph = () => {
     return () => {
       newChart.destroy();
     };
-  }, [stats, loading, error, selectedBuilding]); // Remove chartInstance from dependencies
+  }, [stats, loading, error, selectedBuilding]); // Removed chartInstance from dependencies
 
   return (
     <div>
@@ -139,7 +140,7 @@ const LineGraph = () => {
         <select
           value={selectedBuilding}
           onChange={(e) => {
-            setSelectedBuilding('');
+            setSelectedBuilding(e.target.value);
             setSelectedYear('');
             setSelectedMonth('');
           }}
@@ -190,7 +191,6 @@ const LineGraph = () => {
               </option>
             ))}
         </select>
-
       </div>
 
       <button
