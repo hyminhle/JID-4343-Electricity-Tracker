@@ -7,7 +7,8 @@ The Electricity Consumption Tracker is a web application designed to help users 
 **Required Installations**
 Running the code will require users to install these applications first into their virtual environment:
 - pip install flask flask-cors matplotlib panda
-- npm install chart.js axios chartjs-plugin-annotation
+- npm install chart.js axios chartjs-plugin-annotation react-router-dom
+
 
 # Release Notes
 
