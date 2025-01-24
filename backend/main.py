@@ -250,7 +250,7 @@ def fetch_data_by_params(year, month, day, building):
         #    else:
         #        for key in cached_data:
         #            print(f"{key}: {cached_data[key]}")
-            return jsonify(cached_data)
+            return jsonify({'source': 'cache', 'data': cached_data})
     
     
         print(f"No cache data found for key: {cache_key}")
