@@ -250,12 +250,37 @@ def fetch_data_by_params(year, month, day, building):
             else:
                 for key in cached_data:
                     print(f"{key}: {cached_data[key]}")
-            return jsonify({'source': 'cache', 'data': cached_data})
+            return jsonify({cached_data})
     
     
         print(f"No cache data found for key: {cache_key}")
         return jsonify({'error': 'No data found for the specified parameters'}), 404
-       
+
+
+@app.route('/get-available-data', methods=['GET'])
+def get_available_data():
+    with app.app_context():
+        cache_keys = cache.cache._cache.keys()  # Assuming `cache.cache` gives access to all keys
+        available_data = {}
+
+        for key in cache_keys:
+            parts = key.split('_')  # Example key: electricity_data_2025_10_all_Building1
+            if len(parts) == 5 and parts[0] == "electricity" and parts[1] == "data":
+                year, month, day, building = parts[2], parts[3], parts[4], parts[5]
+                if building not in available_data:
+                    available_data[building] = {}
+                if year not in available_data[building]:
+                    available_data[building][year] = set()
+                if month != "all":
+                    available_data[building][year].add(month)
+
+        # Convert sets to lists for JSON serialization
+        for building in available_data:
+            for year in available_data[building]:
+                available_data[building][year] = list(available_data[building][year])
+
+        return jsonify(available_data)
+
 
 
 if __name__ == '__main__':
