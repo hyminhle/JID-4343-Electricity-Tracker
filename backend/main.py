@@ -267,14 +267,22 @@ def get_available_data():
             # Split key based on underscores
             parts = key.split('_')  # Example key: electricity_data_2023_2_1_Building110
             if len(parts) == 6 and parts[0] == "electricity" and parts[1] == "data":
-                year, month, day_str, building = int(parts[2]), int(parts[3]), parts[4], parts[5]
-                
+                year, month_int, day_str, building = int(parts[2]), int(parts[3]), parts[4], parts[5]
+
+                # If the month is in datetime.date format, we can directly access the month
+                if isinstance(month_int, int):
+                    month = month_int
+                else:
+                    # If it's a string or not in int format, we handle it accordingly (in case of other formats)
+                    date_obj = datetime.strptime(month_int, '%B')  # 'August' -> datetime object
+                    month = date_obj.month
+
                 # If day is 'all', we skip this part and consider the month as a whole
                 if day_str == 'all':
                     day = 'all'
                 else:
                     day = int(day_str)
-                
+
                 # Add to available_data in nested structure: {building: {year: {month: [days]}}}
                 if building not in available_data:
                     available_data[building] = {}
@@ -288,6 +296,9 @@ def get_available_data():
                 # Add the day (or 'all' if it's a monthly cache) to the list of days for the given building, year, and month
                 available_data[building][year][month].append(day)
 
+
+        print("Available Data:", available_data)
+        
         # Convert days to a sorted list, excluding 'all', and prepare the final data
         for building in available_data:
             for year in available_data[building]:
@@ -301,6 +312,7 @@ def get_available_data():
                         available_data[building][year][month].append('all')
 
         return jsonify(available_data)
+
 
 
 
