@@ -174,23 +174,31 @@ const LineGraph = () => {
             ))}
         </select>
 
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          disabled={!selectedYear}
-        >
-          <option value="" disabled>
-            Select Month
-          </option>
-          {selectedBuilding &&
-            selectedYear &&
-            Array.isArray(availableData[selectedBuilding][selectedYear]) &&
-            (availableData[selectedBuilding][selectedYear] || []).map((month) => (
-              <option key={month} value={month}>
-                {month}
+          <select
+        value={selectedMonth}
+        onChange={(e) => setSelectedMonth(e.target.value)}
+        disabled={!selectedYear}
+      >
+        <option value="" disabled>
+          Select Month
+        </option>
+        {selectedBuilding &&
+          selectedYear &&
+          Object.keys(availableData[selectedBuilding][selectedYear]).map((month) => {
+            const monthNum = parseInt(month, 10); // Parsing to ensure it's an integer
+            const monthNames = [
+              'January', 'February', 'March', 'April', 'May', 'June', 'July',
+              'August', 'September', 'October', 'November', 'December'
+            ];
+
+            return (
+              <option key={month} value={monthNum}>
+                {monthNames[monthNum - 1]} {/* Display corresponding month name */}
               </option>
-            ))}
-        </select>
+            );
+          })}
+      </select>
+
       </div>
 
       <button
