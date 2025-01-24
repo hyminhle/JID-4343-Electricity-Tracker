@@ -49,7 +49,7 @@ const FileUpload = () => {
   };
 
   const handleFileUpload = async () => {
-    if (!files.month1 && !files.month2) {
+    if (!files.month1) {
       setError("Please select at least one file to upload");
       return;
     }
@@ -62,9 +62,6 @@ const FileUpload = () => {
       const formData = new FormData();
       if (files.month1) {
         formData.append('file1', files.month1);
-      }
-      if (files.month2) {
-        formData.append('file2', files.month2);
       }
 
       const response = await axios.post('http://localhost:5000/upload', formData, {
@@ -79,7 +76,7 @@ const FileUpload = () => {
           ref.current.value = '';
         }
       });
-      setFiles({ month1: null, month2: null });
+      setFiles({ month1: null});
     } catch (error) {
       setError(error.response?.data?.error || 'Error uploading files');
     } finally {
@@ -152,49 +149,6 @@ const FileUpload = () => {
             </div>
           </div>
         </div>
-
-        <div style={{
-          flex: 1,
-          backgroundColor: '#ffffff',
-          padding: '15px',
-          borderRadius: '6px',
-          border: '1px solid #dee2e6'
-        }}>
-          <h3 style={{
-            margin: '0 0 10px 0',
-            color: '#2c3e50',
-            fontSize: '18px',
-            fontWeight: '500'
-          }}>Month 2</h3>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <input
-              type="file"
-              onChange={handleFileChange('month2')}
-              ref={fileInputRefs.month2}
-              accept=".csv"
-              disabled={loading}
-              style={{
-                flex: '1',
-                padding: '8px',
-                border: '1px solid #ced4da',
-                borderRadius: '4px',
-                backgroundColor: '#fff',
-                color: '#495057',
-                fontSize: '14px'
-              }}
-            />
-            <div style={{
-              color: files.month2 ? '#28a745' : '#6c757d',
-              fontSize: '14px'
-            }}>
-              {files.month2 ? '✓ Selected' : 'No file'}
-            </div>
-          </div>
-        </div>
       </div>
 
       <div style={{
@@ -204,14 +158,14 @@ const FileUpload = () => {
       }}>
         <button 
           onClick={handleFileUpload} 
-          disabled={loading || (!files.month1 && !files.month2)}
+          disabled={loading || (!files.month1)}
           style={{
             padding: '10px 20px',
-            backgroundColor: loading || (!files.month1 && !files.month2) ? '#6c757d' : '#007bff',
+            backgroundColor: loading || (!files.month1) ? '#6c757d' : '#007bff',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: loading || (!files.month1 && !files.month2) ? 'not-allowed' : 'pointer',
+            cursor: loading || (!files.month1) ? 'not-allowed' : 'pointer',
             fontSize: '16px',
             fontWeight: '500',
             transition: 'background-color 0.2s'
