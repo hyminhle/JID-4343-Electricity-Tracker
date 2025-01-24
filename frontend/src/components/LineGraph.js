@@ -4,27 +4,53 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 
 Chart.register(annotationPlugin);
 
-const API_URL = "http://127.0.0.1:5000/stats";
-
 const LineGraph = () => {
   const chartRef = useRef(null);
+  const [availableData, setAvailableData] = useState({});
+  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [chartInstance, setChartInstance] = useState(null);
-  const [threshold, setThreshold] = useState(10);
-  const [showDifferenceLines, setShowDifferenceLines] = useState(true);
 
+  // Fetch available buildings, years, and months
+  useEffect(() => {
+    const fetchAvailableData = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/get-available-data');
+        const data = await response.json();
+        console.log('Available Data:', data);
+        setAvailableData(data);
+        setSelectedBuilding(Object.keys(data)[0] || '');
+      } catch (error) {
+        console.log('Error fetching available data:', error);
+        setAvailableData({});
+      }
+    };
+
+    fetchAvailableData();
+  }, []);
+
+  // Fetch data for the selected parameters
   const fetchData = async () => {
+    if (!selectedBuilding || !selectedYear || !selectedMonth) {
+      setError('Please select building, year, and month before displaying the graph.');
+      return;
+    }
+
+    setLoading(true);
+    const API_URL = `http://localhost:5000/fetch-data/${selectedYear}/${selectedMonth}/0/${selectedBuilding}`;
+
     try {
-      setLoading(true);
       const response = await fetch(API_URL);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch data');
       }
       const data = await response.json();
-      setStats(data);
+      setStats(data.data);
       setError(null);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -34,88 +60,17 @@ const LineGraph = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    return () => {}; // cleanup function
-  }, []); // Only fetch once when component mounts
-
+  // Update the chart
   useEffect(() => {
     if (loading || error || !stats) return;
 
     if (chartInstance) {
-      chartInstance.destroy();
+      chartInstance.destroy(); // Destroy old chart if it exists
     }
 
     const ctx = chartRef.current.getContext('2d');
-    
-    const maxDays = Math.max(
-      stats.currentMonthData?.length || 0,
-      stats.previousMonthData?.length || 0
-    );
-    
-    const labels = Array.from({ length: maxDays }, (_, i) => i + 1);
-
-    // Calculate differences for annotations
-    const currentMonthData = stats.currentMonthData || [];
-    const previousMonthData = stats.previousMonthData || [];
-    
-    const differences = currentMonthData.map((curr, idx) => {
-      const prev = previousMonthData[idx];
-      return prev ? Math.abs(curr - prev) : 0;
-    });
-
-    const maxDiffIndex = differences.indexOf(Math.max(...differences));
-    const minDiffIndex = differences.indexOf(Math.min(...differences));
-
-    // Prepare annotations object
-    const annotations = {
-      thresholdLine: {
-        type: 'line',
-        yMin: threshold,
-        yMax: threshold,
-        borderColor: 'rgb(255, 0, 0)',
-        borderWidth: 2,
-        borderDash: [5, 5],
-        label: {
-          display: true,
-          content: `Threshold: ${threshold} kWh`,
-          position: 'end'
-        }
-      }
-    };
-
-    // Add difference lines if enabled and we have data for both months
-    if (showDifferenceLines && currentMonthData.length && previousMonthData.length) {
-      annotations.maxDiffLine = {
-        type: 'line',
-        yMin: 0,
-        yMax: Math.max(...currentMonthData, ...previousMonthData),
-        xMin: maxDiffIndex,
-        xMax: maxDiffIndex,
-        borderColor: 'rgba(0, 255, 0, 0.7)',
-        borderWidth: 2,
-        label: {
-          display: true,
-          content: `Max Diff: ${differences[maxDiffIndex].toFixed(2)} kWh`,
-          position: 'start'
-        }
-      };
-
-      annotations.minDiffLine = {
-        type: 'line',
-        yMin: 0,
-        yMax: Math.max(...currentMonthData, ...previousMonthData),
-        xMin: minDiffIndex,
-        xMax: minDiffIndex,
-        borderColor: 'rgba(0, 0, 255, 0.7)',
-        borderWidth: 2,
-        label: {
-          display: true,
-          content: `Min Diff: ${differences[minDiffIndex].toFixed(2)} kWh`,
-          position: 'start'
-        }
-      };
-    }
+    const labels = stats.map((entry, index) => entry.day || `Data ${index + 1}`);
+    const dataPoints = stats.map((entry) => entry.value);
 
     const newChart = new Chart(ctx, {
       type: 'line',
@@ -123,20 +78,13 @@ const LineGraph = () => {
         labels: labels,
         datasets: [
           {
-            label: `Current Month (${stats.currentMonth || 'No Data'})`,
-            data: stats.currentMonthData || [],
+            label: `Electricity Data for ${selectedBuilding}`,
+            data: dataPoints,
             borderColor: 'rgb(75, 192, 192)',
             tension: 0.1,
-            fill: false
+            fill: false,
           },
-          {
-            label: `Previous Month (${stats.previousMonth || 'No Data'})`,
-            data: stats.previousMonthData || [],
-            borderColor: 'rgb(255, 99, 132)',
-            tension: 0.1,
-            fill: false
-          }
-        ]
+        ],
       },
       options: {
         responsive: true,
@@ -144,19 +92,12 @@ const LineGraph = () => {
         plugins: {
           title: {
             display: true,
-            text: 'Daily Electricity Consumption Comparison',
+            text: `Electricity Data for ${selectedBuilding}`,
             font: {
               size: 16,
-              weight: 'bold'
-            }
+              weight: 'bold',
+            },
           },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
-          },
-          annotation: {
-            annotations: annotations
-          }
         },
         scales: {
           y: {
@@ -166,165 +107,113 @@ const LineGraph = () => {
               text: 'Consumption (kWh)',
               font: {
                 size: 14,
-                weight: 'bold'
-              }
-            }
+                weight: 'bold',
+              },
+            },
           },
           x: {
             title: {
               display: true,
-              text: 'Day of Month',
+              text: 'Days',
               font: {
                 size: 14,
-                weight: 'bold'
-              }
-            }
-          }
+                weight: 'bold',
+              },
+            },
+          },
         },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
-        }
-      }
+      },
     });
 
     setChartInstance(newChart);
-  }, [stats, loading, error, threshold, showDifferenceLines]);
 
-  
-
-  const handleThresholdChange = (event) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value) && value >= 0) {
-      setThreshold(value);
-    }
-  };
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!stats) return <div>No data available</div>;
+    // Cleanup to avoid memory leaks
+    return () => {
+      newChart.destroy();
+    };
+  }, [stats, loading, error, selectedBuilding]); // Remove chartInstance from dependencies
 
   return (
     <div>
-      <button style={{ marginBottom: '10px' }}>Predict</button>
-      <div style={{ 
-        marginBottom: '20px',
-        display: 'flex',
-        gap: '20px',
-        alignItems: 'center'
-      }}>
-        <div>
-          <label htmlFor="threshold" style={{ marginRight: '10px' }}>
-            Threshold Value (kWh):
-          </label>
-          <input
-            id="threshold"
-            type="number"
-            min="0"
-            step="0.1"
-            value={threshold}
-            onChange={handleThresholdChange}
-            style={{
-              padding: '5px',
-              borderRadius: '4px',
-              border: '1px solid #ccc'
-            }}
-          />
-        </div>
-        
-        <div>
-          <label style={{ marginRight: '10px' }}>
-            <input
-              type="checkbox"
-              checked={showDifferenceLines}
-              onChange={(e) => setShowDifferenceLines(e.target.checked)}
-              style={{ marginRight: '5px' }}
-            />
-            Show Difference Lines
-          </label>
-        </div>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+        <select
+          value={selectedBuilding}
+          onChange={(e) => {
+            setSelectedBuilding('');
+            setSelectedYear('');
+            setSelectedMonth('');
+          }}
+        >
+          <option value="" disabled>
+            Select Building
+          </option>
+          {Object.keys(availableData).map((building) => (
+            <option key={building} value={building}>
+              {building}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedYear}
+          onChange={(e) => {
+            setSelectedYear(e.target.value);
+            setSelectedMonth('');
+          }}
+          disabled={!selectedBuilding}
+        >
+          <option value="" disabled>
+            Select Year
+          </option>
+          {selectedBuilding &&
+            Object.keys(availableData[selectedBuilding] || {}).map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+        </select>
+
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          disabled={!selectedYear}
+        >
+          <option value="" disabled>
+            Select Month
+          </option>
+          {selectedBuilding &&
+            selectedYear &&
+            Array.isArray(availableData[selectedBuilding][selectedYear]) &&
+            (availableData[selectedBuilding][selectedYear] || []).map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+        </select>
+
       </div>
-      
-      <div style={{ 
-        display: 'flex', 
-        gap: '20px',
-        alignItems: 'flex-start'
-      }}>
-        <div style={{ 
-          flex: '1',
-          minWidth: '0',
-          height: '600px'  
-        }}>
+
+      <button
+        onClick={fetchData}
+        style={{
+          padding: '10px 20px',
+          backgroundColor: 'rgb(75, 192, 192)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+        }}
+      >
+        Display
+      </button>
+
+      {loading && <div>Loading...</div>}
+      {error && <div style={{ color: 'red' }}>Error: {error}</div>}
+      {!loading && !error && stats && (
+        <div style={{ height: '500px', width: '100%' }}>
           <canvas ref={chartRef}></canvas>
         </div>
-
-        {stats.stats && (
-          <div style={{ 
-            width: '300px',  
-            padding: '20px',  
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 15px 0',
-              color: '#333',
-              borderBottom: '2px solid #dee2e6',
-              paddingBottom: '8px',
-              fontSize: '18px'  
-            }}>Statistics</h3>
-            
-            {stats.stats.currentMonth && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ 
-                  color: 'rgb(75, 192, 192)',
-                  margin: '0 0 10px 0',
-                  fontSize: '16px'  
-                }}>{stats.currentMonth}</h4>
-                <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Average:</strong> {stats.stats.currentMonth.average.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Maximum:</strong> {stats.stats.currentMonth.max.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Minimum:</strong> {stats.stats.currentMonth.min.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Total:</strong> {stats.stats.currentMonth.total.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
-            )}
-            
-            {stats.stats.previousMonth && (
-              <div>
-                <h4 style={{ 
-                  color: 'rgb(255, 99, 132)',
-                  margin: '0 0 10px 0',
-                  fontSize: '16px'  
-                }}>{stats.previousMonth}</h4>
-                <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Average:</strong> {stats.stats.previousMonth.average.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Maximum:</strong> {stats.stats.previousMonth.max.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Minimum:</strong> {stats.stats.previousMonth.min.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Total:</strong> {stats.stats.previousMonth.total.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
