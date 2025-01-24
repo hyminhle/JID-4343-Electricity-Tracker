@@ -17,13 +17,11 @@ class Predictor:
             monthly_data = []
 
 
-            for year in range(2000, 2025): 
-
-                response = fetch_data_by_params(year, target_month, 0, "Building 110")
+            for year in range(2022, 2024): 
+                response = fetch_data(year, target_month, 0, "Building 110")
                 data = response.json.get('data', [])
                 monthly_data.extend(data)
-
-
+            
             if not monthly_data:
                 return jsonify({'error': f'No data available for month {target_month}'}), 404
 
@@ -74,7 +72,7 @@ class Predictor:
             future_predictions = rf_model.predict(future_X)
 
             future['Final_Prediction'] = future_predictions
-
+            print(mse)
             return jsonify({
                 'predictions': future[['ds', 'Final_Prediction']].to_dict(orient='records'),
                 'evaluation': {
