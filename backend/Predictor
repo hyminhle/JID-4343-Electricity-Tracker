@@ -1,39 +1,35 @@
 from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from flask import jsonify
 import pandas as pd
+import numpy as np
+import main
+
+fetch_data = main.fetch_data_by_params
 
 class Predictor:
-    def __init__(self, monthly_data):
-        self.monthly_data = monthly_data
+    def __init__(self, cache):
+        self.cache = cache
 
-    def predict(self):
+    def predict(self, target_month):
         try:
+            monthly_data = []
+            for year in range(2000, 2025): 
+                monthly_data.append(fetch_data(year, 8, 0, "Building 110"))
             if not monthly_data:
-                return jsonify({'error': 'No data available for prediction'}), 404
+                return jsonify({'error': f'No data available for month {target_month}'}), 404
 
-            # Combine data into a single DataFrame
-            combined_data = []
-            for month, consumption in monthly_data.items():
-                for day, value in enumerate(consumption, start=1):
-                    combined_data.append({
-                        'ds': f'{month} {day}',
-                        'y': value
-                    })
-
-            df = pd.DataFrame(combined_data)
+            df = pd.DataFrame(monthly_data)
             df['ds'] = pd.to_datetime(df['ds'], errors='coerce')
-            df = df.dropna()  
-
+            df = df.dropna() 
 
             prophet = Prophet()
             prophet.fit(df)
 
             future = prophet.make_future_dataframe(periods=31, freq='D')
-            # This is currently only running future data for august and is hard coded
-            future = future[future['ds'].dt.month == 8]    
+            future = future[future['ds'].dt.month == target_month]  
             prophet_forecast = prophet.predict(future)
-
 
             prophet_results = prophet_forecast[['ds', 'yhat']]
             df = pd.merge(df, prophet_results, on='ds', how='left')
@@ -46,6 +42,7 @@ class Predictor:
 
             X = df[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
             y = df['y']
+            from sklearn.model_selection import train_test_split
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
             rf_model = RandomForestRegressor(random_state=42)
@@ -57,8 +54,8 @@ class Predictor:
 
             future['day_of_week'] = future['ds'].dt.dayofweek
             future['month'] = future['ds'].dt.month
-            future['lag_1'] = df['y'].iloc[-1] 
-            future['lag_2'] = df['y'].iloc[-2]  
+            future['lag_1'] = df['y'].iloc[-1]  # Last available data
+            future['lag_2'] = df['y'].iloc[-2]
             future_X = future[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
             future_predictions = rf_model.predict(future_X)
 
@@ -73,4 +70,3 @@ class Predictor:
             })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
-    pass
