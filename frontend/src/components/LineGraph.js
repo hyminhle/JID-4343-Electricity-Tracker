@@ -192,6 +192,8 @@ const LineGraph = () => {
     setChartInstance(newChart);
   }, [stats, loading, error, threshold, showDifferenceLines]);
 
+  
+
   const handleThresholdChange = (event) => {
     const value = parseFloat(event.target.value);
     if (!isNaN(value) && value >= 0) {
@@ -205,6 +207,7 @@ const LineGraph = () => {
 
   return (
     <div>
+      <button style={{ marginBottom: '10px' }}>Predict</button>
       <div style={{ 
         marginBottom: '20px',
         display: 'flex',
