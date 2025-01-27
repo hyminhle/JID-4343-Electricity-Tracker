@@ -250,16 +250,74 @@ def fetch_data_by_params(year, month, day, building):
         #    else:
         #        for key in cached_data:
         #            print(f"{key}: {cached_data[key]}")
-            return jsonify({'source': 'cache', 'data': cached_data})
+            return jsonify(cached_data)
     
     
         print(f"No cache data found for key: {cache_key}")
         return jsonify({'error': 'No data found for the specified parameters'}), 404
-       
+
 @app.route('/predict', methods=['POST'])
 def predict_future():
     predictor = predictor(monthly_data)
     return predictor.predict()
+@app.route('/get-available-data', methods=['GET'])
+def get_available_data():
+    with app.app_context():
+        cache_keys = cache.cache._cache.keys()  # Get all the cache keys
+        available_data = {}
+
+        for key in cache_keys:
+            # Split key based on underscores
+            parts = key.split('_')  # Example key: electricity_data_2023_2_1_Building110
+            if len(parts) == 6 and parts[0] == "electricity" and parts[1] == "data":
+                year, month_int, day_str, building = int(parts[2]), int(parts[3]), parts[4], parts[5]
+
+                # If the month is in datetime.date format, we can directly access the month
+                if isinstance(month_int, int):
+                    month = month_int
+                else:
+                    # If it's a string or not in int format, we handle it accordingly (in case of other formats)
+                    date_obj = datetime.strptime(month_int, '%B')  # 'August' -> datetime object
+                    month = date_obj.month
+
+                # If day is 'all', we skip this part and consider the month as a whole
+                if day_str == 'all':
+                    day = 'all'
+                else:
+                    day = int(day_str)
+
+                # Add to available_data in nested structure: {building: {year: {month: [days]}}}
+                if building not in available_data:
+                    available_data[building] = {}
+
+                if year not in available_data[building]:
+                    available_data[building][year] = {}
+
+                if month not in available_data[building][year]:
+                    available_data[building][year][month] = []
+
+                # Add the day (or 'all' if it's a monthly cache) to the list of days for the given building, year, and month
+                available_data[building][year][month].append(day)
+
+
+        print("Available Data:", available_data)
+        
+        # Convert days to a sorted list, excluding 'all', and prepare the final data
+        for building in available_data:
+            for year in available_data[building]:
+                for month in available_data[building][year]:
+                    # Filter out 'all' before sorting
+                    days = [day for day in available_data[building][year][month] if day != 'all']
+                    available_data[building][year][month] = sorted(days)
+
+                    # If 'all' is present, add it back to the list
+                    if 'all' in available_data[building][year][month]:
+                        available_data[building][year][month].append('all')
+
+        return jsonify(available_data)
+
+
+
 
 if __name__ == '__main__':
     
