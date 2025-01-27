@@ -16,12 +16,13 @@ const LineGraph = () => {
   const [chartInstance, setChartInstance] = useState(null);
   const [threshold, setThreshold] = useState(10);
   const [showDifferenceLines, setShowDifferenceLines] = useState(true);
+  const [selectedDatasets, setSelectedDatasets] = useState([]);
 
   // Fetch available buildings, years, and months
   useEffect(() => {
     const fetchAvailableData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/get-available-data');
+        const response = await fetch('http://127.0.0.1:5000/get-available-data');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -47,7 +48,9 @@ const LineGraph = () => {
     }
 
     setLoading(true);
-    const API_URL = `http://localhost:5000/fetch-data/${selectedYear}/${selectedMonth}/0/${selectedBuilding}`;
+
+    const API_URL = `http://127.0.0.1:5000/fetch-data/${selectedYear}/${selectedMonth}/0/${selectedBuilding}`;
+    console.log('Fetching data from:', API_URL);
 
     try {
       const response = await fetch(API_URL);
@@ -67,34 +70,79 @@ const LineGraph = () => {
     }
   };
 
-  // Update the chart
+  // Add this function to handle adding new datasets
+  const addDataset = async () => {
+    if (!selectedBuilding || !selectedYear || !selectedMonth) {
+      setError('Please select building, year, and month before adding to graph.');
+      return;
+    }
+
+    // Check if this combination already exists
+    const exists = selectedDatasets.some(
+      ds => ds.building === selectedBuilding && 
+            ds.year === selectedYear && 
+            ds.month === selectedMonth
+    );
+
+    if (exists) {
+      setError('This dataset is already displayed on the graph.');
+      return;
+    }
+
+    setLoading(true);
+    const API_URL = `http://127.0.0.1:5000/fetch-data/${selectedYear}/${selectedMonth}/0/${selectedBuilding}`;
+
+    try {
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      // Generate a random color for the new dataset
+      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+      
+      setSelectedDatasets(prev => [...prev, {
+        building: selectedBuilding,
+        year: selectedYear,
+        month: selectedMonth,
+        data: data,
+        color: randomColor
+      }]);
+      
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError(`Failed to fetch data: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Modify the chart update effect
   useEffect(() => {
-    if (loading || error || !stats) return;
+    if (loading || error || selectedDatasets.length === 0) return;
 
     if (chartInstance) {
-      chartInstance.destroy(); // Destroy old chart if it exists
+      chartInstance.destroy();
     }
 
     const ctx = chartRef.current.getContext('2d');
-    const labels = stats.map((entry) => new Date(entry.date).getDate());
-    const dataPoints = stats.map((entry) => entry.consumption);
-
-    console.log('Creating chart with labels:', labels);
-    console.log('Creating chart with dataPoints:', dataPoints);
+    
+    // Create datasets array for the chart
+    const datasets = selectedDatasets.map(ds => ({
+      label: `${ds.building} - ${ds.month}/${ds.year}`,
+      data: ds.data.map(entry => entry.consumption),
+      borderColor: ds.color,
+      tension: 0.1,
+      fill: false,
+    }));
 
     const newChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
-        datasets: [
-          {
-            label: `Electricity Data for ${selectedBuilding}`,
-            data: dataPoints,
-            borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1,
-            fill: false,
-          },
-        ],
+        labels: selectedDatasets[0].data.map(entry => new Date(entry.date).getDate()),
+        datasets: datasets,
       },
       options: {
         responsive: true,
@@ -102,16 +150,24 @@ const LineGraph = () => {
         plugins: {
           title: {
             display: true,
-            text: `Electricity Data for ${selectedBuilding}`,
+            text: 'Electricity Consumption Comparison',
             font: {
               size: 16,
               weight: 'bold',
             },
           },
+          legend: {
+            display: true,
+            position: 'top',
+          },
         },
         scales: {
           y: {
             beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Consumption (kWh)',
+            },
           },
           x: {
             title: {
@@ -128,6 +184,12 @@ const LineGraph = () => {
     });
 
     setChartInstance(newChart);
+  }, [selectedDatasets, loading, error]);
+
+  // Add this function to remove a dataset
+  const removeDataset = (index) => {
+    setSelectedDatasets(prev => prev.filter((_, i) => i !== index));
+  };
   }, [stats, loading, error, selectedBuilding]);
 
   const handleThresholdChange = (event) => {
@@ -208,6 +270,49 @@ const LineGraph = () => {
         <button onClick={fetchData} disabled={loading}>
           {loading ? 'Loading...' : 'Fetch Data'}
         </button>
+      </div>
+
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+        <button onClick={addDataset} disabled={loading}>
+          Add to Graph
+        </button>
+      </div>
+
+      {/* Display active datasets */}
+      <div style={{ marginBottom: '20px' }}>
+        {selectedDatasets.map((dataset, index) => (
+          <div 
+            key={index} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '10px',
+              marginBottom: '5px',
+              padding: '5px',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '4px'
+            }}
+          >
+            <div style={{ 
+              width: '20px', 
+              height: '20px', 
+              backgroundColor: dataset.color,
+              borderRadius: '50%' 
+            }} />
+            <span>{`${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
+            <button 
+              onClick={() => removeDataset(index)}
+              style={{ 
+                marginLeft: 'auto',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd'
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        ))}
       </div>
 
       <button style={{ marginBottom: '10px' }}>Predict</button>
