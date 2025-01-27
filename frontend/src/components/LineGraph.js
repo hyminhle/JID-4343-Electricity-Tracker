@@ -48,6 +48,7 @@ const LineGraph = () => {
     }
 
     setLoading(true);
+
     const API_URL = `http://127.0.0.1:5000/fetch-data/${selectedYear}/${selectedMonth}/0/${selectedBuilding}`;
     console.log('Fetching data from:', API_URL);
 
@@ -189,6 +190,7 @@ const LineGraph = () => {
   const removeDataset = (index) => {
     setSelectedDatasets(prev => prev.filter((_, i) => i !== index));
   };
+  }, [stats, loading, error, selectedBuilding]);
 
   const handleThresholdChange = (event) => {
     const value = parseFloat(event.target.value);
