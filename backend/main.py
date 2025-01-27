@@ -57,18 +57,11 @@ def parse_csv(file):
         building_info = df.loc[0, 'Group']
         building_number = re.search(r'Building\s(\d+)', building_info).group(1)
 
-        # Extract the date columns (assumes the first two columns are not part of the date-based data)
+        # Extract the date columns
         date_columns = df.columns[2:]
 
         # Extract the consumption data and ensure it's converted to a list of floats
         consumption_data = df.iloc[0, 2:].astype(float)
-
-        # Extract the month from the first date
-        first_date = date_columns[0]
-        parsed_date = datetime.strptime(first_date, '%m/%d/%Y %H:%M')  # Parse the date and time
-        month_number = parsed_date.month
-        year_number = parsed_date.year
-        day_number = parsed_date.day
 
         # Map numeric month to month name
         months = {
@@ -77,43 +70,43 @@ def parse_csv(file):
             9: 'September', 10: 'October', 11: 'November', 12: 'December'
         }
 
-        month_name = months.get(month_number, 'Unknown')
-
-        # Check for empty consumption data
-        if not any(consumption_data):  # Check if the list has valid non-zero data
-            return None, "No valid consumption data found in the file."
-        
-        # Check for duplicate data
-        if is_duplicate_data(year_number, int(month_number), int(day_number), f"Building {building_number}"):
-            return None, "Duplicate data detected."
-
-        # Input data into database
+        # Loop through each date and consumption value
         for date, consumption in zip(date_columns, consumption_data):
-            formatted_date = datetime.strptime(date, '%m/%d/%Y %H:%M').date()
+            # Parse each date
+            parsed_date = datetime.strptime(date, '%m/%d/%Y %H:%M').date()
+
+            # Get the month name for the current date
+            month_name = months.get(parsed_date.month, 'Unknown')
+
+            # Check for duplicate data
+            if is_duplicate_data(parsed_date.year, parsed_date.month, parsed_date.day, f"Building {building_number}"):
+                continue  # Skip duplicate data
+
+            # Add the entry to the database
             new_entry = ElectricityData(
                 month=month_name,
-                date=formatted_date,
+                date=parsed_date,
                 consumption=consumption,
                 building=f"Building {building_number}"
             )
             db.session.add(new_entry)
+
+        # Commit all changes to the database
         db.session.commit()
 
-        # Store the data for the month
-        monthly_data[month_name] = consumption_data
-
-        return month_name, consumption_data
+        return "Success", "Data successfully added to the database."
 
     except Exception as e:
         db.session.rollback()
         return None, f"Error processing file: {str(e)}"
+
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
     try:
         files = request.files
         
-        if 'file1' not in files and 'file2' not in files:
+        if 'file1' not in files:
             return jsonify({'error': 'No files uploaded'}), 400
 
         # Process first file if present
@@ -123,18 +116,11 @@ def upload_files():
             if not month1:
                 return jsonify({'error': data1}), 400
 
-        # Process second file if present
-        if 'file2' in files:
-            file2 = files['file2']
-            month2, data2 = parse_csv(file2)
-            if not month2:
-                return jsonify({'error': data2}), 400
 
         return jsonify({
             'message': 'Files uploaded successfully',
             'data': {
                 'month1': month1 if 'file1' in files else None,
-                'month2': month2 if 'file2' in files else None
             }
         })
 
@@ -144,43 +130,40 @@ def upload_files():
 @app.route('/stats', methods=['GET'])
 def get_stats():
     try:
-        if not monthly_data:
+        # Fetch all distinct months from the database
+        months = db.session.query(ElectricityData.month).distinct().all()
+
+        if not months:
             return jsonify({'error': 'No data available'}), 404
 
-        months = list(monthly_data.keys())
-        if len(months) == 0:
-            return jsonify({'error': 'No monthly data available'}), 404
+        # Convert months from tuples to a flat list
+        months = [month[0] for month in months]
 
-        # Get data for the latest two months
+        # Get data for the most recent month
         current_month = months[-1] if months else None
-        previous_month = months[-2] if len(months) > 1 else None
 
-        response_data = {
-            'currentMonth': current_month,
-            'previousMonth': previous_month,
-            'currentMonthData': monthly_data[current_month].tolist() if current_month else [],
-            'previousMonthData': monthly_data[previous_month].tolist() if previous_month else [],
-            'stats': {}
-        }
-
-        # Calculate statistics for current month
         if current_month:
-            current_data = monthly_data[current_month]
-            response_data['stats']['currentMonth'] = {
-                'average': float(np.mean(current_data)),
-                'max': float(np.max(current_data)),
-                'min': float(np.min(current_data)),
-                'total': float(np.sum(current_data))
-            }
+            # Fetch data for the current month
+            current_month_data = db.session.query(ElectricityData.consumption).filter_by(month=current_month).all()
+            current_month_data = [entry[0] for entry in current_month_data]  # Extract consumption values
 
-        # Calculate statistics for previous month
-        if previous_month:
-            previous_data = monthly_data[previous_month]
-            response_data['stats']['previousMonth'] = {
-                'average': float(np.mean(previous_data)),
-                'max': float(np.max(previous_data)),
-                'min': float(np.min(previous_data)),
-                'total': float(np.sum(previous_data))
+            response_data = {
+                'currentMonth': current_month,
+                'currentMonthData': current_month_data,
+                'stats': {
+                    'currentMonth': {
+                        'average': float(np.mean(current_month_data)) if current_month_data else 0,
+                        'max': float(np.max(current_month_data)) if current_month_data else 0,
+                        'min': float(np.min(current_month_data)) if current_month_data else 0,
+                        'total': float(np.sum(current_month_data)) if current_month_data else 0
+                    }
+                }
+            }
+        else:
+            response_data = {
+                'currentMonth': None,
+                'currentMonthData': [],
+                'stats': {}
             }
 
         return jsonify(response_data)
@@ -267,16 +250,74 @@ def fetch_data_by_params(year, month, day, building):
         #    else:
         #        for key in cached_data:
         #            print(f"{key}: {cached_data[key]}")
-            return jsonify({'source': 'cache', 'data': cached_data})
+            return jsonify(cached_data)
     
     
         print(f"No cache data found for key: {cache_key}")
         return jsonify({'error': 'No data found for the specified parameters'}), 404
-       
+
 @app.route('/predict', methods=['POST'])
 def predict_future():
     predictor = predictor(monthly_data)
     return predictor.predict()
+@app.route('/get-available-data', methods=['GET'])
+def get_available_data():
+    with app.app_context():
+        cache_keys = cache.cache._cache.keys()  # Get all the cache keys
+        available_data = {}
+
+        for key in cache_keys:
+            # Split key based on underscores
+            parts = key.split('_')  # Example key: electricity_data_2023_2_1_Building110
+            if len(parts) == 6 and parts[0] == "electricity" and parts[1] == "data":
+                year, month_int, day_str, building = int(parts[2]), int(parts[3]), parts[4], parts[5]
+
+                # If the month is in datetime.date format, we can directly access the month
+                if isinstance(month_int, int):
+                    month = month_int
+                else:
+                    # If it's a string or not in int format, we handle it accordingly (in case of other formats)
+                    date_obj = datetime.strptime(month_int, '%B')  # 'August' -> datetime object
+                    month = date_obj.month
+
+                # If day is 'all', we skip this part and consider the month as a whole
+                if day_str == 'all':
+                    day = 'all'
+                else:
+                    day = int(day_str)
+
+                # Add to available_data in nested structure: {building: {year: {month: [days]}}}
+                if building not in available_data:
+                    available_data[building] = {}
+
+                if year not in available_data[building]:
+                    available_data[building][year] = {}
+
+                if month not in available_data[building][year]:
+                    available_data[building][year][month] = []
+
+                # Add the day (or 'all' if it's a monthly cache) to the list of days for the given building, year, and month
+                available_data[building][year][month].append(day)
+
+
+        print("Available Data:", available_data)
+        
+        # Convert days to a sorted list, excluding 'all', and prepare the final data
+        for building in available_data:
+            for year in available_data[building]:
+                for month in available_data[building][year]:
+                    # Filter out 'all' before sorting
+                    days = [day for day in available_data[building][year][month] if day != 'all']
+                    available_data[building][year][month] = sorted(days)
+
+                    # If 'all' is present, add it back to the list
+                    if 'all' in available_data[building][year][month]:
+                        available_data[building][year][month].append('all')
+
+        return jsonify(available_data)
+
+
+
 
 if __name__ == '__main__':
     
