@@ -6,9 +6,8 @@ The Electricity Consumption Tracker is a web application designed to help users 
 
 **Required Installations**
 Running the code will require users to install these applications first into their virtual environment:
-- pip install flask flask-cors matplotlib panda
+- pip install flask flask-cors matplotlib panda mysql-connector mysql-connector-python mysql-connector-python-rf pymysql flask-sqlalchemy Flask-Caching apscheduler
 - npm install chart.js axios chartjs-plugin-annotation react-router-dom
-
 
 # Release Notes
 
@@ -20,8 +19,6 @@ This is the initial release of the Electricity Consumption Tracker application.
 
 - **CSV File Upload**: Users can upload CSV files containing monthly energy consumption data for visualization.
 - **Line Graph Display**: The uploaded data is displayed on a dynamic line graph, comparing energy consumption over time.
-- **Real-time Data Fetching**: The app fetches data from the backend to display the latest energy statistics.
-- **Stats Display**: Includes detailed energy consumption stats such as average usage, total cost, max usage, and more for each month (e.g., June, July).
 
 ### Bug Fixes
 
@@ -32,3 +29,30 @@ This is the initial release of the Electricity Consumption Tracker application.
 - **Graph not displaying on initial load**: Sometimes, the graph may fail to render if the data is not available immediately. This issue will be addressed in the next release.
 - **Stats Box Updates**: The stats box may not reflect updates correctly after new data is uploaded. This will be fixed in future versions to ensure proper reactivity.
 - **Uploaded Data Not Syncing with Graph and Stats box**: The data in the CSV files, while can be uploaded, are not synced with the line graph and stats box. 
+
+
+
+
+## Release 0.1.0
+
+### Features
+
+- **Modal for Data Selection**: Implemented a modal window in `Graph.js` for selecting buildings, years, and months.
+- **Predict Button**: Added a "Predict" button in `LineGraph.js` for future machine learning integration.
+- **Backend Endpoints**: Added new API endpoints in `main.py` to fetch available months and buildings.
+- **Data Fetching and Display**: Updated `Graph.js` and `LineGraph.js` to fetch and display data based on user selections.
+- **Caching**: Implemented caching in the backend to improve performance and reduce database load.
+- **Scheduler**: Added a scheduler to periodically refresh the cache.
+- **MySQL Database**: Create and maintain a SQL database that hold electricity data pull from the uploaded CSV files. 
+- **Basic Dashboard and Menu Page**: Created a basic dashboard and menu page to improve user navigation and accessibility.
+
+### Bug Fixes
+
+- **Graph Rendering**: Fixed an issue where the graph would not render on initial load if the data was not available immediately.
+- **Select Month Update**: Fixed an issue where the user were not able to correctly choose the month data that they wanted to display
+- **Data Syncing**: Ensured that uploaded data syncs correctly with the line graph and stats box.
+
+### Known Issues
+
+- **Prediction Functionality**: The "Predict" button is currently a placeholder and does not yet trigger any machine learning predictions. This will be implemented in future versions.
+

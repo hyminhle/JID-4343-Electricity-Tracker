@@ -190,7 +190,7 @@ const LineGraph = () => {
   const removeDataset = (index) => {
     setSelectedDatasets(prev => prev.filter((_, i) => i !== index));
   };
-  }, [stats, loading, error, selectedBuilding]);
+  
 
   const handleThresholdChange = (event) => {
     const value = parseFloat(event.target.value);
