@@ -199,6 +199,68 @@ const LineGraph = () => {
     }
   };
 
+  
+  const calculateAverageAggregate = () => {
+    if (selectedDatasets.length === 0) {
+      setError('No datasets available to calculate an average aggregate.');
+      return;
+    }
+  
+    // Determine the number of days from the first dataset
+    const numDays = Math.max(
+      ...selectedDatasets.map(dataset => dataset?.data?.length || 0)
+    );
+    
+  
+    if (numDays === 0) {
+      setError('Selected datasets do not have valid data.');
+      return;
+    }
+  
+    const aggregateData = Array(numDays).fill(0);
+    const counts = Array(numDays).fill(0);
+
+    selectedDatasets.forEach(dataset => {
+      let lastDefinedValue = 0;
+      dataset.data.forEach((entry, index) => {
+        const value = entry?.consumption !== undefined ? entry.consumption : lastDefinedValue;
+        if (entry?.consumption !== undefined) {
+          lastDefinedValue = entry.consumption;
+        }
+        aggregateData[index] += value;
+        counts[index] += 1;
+      });
+    });
+
+    const averageData = aggregateData.map((total, index) => total / counts[index]);
+    
+  
+    // Add the average dataset to the graph
+    const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+    const averageDataset = {
+      data: averageData.map((y, i) => ({ day: i + 1, consumption: y })), // Ensure proper format
+      building: 'Data',
+      year: selectedDatasets.length + ' Months',
+      month: 'Aggregate Average',
+      color: randomColor,
+      tension: 0.1,
+      borderDash: [5, 5], 
+      fill: false,
+    };
+  
+    // Check if an "Average Aggregate" dataset already exists, if so, replace it
+    const updatedDatasets = selectedDatasets.filter(
+      (ds) => ds.label !== 'Average Aggregate'
+    );
+  
+    setSelectedDatasets([...updatedDatasets, averageDataset]);
+    console.log('Selected Datasets:', selectedDatasets);
+    console.log('Dataset Data:', selectedDatasets.map(ds => ds.data));
+
+    setError(null);
+  };
+
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -267,17 +329,54 @@ const LineGraph = () => {
             })}
         </select>
 
-        <button onClick={fetchData} disabled={loading}>
+        <button onClick={fetchData} disabled={loading}
+        style={{
+          marginBottom: '5px',
+          padding: '6px 10px',
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+        }}
+        >
           {loading ? 'Loading...' : 'Fetch Data'}
+          
         </button>
       </div>
 
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-        <button onClick={addDataset} disabled={loading}>
+      <div style={{ marginBottom: '5px', display: 'flex', gap: '10px' }}>
+        <button onClick={addDataset} disabled={loading}
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
           Add to Graph
         </button>
       </div>
-
+      <div style={{ marginBottom: '5px', display: 'flex', gap: '10px' }}>
+        <button
+          onClick={() => calculateAverageAggregate()}
+          disabled={selectedDatasets.length === 0}
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Display Average Aggregate
+        </button>
+      </div>
       {/* Display active datasets */}
       <div style={{ marginBottom: '20px' }}>
         {selectedDatasets.map((dataset, index) => (
