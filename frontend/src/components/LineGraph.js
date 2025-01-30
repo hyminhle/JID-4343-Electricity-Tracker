@@ -40,50 +40,61 @@ const LineGraph = () => {
     fetchAvailableData();
   }, []);
   const fetchPrediction = async () => {
-    if (!selectedBuilding || !selectedYear || !selectedMonth) {
-      setError('Please select building, year, and month before predicting.');
+    if (!selectedDatasets.length) {
+      setError('No data available for prediction.');
       return;
     }
   
     setLoading(true);
-    const API_URL = `http://127.0.0.1:5000/predict`;
+  
+    // Extract relevant data for the predictor (assuming first dataset for now)
+    const selectedData = selectedDatasets.map(ds => ({
+      building: ds.building,
+      year: ds.year,
+      month: ds.month,
+      data: ds.data.map(entry => ({
+        date: entry.date,
+        consumption: entry.consumption
+      }))
+    }));
   
     try {
-      const response = await fetch(API_URL, {
+      const response = await fetch('http://127.0.0.1:5000/predict', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target_year: parseInt(selectedYear, 10),
-          target_month: parseInt(selectedMonth, 10),
-          building: selectedBuilding,
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ datasets: selectedData }), // Send the same data as graph
       });
   
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      
-      // Assign a distinct color for predicted data
-      const predictedColor = 'rgb(255, 165, 0)'; // Orange for prediction
-      
+  
+      const predictionData = await response.json();
+      console.log('Prediction Data:', predictionData);
+  
+      // Append prediction results to the graph
+      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+  
       setSelectedDatasets(prev => [...prev, {
-        building: selectedBuilding,
-        year: selectedYear,
-        month: selectedMonth,
-        data: data,
-        color: predictedColor,
-        label: 'Predicted Data'
+        building: 'Prediction',
+        year: 'Future',
+        month: '',
+        data: predictionData,
+        color: randomColor
       }]);
   
       setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
-      setError(`Failed to fetch prediction: ${error.message}`);
+      setError(`Prediction failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
+  
+
   
   // Fetch data for the selected parameters
   const fetchData = async () => {

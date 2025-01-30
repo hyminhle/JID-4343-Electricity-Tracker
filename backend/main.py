@@ -301,23 +301,31 @@ def fetch_data_by_params(year, month, day, building):
 @app.route('/predict', methods=['POST'])
 def predict_future():
     data = request.get_json()
-    target_year = data.get("target_year")
-    target_month = data.get("target_month")
-    building = data.get("building")
+    datasets = data.get("datasets", [])
 
-    # Validate input parameters
-    if not target_year or not isinstance(target_year, int):
-        return jsonify({'error': 'Invalid target year'}), 400
-    if not target_month or not isinstance(target_month, int) or not (1 <= target_month <= 12):
-        return jsonify({'error': 'Invalid target month'}), 400
-    if not building or not isinstance(building, str):
-        return jsonify({'error': 'Invalid building'}), 400
+    if not datasets:
+        return jsonify({'error': 'No datasets provided'}), 400
 
-    # Initialize Predictor and get predictions
     predictor = Predictor()
-    prediction_result = predictor.predict(target_year, target_month, building)
+    
+    predictions = []
+    for dataset in datasets:
+        building = dataset["building"]
+        year = dataset["year"]
+        month = dataset["month"]
+        consumption_data = dataset["data"]
 
-    return jsonify(prediction_result)
+        predicted_values = predictor.predict(consumption_data)  # Use fetched data
+
+        predictions.append({
+            "building": building,
+            "year": year,
+            "month": month,
+            "predicted_data": predicted_values
+        })
+
+    return jsonify(predictions)
+
 
 @app.route('/get-available-data', methods=['GET'])
 def get_available_data():
