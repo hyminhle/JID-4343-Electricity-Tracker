@@ -3,84 +3,101 @@ import numpy as np
 from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from flask import jsonify
+from flask import Flask, request, jsonify
 
-def some_function():
-    from main import fetch_data_by_params  
-    data = fetch_data_by_params()
+
+app = Flask(__name__)
 
 class Predictor:
     def __init__(self):
         pass
 
-    def predict(self, target_month):
+    def predict(self, datasets):
         try:
-            monthly_data = []
-
-            for year in range(2022, 2024): 
-                data = fetch_data_by_params(year, target_month, 0, "Building 110")  # Fetch data directly
+            predict_data = []
+            for dataset in datasets:
+                year = dataset['year']
+                month = dataset['month']
+                building = dataset['building']
+                data = dataset['data']
                 if data:
-                    monthly_data.extend(data)
+                    predict_data.extend(data)
 
-            if not monthly_data:
-                return jsonify({'error': f'No data available for month {target_month}'}), 404
+            if not predict_data:
+                return jsonify({'error': 'No data available for the selected datasets'}), 404
 
             # Convert to DataFrame
-            df = pd.DataFrame(monthly_data)
-            df['ds'] = pd.to_datetime(df['date'], errors='coerce')  
-            df['y'] = df['consumption']
-            df = df.dropna()
+#            df = pd.DataFrame(monthly_data)
+#            df['ds'] = pd.to_datetime(df['date'], errors='coerce')  
+#            df['y'] = df['consumption']
+#            df = df.dropna()
 
             # Fit Prophet Model
-            prophet = Prophet()
-            prophet.fit(df[['ds', 'y']])
+#            prophet = Prophet()
+#            prophet.fit(df[['ds', 'y']])
 
             # Generate Future Dates
-            future = prophet.make_future_dataframe(periods=31, freq='D')
-            future = future[future['ds'].dt.month == target_month]
-            prophet_forecast = prophet.predict(future)
+            # future = prophet.make_future_dataframe(periods=31, freq='D')
+            # future = future[future['ds'].dt.month == target_month]
+            # prophet_forecast = prophet.predict(future)
 
-            # Merge Forecast Results
-            prophet_results = prophet_forecast[['ds', 'yhat']]
-            df = pd.merge(df, prophet_results, on='ds', how='left')
+            # # Merge Forecast Results
+            # prophet_results = prophet_forecast[['ds', 'yhat']]
+            # df = pd.merge(df, prophet_results, on='ds', how='left')
 
-            # Feature Engineering
-            df['day_of_week'] = df['ds'].dt.dayofweek
-            df['month'] = df['ds'].dt.month
-            df['lag_1'] = df['y'].shift(1)
-            df['lag_2'] = df['y'].shift(2)
-            df = df.dropna()
+            # # Feature Engineering
+            # df['day_of_week'] = df['ds'].dt.dayofweek
+            # df['month'] = df['ds'].dt.month
+            # df['lag_1'] = df['y'].shift(1)
+            # df['lag_2'] = df['y'].shift(2)
+            # df = df.dropna()
 
-            # Train RandomForest Model
-            X = df[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
-            y = df['y']
-            from sklearn.model_selection import train_test_split
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # # Train RandomForest Model
+            # X = df[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
+            # y = df['y']
+            # from sklearn.model_selection import train_test_split
+            # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            rf_model = RandomForestRegressor(random_state=42)
-            rf_model.fit(X_train, y_train)
+            # rf_model = RandomForestRegressor(random_state=42)
+            # rf_model.fit(X_train, y_train)
 
-            # Evaluate Model
-            y_pred = rf_model.predict(X_test)
-            mse = mean_squared_error(y_test, y_pred)
-            mae = mean_absolute_error(y_test, y_pred)
+            # # Evaluate Model
+            # y_pred = rf_model.predict(X_test)
+            # mse = mean_squared_error(y_test, y_pred)
+            # mae = mean_absolute_error(y_test, y_pred)
 
-            # Predict Future Values
-            future['day_of_week'] = future['ds'].dt.dayofweek
-            future['month'] = future['ds'].dt.month
-            future['lag_1'] = df['y'].iloc[-1]
-            future['lag_2'] = df['y'].iloc[-2]
-            future_X = future[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
-            future_predictions = rf_model.predict(future_X)
+            # # Predict Future Values
+            # future['day_of_week'] = future['ds'].dt.dayofweek
+            # future['month'] = future['ds'].dt.month
+            # future['lag_1'] = df['y'].iloc[-1]
+            # future['lag_2'] = df['y'].iloc[-2]
+            # future_X = future[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
+            # future_predictions = rf_model.predict(future_X)
 
-            future['Final_Prediction'] = future_predictions
+            # future['Final_Prediction'] = future_predictions
 
-            return jsonify({
-                'predictions': future[['ds', 'Final_Prediction']].to_dict(orient='records'),
-                'evaluation': {
-                    'mean_squared_error': mse,
-                    'mean_absolute_error': mae
-                }
-            })
+            # return jsonify({
+            #     'predictions': future[['ds', 'Final_Prediction']].to_dict(orient='records'),
+            #     'evaluation': {
+            #         'mean_squared_error': mse,
+            #         'mean_absolute_error': mae
+            #     }
+            #)
+            return jsonify({'message': 'Prediction successful', 'data': predict_data})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.get_json()
+        datasets = data.get('datasets')
+        
+        predictor = Predictor()
+        return predictor.predict(datasets)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

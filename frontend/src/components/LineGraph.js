@@ -316,6 +316,20 @@ const LineGraph = () => {
     setError(null);
   };
 
+  const handlePredict = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post('http://localhost:5000/predict', {
+        datasets: selectedDatasets
+      });
+      console.log('Prediction response:', response.data);
+    } catch (error) {
+      console.error('Error making prediction:', error);
+      setError('Error making prediction. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -472,7 +486,7 @@ const LineGraph = () => {
 
       <button 
       style={{ marginBottom: '10px' }} 
-      onClick={fetchPrediction} 
+      onClick={handlePredict} 
       disabled={loading}
     >
       {loading ? 'Predicting...' : 'Predict'}
