@@ -39,7 +39,52 @@ const LineGraph = () => {
 
     fetchAvailableData();
   }, []);
-
+  const fetchPrediction = async () => {
+    if (!selectedBuilding || !selectedYear || !selectedMonth) {
+      setError('Please select building, year, and month before predicting.');
+      return;
+    }
+  
+    setLoading(true);
+    const API_URL = `http://127.0.0.1:5000/predict`;
+  
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_year: parseInt(selectedYear, 10),
+          target_month: parseInt(selectedMonth, 10),
+          building: selectedBuilding,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      // Assign a distinct color for predicted data
+      const predictedColor = 'rgb(255, 165, 0)'; // Orange for prediction
+      
+      setSelectedDatasets(prev => [...prev, {
+        building: selectedBuilding,
+        year: selectedYear,
+        month: selectedMonth,
+        data: data,
+        color: predictedColor,
+        label: 'Predicted Data'
+      }]);
+  
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching prediction:', error);
+      setError(`Failed to fetch prediction: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Fetch data for the selected parameters
   const fetchData = async () => {
     if (!selectedBuilding || !selectedYear || !selectedMonth) {
@@ -414,13 +459,20 @@ const LineGraph = () => {
         ))}
       </div>
 
-      <button style={{ marginBottom: '10px' }}>Predict</button>
+      <button 
+      style={{ marginBottom: '10px' }} 
+      onClick={fetchPrediction} 
+      disabled={loading}
+    >
+      {loading ? 'Predicting...' : 'Predict'}
+      </button>
       <div style={{
         marginBottom: '20px',
         display: 'flex',
         gap: '20px',
         alignItems: 'center'
       }}>
+
         <div>
           <label htmlFor="threshold" style={{ marginRight: '10px' }}>
             Threshold Value (kWh):

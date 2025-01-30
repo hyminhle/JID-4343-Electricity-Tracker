@@ -1,55 +1,57 @@
+import pandas as pd
+import numpy as np
 from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from flask import jsonify
-import pandas as pd
-import numpy as np
-import main
 
-fetch_data = main.fetch_data_by_params
+def some_function():
+    from main import fetch_data_by_params  
+    data = fetch_data_by_params()
+
 class Predictor:
     def __init__(self):
-        pass 
+        pass
 
     def predict(self, target_month):
         try:
-
             monthly_data = []
 
-
             for year in range(2022, 2024): 
-                response = fetch_data(year, target_month, 0, "Building 110")
-                data = response.json.get('data', [])
-                monthly_data.extend(data)
-            
+                data = fetch_data_by_params(year, target_month, 0, "Building 110")  # Fetch data directly
+                if data:
+                    monthly_data.extend(data)
+
             if not monthly_data:
                 return jsonify({'error': f'No data available for month {target_month}'}), 404
 
-
+            # Convert to DataFrame
             df = pd.DataFrame(monthly_data)
             df['ds'] = pd.to_datetime(df['date'], errors='coerce')  
-            df['y'] = df['consumption']  
+            df['y'] = df['consumption']
             df = df.dropna()
 
-
+            # Fit Prophet Model
             prophet = Prophet()
             prophet.fit(df[['ds', 'y']])
 
-
+            # Generate Future Dates
             future = prophet.make_future_dataframe(periods=31, freq='D')
-            future = future[future['ds'].dt.month == target_month]  
+            future = future[future['ds'].dt.month == target_month]
             prophet_forecast = prophet.predict(future)
 
-
+            # Merge Forecast Results
             prophet_results = prophet_forecast[['ds', 'yhat']]
             df = pd.merge(df, prophet_results, on='ds', how='left')
+
+            # Feature Engineering
             df['day_of_week'] = df['ds'].dt.dayofweek
             df['month'] = df['ds'].dt.month
             df['lag_1'] = df['y'].shift(1)
             df['lag_2'] = df['y'].shift(2)
             df = df.dropna()
 
-
+            # Train RandomForest Model
             X = df[['yhat', 'day_of_week', 'month', 'lag_1', 'lag_2']]
             y = df['y']
             from sklearn.model_selection import train_test_split
@@ -58,12 +60,12 @@ class Predictor:
             rf_model = RandomForestRegressor(random_state=42)
             rf_model.fit(X_train, y_train)
 
-
+            # Evaluate Model
             y_pred = rf_model.predict(X_test)
             mse = mean_squared_error(y_test, y_pred)
             mae = mean_absolute_error(y_test, y_pred)
 
-
+            # Predict Future Values
             future['day_of_week'] = future['ds'].dt.dayofweek
             future['month'] = future['ds'].dt.month
             future['lag_1'] = df['y'].iloc[-1]
@@ -72,7 +74,7 @@ class Predictor:
             future_predictions = rf_model.predict(future_X)
 
             future['Final_Prediction'] = future_predictions
-            print(mse)
+
             return jsonify({
                 'predictions': future[['ds', 'Final_Prediction']].to_dict(orient='records'),
                 'evaluation': {
@@ -82,4 +84,3 @@ class Predictor:
             })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
-

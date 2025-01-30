@@ -9,7 +9,7 @@ import mysql.connector
 from flask_caching import Cache
 from apscheduler.schedulers.background import BackgroundScheduler
 import threading
-
+from Predictor import Predictor
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
@@ -270,13 +270,54 @@ def fetch_data_by_params(year, month, day, building):
             return jsonify(cached_data)
     
     
-        print(f"No cache data found for key: {cache_key}")
-        return jsonify({'error': 'No data found for the specified parameters'}), 404
+        query = ElectricityData.query.filter(
+            db.extract('year', ElectricityData.date) == year,
+            db.extract('month', ElectricityData.date) == month,
+            ElectricityData.building == building
+        )
 
+        if day != 0:
+            query = query.filter(db.extract('day', ElectricityData.date) == day)
+
+        result = query.all()
+
+        if not result:
+            return None  # No data found
+
+        # Convert database results to list of dictionaries
+        data_list = [
+            {
+                'month': entry.month,
+                'date': entry.date.strftime('%Y-%m-%d'),
+                'consumption': entry.consumption,
+                'building': entry.building
+            }
+            for entry in result
+        ]
+
+        # Cache the result
+        cache.set(cache_key, data_list)
+        return data_list
 @app.route('/predict', methods=['POST'])
 def predict_future():
-    predictor = predictor(monthly_data)
-    return predictor.predict()
+    data = request.get_json()
+    target_year = data.get("target_year")
+    target_month = data.get("target_month")
+    building = data.get("building")
+
+    # Validate input parameters
+    if not target_year or not isinstance(target_year, int):
+        return jsonify({'error': 'Invalid target year'}), 400
+    if not target_month or not isinstance(target_month, int) or not (1 <= target_month <= 12):
+        return jsonify({'error': 'Invalid target month'}), 400
+    if not building or not isinstance(building, str):
+        return jsonify({'error': 'Invalid building'}), 400
+
+    # Initialize Predictor and get predictions
+    predictor = Predictor()
+    prediction_result = predictor.predict(target_year, target_month, building)
+
+    return jsonify(prediction_result)
 
 @app.route('/get-available-data', methods=['GET'])
 def get_available_data():
