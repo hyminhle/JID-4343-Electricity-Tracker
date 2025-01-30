@@ -277,6 +277,7 @@ def fetch_data_by_params(year, month, day, building):
 def predict_future():
     predictor = predictor(monthly_data)
     return predictor.predict()
+
 @app.route('/get-available-data', methods=['GET'])
 def get_available_data():
     with app.app_context():
