@@ -271,34 +271,8 @@ def fetch_data_by_params(year, month, day, building):
             return jsonify(cached_data)
     
     
-        query = ElectricityData.query.filter(
-            db.extract('year', ElectricityData.date) == year,
-            db.extract('month', ElectricityData.date) == month,
-            ElectricityData.building == building
-        )
-
-        if day != 0:
-            query = query.filter(db.extract('day', ElectricityData.date) == day)
-
-        result = query.all()
-
-        if not result:
-            return None  # No data found
-
-        # Convert database results to list of dictionaries
-        data_list = [
-            {
-                'month': entry.month,
-                'date': entry.date.strftime('%Y-%m-%d'),
-                'consumption': entry.consumption,
-                'building': entry.building
-            }
-            for entry in result
-        ]
-
-        # Cache the result
-        cache.set(cache_key, data_list)
-        return data_list
+        print(f"No cache data found for key: {cache_key}")
+        return jsonify({'error': 'No data found for the specified parameters'}), 404
 @app.route('/predict', methods=['POST'])
 def predict_future():
     try:
