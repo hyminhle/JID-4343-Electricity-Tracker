@@ -11,6 +11,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 from Predictor import Predictor
 
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 # Add database
@@ -300,31 +301,14 @@ def fetch_data_by_params(year, month, day, building):
         return data_list
 @app.route('/predict', methods=['POST'])
 def predict_future():
-    data = request.get_json()
-    datasets = data.get("datasets", [])
-
-    if not datasets:
-        return jsonify({'error': 'No datasets provided'}), 400
-
-    predictor = Predictor()
-    
-    predictions = []
-    for dataset in datasets:
-        building = dataset["building"]
-        year = dataset["year"]
-        month = dataset["month"]
-        consumption_data = dataset["data"]
-
-        predicted_values = predictor.predict(consumption_data)  # Use fetched data
-
-        predictions.append({
-            "building": building,
-            "year": year,
-            "month": month,
-            "predicted_data": predicted_values
-        })
-
-    return jsonify(predictions)
+    try:
+        data = request.get_json()
+        datasets = data.get('datasets')
+        
+        predictor = Predictor()
+        return predictor.predict(datasets)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/get-available-data', methods=['GET'])
@@ -382,7 +366,6 @@ def get_available_data():
                         available_data[building][year][month].append('all')
 
         return jsonify(available_data)
-
 
 
 
