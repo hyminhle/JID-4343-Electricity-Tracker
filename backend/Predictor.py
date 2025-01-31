@@ -5,7 +5,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from flask import Flask, request, jsonify
 
-
 app = Flask(__name__)
 
 class Predictor:
@@ -87,17 +86,3 @@ class Predictor:
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        data = request.get_json()
-        datasets = data.get('datasets')
-        
-        predictor = Predictor()
-        return predictor.predict(datasets)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
