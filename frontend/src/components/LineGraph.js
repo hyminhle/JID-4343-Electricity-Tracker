@@ -15,8 +15,6 @@ const LineGraph = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [chartInstance, setChartInstance] = useState(null);
-  const [threshold, setThreshold] = useState(10);
-  const [showDifferenceLines, setShowDifferenceLines] = useState(true);
   const [selectedDatasets, setSelectedDatasets] = useState([]);
   const [addError, setAddError] = useState(null); 
 
@@ -41,61 +39,8 @@ const LineGraph = () => {
     };
 
     fetchAvailableData();
+
   }, []);
-  const fetchPrediction = async () => {
-    if (!selectedDatasets.length) {
-      setError('No data available for prediction.');
-      return;
-    }
-  
-    setLoading(true);
-  
-    // Extract relevant data for the predictor (assuming first dataset for now)
-    const selectedData = selectedDatasets.map(ds => ({
-      building: ds.building,
-      year: ds.year,
-      month: ds.month,
-      data: ds.data.map(entry => ({
-        date: entry.date,
-        consumption: entry.consumption
-      }))
-    }));
-  
-    try {
-      const response = await fetch('http://127.0.0.1:5000/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ datasets: selectedData }), // Send the same data as graph
-      });
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      const predictionData = await response.json();
-      console.log('Prediction Data:', predictionData);
-  
-      // Append prediction results to the graph
-      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
-  
-      setSelectedDatasets(prev => [...prev, {
-        building: 'Prediction',
-        year: 'Future',
-        month: '',
-        data: predictionData,
-        color: randomColor
-      }]);
-  
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching prediction:', error);
-      setError(`Prediction failed: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
   
   // Add this function to handle adding new datasets
   const addDataset = async () => {
@@ -218,13 +163,6 @@ const LineGraph = () => {
     setSelectedDatasets(prev => prev.filter((_, i) => i !== index));
   };
   
-
-  const handleThresholdChange = (event) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value) && value >= 0) {
-      setThreshold(value);
-    }
-  };
 
   
   const calculateAverageAggregate = () => {
