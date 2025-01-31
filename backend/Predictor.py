@@ -3,6 +3,7 @@ import numpy as np
 from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.model_selection import train_test_split
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
