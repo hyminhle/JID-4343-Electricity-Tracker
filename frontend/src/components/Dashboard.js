@@ -3,7 +3,7 @@ import './Dashboard.css';
 import FileUpload from './FileUpload';
 import LineGraph from './LineGraph';
 
-function Dashboard() {
+const Dashboard = () => {
   return (
     <div className="dashboard">
       <h1 className="dashboard-title">Energy Tracker</h1>
