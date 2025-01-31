@@ -9,6 +9,7 @@ import mysql.connector
 from flask_caching import Cache
 from apscheduler.schedulers.background import BackgroundScheduler
 import threading
+from Predictor import Predictor
 
 
 app = Flask(__name__)
@@ -272,11 +273,17 @@ def fetch_data_by_params(year, month, day, building):
     
         print(f"No cache data found for key: {cache_key}")
         return jsonify({'error': 'No data found for the specified parameters'}), 404
-
 @app.route('/predict', methods=['POST'])
 def predict_future():
-    predictor = predictor(monthly_data)
-    return predictor.predict()
+    try:
+        data = request.get_json()
+        datasets = data.get('datasets')
+        
+        predictor = Predictor()
+        return predictor.predict(datasets)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/get-available-data', methods=['GET'])
 def get_available_data():
@@ -333,7 +340,6 @@ def get_available_data():
                         available_data[building][year][month].append('all')
 
         return jsonify(available_data)
-
 
 
 

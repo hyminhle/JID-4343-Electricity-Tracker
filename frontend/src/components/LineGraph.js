@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import Chart from 'chart.js/auto';
 import annotationPlugin from 'chartjs-plugin-annotation';
 
@@ -39,7 +40,63 @@ const LineGraph = () => {
 
     fetchAvailableData();
   }, []);
+  const fetchPrediction = async () => {
+    if (!selectedDatasets.length) {
+      setError('No data available for prediction.');
+      return;
+    }
+  
+    setLoading(true);
+  
+    // Extract relevant data for the predictor (assuming first dataset for now)
+    const selectedData = selectedDatasets.map(ds => ({
+      building: ds.building,
+      year: ds.year,
+      month: ds.month,
+      data: ds.data.map(entry => ({
+        date: entry.date,
+        consumption: entry.consumption
+      }))
+    }));
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ datasets: selectedData }), // Send the same data as graph
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const predictionData = await response.json();
+      console.log('Prediction Data:', predictionData);
+  
+      // Append prediction results to the graph
+      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+  
+      setSelectedDatasets(prev => [...prev, {
+        building: 'Prediction',
+        year: 'Future',
+        month: '',
+        data: predictionData,
+        color: randomColor
+      }]);
+  
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching prediction:', error);
+      setError(`Prediction failed: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
+  
   // Fetch data for the selected parameters
   const fetchData = async () => {
     if (!selectedBuilding || !selectedYear || !selectedMonth) {
@@ -260,6 +317,20 @@ const LineGraph = () => {
     setError(null);
   };
 
+  const handlePredict = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post('http://localhost:5000/predict', {
+        datasets: selectedDatasets
+      });
+      console.log('Prediction response:', response.data);
+    } catch (error) {
+      console.error('Error making prediction:', error);
+      setError('Error making prediction. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -414,13 +485,20 @@ const LineGraph = () => {
         ))}
       </div>
 
-      <button style={{ marginBottom: '10px' }}>Predict</button>
+      <button 
+      style={{ marginBottom: '10px' }} 
+      onClick={handlePredict} 
+      disabled={loading}
+    >
+      {loading ? 'Predicting...' : 'Predict'}
+      </button>
       <div style={{
         marginBottom: '20px',
         display: 'flex',
         gap: '20px',
         alignItems: 'center'
       }}>
+
         <div>
           <label htmlFor="threshold" style={{ marginRight: '10px' }}>
             Threshold Value (kWh):
