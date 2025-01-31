@@ -17,6 +17,8 @@ class Predictor:
                 month = dataset['month']
                 building = dataset['building']
                 data = dataset['data']
+                print(f"Processing dataset: year={year}, month={month}, building={building}, data_length={len(data)}")  # Print dataset info
+      
                 if data:
                     predict_data.extend(data)
 
@@ -25,6 +27,7 @@ class Predictor:
 
 
             df = pd.DataFrame(predict_data)
+            print(f"DataFrame created with {len(df)} rows")  # Print DataFrame info
             df['ds'] = pd.to_datetime(df['date'], errors='coerce')  
             df['y'] = df['consumption']
             df = df.dropna()
