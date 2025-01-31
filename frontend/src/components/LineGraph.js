@@ -18,6 +18,8 @@ const LineGraph = () => {
   const [threshold, setThreshold] = useState(10);
   const [showDifferenceLines, setShowDifferenceLines] = useState(true);
   const [selectedDatasets, setSelectedDatasets] = useState([]);
+  const [addError, setAddError] = useState(null); 
+
 
   // Fetch available buildings, years, and months
   useEffect(() => {
@@ -95,42 +97,10 @@ const LineGraph = () => {
     }
   };
   
-
-  
-  // Fetch data for the selected parameters
-  const fetchData = async () => {
-    if (!selectedBuilding || !selectedYear || !selectedMonth) {
-      setError('Please select building, year, and month before displaying the graph.');
-      return;
-    }
-
-    setLoading(true);
-
-    const API_URL = `http://127.0.0.1:5000/fetch-data/${selectedYear}/${selectedMonth}/0/${selectedBuilding}`;
-    console.log('Fetching data from:', API_URL);
-
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch data');
-      }
-      const data = await response.json();
-      console.log('Fetched Data:', data);
-      setStats(data);
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Add this function to handle adding new datasets
   const addDataset = async () => {
     if (!selectedBuilding || !selectedYear || !selectedMonth) {
-      setError('Please select building, year, and month before adding to graph.');
+      setAddError('Please select building, year, and month before adding to graph.');
       return;
     }
 
@@ -142,7 +112,7 @@ const LineGraph = () => {
     );
 
     if (exists) {
-      setError('This dataset is already displayed on the graph.');
+      setAddError('This dataset is already displayed on the graph.');
       return;
     }
 
@@ -167,10 +137,10 @@ const LineGraph = () => {
         color: randomColor
       }]);
       
-      setError(null);
+      setAddError(null);
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError(`Failed to fetch data: ${error.message}`);
+      setAddError(`Failed to fetch data: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -412,23 +382,7 @@ const LineGraph = () => {
         >
           Add to Graph
         </button>
-      </div>
-      <div style={{ marginBottom: '5px', display: 'flex', gap: '10px' }}>
-        <button
-          onClick={() => calculateAverageAggregate()}
-          disabled={selectedDatasets.length === 0}
-          style={{
-            marginBottom: '5px',
-            padding: '8px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Display Average Aggregate
-        </button>
+        {addError && <p style={{ color: 'red' }}>{addError}</p>}
       </div>
       {/* Display active datasets */}
       <div style={{ marginBottom: '20px' }}>
@@ -466,15 +420,39 @@ const LineGraph = () => {
           </div>
         ))}
       </div>
-
-      <button 
-      style={{ marginBottom: '10px' }} 
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+      <button  
       onClick={handlePredict} 
       disabled={loading}
+      style={{
+        marginBottom: '5px',
+        padding: '8px 12px',
+        backgroundColor: '#007bff',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+      }}
     >
       {loading ? 'Predicting...' : 'Predict'}
       </button>
       
+      <button
+          onClick={() => calculateAverageAggregate()}
+          disabled={selectedDatasets.length === 0}
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Display Average Aggregate
+        </button>
+      </div>
       <div style={{
         display: 'flex',
         gap: '20px',
