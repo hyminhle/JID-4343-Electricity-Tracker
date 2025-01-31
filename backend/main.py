@@ -273,6 +273,7 @@ def fetch_data_by_params(year, month, day, building):
     
         print(f"No cache data found for key: {cache_key}")
         return jsonify({'error': 'No data found for the specified parameters'}), 404
+
 @app.route('/predict', methods=['POST'])
 def predict_future():
     try:
