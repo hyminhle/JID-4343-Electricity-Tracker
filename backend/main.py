@@ -280,7 +280,8 @@ def predict_future():
         datasets = data.get('datasets')
         
         predictor = Predictor()
-        return predictor.predict(datasets)
+        future_predictions = predictor.predict(datasets)
+        return jsonify(future_predictions)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
