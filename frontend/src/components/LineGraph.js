@@ -17,7 +17,8 @@ const LineGraph = () => {
   const [chartInstance, setChartInstance] = useState(null);
   const [selectedDatasets, setSelectedDatasets] = useState([]);
   const [addError, setAddError] = useState(null); 
-
+  const [primaryDataset, setPrimaryDataset] = useState(null);
+  const [secondaryDataset, setSecondaryDataset] = useState(null);
 
   // Fetch available buildings, years, and months
   useEffect(() => {
@@ -240,6 +241,50 @@ const LineGraph = () => {
     }
   };
 
+  const compareDatasets = () => {
+    if (primaryDataset === null || secondaryDataset === null) {
+      setError('Please select both primary and secondary datasets for comparison.');
+      return;
+    }
+  
+    const primaryData = selectedDatasets[primaryDataset].data;
+    const secondaryData = selectedDatasets[secondaryDataset].data;
+  
+    const comparisonData = primaryData.map((entry, index) => {
+      const primaryValue = entry.consumption;
+      const secondaryValue = secondaryData[index]?.consumption || 0;
+      return {
+        day: entry.day,
+        primary: primaryValue,
+        secondary: secondaryValue,
+        difference: primaryValue - secondaryValue
+      };
+    });
+  
+    // Update existing datasets in the chart
+    chartInstance.data.datasets.forEach((dataset, index) => {
+      if (dataset.label === 'Primary Dataset') {
+        dataset.data = comparisonData.map(entry => entry.primary);
+      } else if (dataset.label === 'Secondary Dataset') {
+        dataset.data = comparisonData.map(entry => entry.secondary);
+      }
+    });
+  
+    chartInstance.options.plugins.annotation = {
+      annotations: comparisonData.map((entry, index) => ({
+        type: 'box',
+        xMin: index - 0.5,
+        xMax: index + 0.5,
+        yMin: Math.min(entry.primary, entry.secondary),
+        yMax: Math.max(entry.primary, entry.secondary),
+        backgroundColor: entry.difference > 0 ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 0, 0.3)'
+      }))
+    };
+  
+    chartInstance.update();
+  };
+
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -345,9 +390,35 @@ const LineGraph = () => {
             }} />
             <span>{`${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
             <button 
-              onClick={() => removeDataset(index)}
+              onClick={() => setPrimaryDataset(index)}
               style={{ 
                 marginLeft: 'auto',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
+                color: primaryDataset === index ? '#fff' : '#000'
+              }}
+            >
+              Primary
+            </button>
+            <button 
+              onClick={() => setSecondaryDataset(index)}
+              style={{ 
+                marginLeft: '10px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
+                color: secondaryDataset === index ? '#fff' : '#000'
+              }}
+            >
+              Secondary
+            </button>
+            <button 
+              onClick={() => removeDataset(index)}
+              style={{ 
+                marginLeft: '10px',
                 padding: '2px 8px',
                 borderRadius: '4px',
                 border: '1px solid #ddd'
@@ -390,6 +461,21 @@ const LineGraph = () => {
         >
           Display Average Aggregate
         </button>
+
+        <button 
+        onClick={compareDatasets}
+        style={{
+          marginBottom: '5px',
+          padding: '8px 12px',
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Compare
+      </button>
       </div>
       <div style={{
         display: 'flex',
