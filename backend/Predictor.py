@@ -4,9 +4,6 @@ from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
 
 class Predictor:
     def __init__(self):
@@ -24,7 +21,7 @@ class Predictor:
                     predict_data.extend(data)
 
             if not predict_data:
-                return jsonify({'error': 'No data available for the selected datasets'}), 404
+                return {'error': 'No data available for the selected datasets'}, 404
 
 
             df = pd.DataFrame(predict_data)
@@ -75,13 +72,13 @@ class Predictor:
 
             future['Final_Prediction'] = future_predictions
 
-            return jsonify({
+            return {
                 'predictions': future[['ds', 'Final_Prediction']].to_dict(orient='records'),
                 'evaluation': {
                     'mean_squared_error': mse,
                     'mean_absolute_error': mae
                 }
-            })
+            }
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return {'error': str(e)}, 500
 
