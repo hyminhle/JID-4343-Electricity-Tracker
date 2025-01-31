@@ -399,24 +399,6 @@ const LineGraph = () => {
               );
             })}
         </select>
-
-        <button onClick={fetchData} disabled={loading}
-        style={{
-          marginBottom: '5px',
-          padding: '6px 10px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-        }}
-        >
-          {loading ? 'Loading...' : 'Fetch Data'}
-          
-        </button>
-      </div>
-
-      <div style={{ marginBottom: '5px', display: 'flex', gap: '10px' }}>
         <button onClick={addDataset} disabled={loading}
           style={{
             marginBottom: '5px',
@@ -492,45 +474,7 @@ const LineGraph = () => {
     >
       {loading ? 'Predicting...' : 'Predict'}
       </button>
-      <div style={{
-        marginBottom: '20px',
-        display: 'flex',
-        gap: '20px',
-        alignItems: 'center'
-      }}>
-
-        <div>
-          <label htmlFor="threshold" style={{ marginRight: '10px' }}>
-            Threshold Value (kWh):
-          </label>
-          <input
-            id="threshold"
-            type="number"
-            min="0"
-            step="0.1"
-            value={threshold}
-            onChange={handleThresholdChange}
-            style={{
-              padding: '5px',
-              borderRadius: '4px',
-              border: '1px solid #ccc'
-            }}
-          />
-        </div>
-       
-        <div>
-          <label style={{ marginRight: '10px' }}>
-            <input
-              type="checkbox"
-              checked={showDifferenceLines}
-              onChange={(e) => setShowDifferenceLines(e.target.checked)}
-              style={{ marginRight: '5px' }}
-            />
-            Show Difference Lines
-          </label>
-        </div>
-      </div>
-     
+      
       <div style={{
         display: 'flex',
         gap: '20px',
