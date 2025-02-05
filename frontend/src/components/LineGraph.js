@@ -170,18 +170,13 @@ const LineGraph = () => {
   }, [selectedDatasets, loading, error]);
 
   const removeDataset = (index) => {
-    setSelectedDatasets(prev => prev.filter((_, i) => i !== index));
+    setSelectedDatasets((prev) => {
+      const updatedDatasets = prev.filter((_, i) => i !== index);
+      return updatedDatasets;
+    });
   };
   
 
-  const handleThresholdChange = (event) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value) && value >= 0) {
-      setThreshold(value);
-    }
-  };
-
-  
   const calculateAverageAggregate = () => {
     if (selectedDatasets.length === 0) {
       setError('No datasets available to calculate an average aggregate.');
