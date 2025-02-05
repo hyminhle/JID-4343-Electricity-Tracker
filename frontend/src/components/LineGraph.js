@@ -237,20 +237,61 @@ const LineGraph = () => {
   };
 
 
-  const handlePredict = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.post('http://localhost:5000/predict', {
-        datasets: selectedDatasets
+  const fetchPrediction = async () => {
+    if (!selectedDatasets.length) {
+      setError('No data available for prediction.');
+      return;
+    }
+     setLoading(true);
+     // Extract relevant data for the predictor
+    const selectedData = selectedDatasets.map(ds => ({
+      building: ds.building,
+      year: ds.year,
+      month: ds.month,
+      data: ds.data.map(entry => ({
+        date: entry.date,
+        consumption: entry.consumption
+      }))
+    }));
+     try {
+      const response = await fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ datasets: selectedData }),
       });
-      console.log('Prediction response:', response.data);
+       if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+       const predictionData = await response.json();
+      console.log('Prediction Data:', predictionData);
+       // Format the prediction data for the graph
+      const formattedPredictions = predictionData.predictions.map(prediction => ({
+        date: prediction.ds, // Ensure this matches the format used in the graph
+        consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
+      }));
+       // Append prediction results to the graph
+      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+       setSelectedDatasets(prev => [
+        ...prev,
+        {
+          building: 'Prediction',
+          year: 'Future',
+          month: '',
+          data: formattedPredictions,
+          color: randomColor,
+        },
+      ]);
+       setError(null);
     } catch (error) {
-      console.error('Error making prediction:', error);
-      setError('Error making prediction. Please try again.');
+      console.error('Error fetching prediction:', error);
+      setError(`Prediction failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
+ 
 
   const compareDatasets = () => {
     if (primaryDataset === null || secondaryDataset === null) {
@@ -424,7 +465,7 @@ const LineGraph = () => {
 </div>
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
       <button  
-      onClick={handlePredict} 
+      onClick={fetchPrediction} 
       disabled={loading}
       style={{
         marginBottom: '5px',
