@@ -19,6 +19,11 @@ const LineGraph = () => {
   const [addError, setAddError] = useState(null); 
   const [primaryDataset, setPrimaryDataset] = useState(null);
   const [secondaryDataset, setSecondaryDataset] = useState(null);
+  const [isAverageDisplayed, setIsAverageDisplayed] = useState(false);
+  const [averageDataset, setAverageDataset] = useState(null);
+
+
+
 
   // Fetch available buildings, years, and months
   useEffect(() => {
@@ -94,27 +99,47 @@ const LineGraph = () => {
 
   // Modify the chart update effect
   useEffect(() => {
-    if (loading || error || selectedDatasets.length === 0) return;
-
+    if (loading || error || (selectedDatasets.length === 0 && !averageDataset)) {
+      // If no datasets are available and no average dataset exists, destroy the chart instance
+      if (chartInstance) {
+        chartInstance.destroy();
+        setChartInstance(null);
+      }
+      return;
+    }
+  
     if (chartInstance) {
       chartInstance.destroy();
     }
-
+  
     const ctx = chartRef.current.getContext('2d');
-    
+  
     // Create datasets array for the chart
-    const datasets = selectedDatasets.map(ds => ({
-      label: `${ds.building} - ${ds.month}/${ds.year}`,
-      data: ds.data.map(entry => entry.consumption),
+    const datasets = selectedDatasets.map((ds) => ({
+      label: ds.label || `${ds.building} - ${ds.month}/${ds.year}`,
+      data: ds.data.map((entry) => entry.consumption),
       borderColor: ds.color,
       tension: 0.1,
-      fill: false,
+      fill: ds.fill || false,
+      borderDash: ds.borderDash,
     }));
-
+  
+    // Add the average dataset if it exists
+    if (averageDataset) {
+      datasets.push({
+        label: averageDataset.label,
+        data: averageDataset.data.map((entry) => entry.consumption),
+        borderColor: averageDataset.color,
+        tension: 0.1,
+        borderDash: [5, 5],
+        fill: false,
+      });
+    }
+  
     const newChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: selectedDatasets[0].data.map(entry => new Date(entry.date).getDate()),
+        labels: selectedDatasets[0]?.data.map((entry) => new Date(entry.date).getDate()) || [],
         datasets: datasets,
       },
       options: {
@@ -155,17 +180,18 @@ const LineGraph = () => {
         },
       },
     });
-
+  
     setChartInstance(newChart);
-  }, [selectedDatasets, loading, error]);
+  }, [selectedDatasets, averageDataset, loading, error]);
 
-  // Add this function to remove a dataset
   const removeDataset = (index) => {
-    setSelectedDatasets(prev => prev.filter((_, i) => i !== index));
+    setSelectedDatasets((prev) => {
+      const updatedDatasets = prev.filter((_, i) => i !== index);
+      return updatedDatasets;
+    });
   };
   
 
-  
   const calculateAverageAggregate = () => {
     if (selectedDatasets.length === 0) {
       setError('No datasets available to calculate an average aggregate.');
@@ -173,10 +199,7 @@ const LineGraph = () => {
     }
   
     // Determine the number of days from the first dataset
-    const numDays = Math.max(
-      ...selectedDatasets.map(dataset => dataset?.data?.length || 0)
-    );
-    
+    const numDays = Math.max(...selectedDatasets.map((dataset) => dataset?.data?.length || 0));
   
     if (numDays === 0) {
       setError('Selected datasets do not have valid data.');
@@ -185,8 +208,8 @@ const LineGraph = () => {
   
     const aggregateData = Array(numDays).fill(0);
     const counts = Array(numDays).fill(0);
-
-    selectedDatasets.forEach(dataset => {
+  
+    selectedDatasets.forEach((dataset) => {
       let lastDefinedValue = 0;
       dataset.data.forEach((entry, index) => {
         const value = entry?.consumption !== undefined ? entry.consumption : lastDefinedValue;
@@ -197,49 +220,90 @@ const LineGraph = () => {
         counts[index] += 1;
       });
     });
-
-    const averageData = aggregateData.map((total, index) => total / counts[index]);
-    
   
-    // Add the average dataset to the graph
+    const averageData = aggregateData.map((total, index) => total / counts[index]);
+  
+    // Create the average dataset
     const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
-    const averageDataset = {
-      data: averageData.map((y, i) => ({ day: i + 1, consumption: y })), // Ensure proper format
+    const newAverageDataset = {
+      label: 'Average Aggregate',
+      data: averageData.map((y, i) => ({ day: i + 1, consumption: y })),
       building: 'Data',
       year: selectedDatasets.length + ' Months',
       month: 'Aggregate Average',
       color: randomColor,
       tension: 0.1,
-      borderDash: [5, 5], 
+      borderDash: [5, 5],
       fill: false,
     };
   
-    // Check if an "Average Aggregate" dataset already exists, if so, replace it
-    const updatedDatasets = selectedDatasets.filter(
-      (ds) => ds.label !== 'Average Aggregate'
-    );
-  
-    setSelectedDatasets([...updatedDatasets, averageDataset]);
-    console.log('Selected Datasets:', selectedDatasets);
-    console.log('Dataset Data:', selectedDatasets.map(ds => ds.data));
-
+    // Set the average dataset in the state
+    setAverageDataset(newAverageDataset);
+    setIsAverageDisplayed(true); // Indicate that the average is displayed
     setError(null);
   };
 
-  const handlePredict = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.post('http://localhost:5000/predict', {
-        datasets: selectedDatasets
+  const removeAverageDataset = () => {
+    setAverageDataset(null); // Remove the average dataset
+    setIsAverageDisplayed(false); // Update the state to indicate the average is removed
+  };
+
+
+  const fetchPrediction = async () => {
+    if (!selectedDatasets.length) {
+      setError('No data available for prediction.');
+      return;
+    }
+     setLoading(true);
+     // Extract relevant data for the predictor
+    const selectedData = selectedDatasets.map(ds => ({
+      building: ds.building,
+      year: ds.year,
+      month: ds.month,
+      data: ds.data.map(entry => ({
+        date: entry.date,
+        consumption: entry.consumption
+      }))
+    }));
+     try {
+      const response = await fetch('http://127.0.0.1:5000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ datasets: selectedData }),
       });
-      console.log('Prediction response:', response.data);
+       if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+       const predictionData = await response.json();
+      console.log('Prediction Data:', predictionData);
+       // Format the prediction data for the graph
+      const formattedPredictions = predictionData.predictions.map(prediction => ({
+        date: prediction.ds, // Ensure this matches the format used in the graph
+        consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
+      }));
+       // Append prediction results to the graph
+      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+       setSelectedDatasets(prev => [
+        ...prev,
+        {
+          building: 'Prediction',
+          year: 'Future',
+          month: '',
+          data: formattedPredictions,
+          color: randomColor,
+        },
+      ]);
+       setError(null);
     } catch (error) {
-      console.error('Error making prediction:', error);
-      setError('Error making prediction. Please try again.');
+      console.error('Error fetching prediction:', error);
+      setError(`Prediction failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
+ 
 
   const compareDatasets = () => {
     if (primaryDataset === null || secondaryDataset === null) {
@@ -247,40 +311,20 @@ const LineGraph = () => {
       return;
     }
   
-    const primaryData = selectedDatasets[primaryDataset].data;
-    const secondaryData = selectedDatasets[secondaryDataset].data;
-  
-    const comparisonData = primaryData.map((entry, index) => {
-      const primaryValue = entry.consumption;
-      const secondaryValue = secondaryData[index]?.consumption || 0;
-      return {
-        day: entry.day,
-        primary: primaryValue,
-        secondary: secondaryValue,
-        difference: primaryValue - secondaryValue
-      };
-    });
-  
-    // Update existing datasets in the chart
+    // Update the datasets with fill properties
     chartInstance.data.datasets.forEach((dataset, index) => {
-      if (dataset.label === 'Primary Dataset') {
-        dataset.data = comparisonData.map(entry => entry.primary);
-      } else if (dataset.label === 'Secondary Dataset') {
-        dataset.data = comparisonData.map(entry => entry.secondary);
+      if (index === primaryDataset) {
+        dataset.fill = {
+          target: secondaryDataset, // Fill relative to the secondary dataset
+          above: 'rgba(20, 255, 0, 0.3)', // Green for areas above the secondary dataset
+          below: 'rgba(255, 0, 0, 0.3)', // Red for areas below the secondary dataset
+        };
+      } else if (index === secondaryDataset) {
+        dataset.fill = false; // Ensure the secondary dataset does not fill
       }
     });
   
-    chartInstance.options.plugins.annotation = {
-      annotations: comparisonData.map((entry, index) => ({
-        type: 'box',
-        xMin: index - 0.5,
-        xMax: index + 0.5,
-        yMin: Math.min(entry.primary, entry.secondary),
-        yMax: Math.max(entry.primary, entry.secondary),
-        backgroundColor: entry.difference > 0 ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 0, 0.3)'
-      }))
-    };
-  
+    // Update the chart to reflect the changes
     chartInstance.update();
   };
 
@@ -369,69 +413,71 @@ const LineGraph = () => {
       </div>
       {/* Display active datasets */}
       <div style={{ marginBottom: '20px' }}>
-        {selectedDatasets.map((dataset, index) => (
-          <div 
-            key={index} 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '10px',
-              marginBottom: '5px',
-              padding: '5px',
-              backgroundColor: '#f5f5f5',
-              borderRadius: '4px'
-            }}
-          >
-            <div style={{ 
-              width: '20px', 
-              height: '20px', 
-              backgroundColor: dataset.color,
-              borderRadius: '50%' 
-            }} />
-            <span>{`${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
-            <button 
-              onClick={() => setPrimaryDataset(index)}
-              style={{ 
-                marginLeft: 'auto',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd',
-                backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
-                color: primaryDataset === index ? '#fff' : '#000'
-              }}
-            >
-              Primary
-            </button>
-            <button 
-              onClick={() => setSecondaryDataset(index)}
-              style={{ 
-                marginLeft: '10px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd',
-                backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
-                color: secondaryDataset === index ? '#fff' : '#000'
-              }}
-            >
-              Secondary
-            </button>
-            <button 
-              onClick={() => removeDataset(index)}
-              style={{ 
-                marginLeft: '10px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
+  {selectedDatasets.map((dataset, index) => (
+    <div
+      key={index}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        marginBottom: '5px',
+        padding: '5px',
+        backgroundColor: '#f5f5f5',
+        borderRadius: '4px',
+      }}
+    >
+      <div
+        style={{
+          width: '20px',
+          height: '20px',
+          backgroundColor: dataset.color,
+          borderRadius: '50%',
+        }}
+      />
+      <span>{dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
+      <button
+        onClick={() => setPrimaryDataset(index)}
+        style={{
+          marginLeft: 'auto',
+          padding: '2px 8px',
+          borderRadius: '4px',
+          border: '1px solid #ddd',
+          backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
+          color: primaryDataset === index ? '#fff' : '#000',
+        }}
+      >
+        Primary
+      </button>
+      <button
+        onClick={() => setSecondaryDataset(index)}
+        style={{
+          marginLeft: '10px',
+          padding: '2px 8px',
+          borderRadius: '4px',
+          border: '1px solid #ddd',
+          backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
+          color: secondaryDataset === index ? '#fff' : '#000',
+        }}
+      >
+        Secondary
+      </button>
+      <button
+        onClick={() => removeDataset(index)}
+        style={{
+          marginLeft: '10px',
+          padding: '2px 8px',
+          borderRadius: '4px',
+          border: '1px solid #ddd',
+        }}
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+</div>
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
       <button  
-      onClick={handlePredict} 
+      onClick={fetchPrediction} 
       disabled={loading}
       style={{
         marginBottom: '5px',
@@ -476,6 +522,22 @@ const LineGraph = () => {
       >
         Compare
       </button>
+     <button
+      onClick={removeAverageDataset}
+      disabled={!isAverageDisplayed}
+      style={{
+        marginBottom: '5px',
+        padding: '8px 12px',
+        backgroundColor: '#dc3545', // Red color for removal
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+      }}
+    >
+      Remove Average
+    </button>
+
       </div>
       <div style={{
         display: 'flex',
