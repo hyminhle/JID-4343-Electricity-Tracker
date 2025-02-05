@@ -79,26 +79,53 @@ const MapComponent = () => {
     }
   };
 
+
   const fetchBuildingStats = async (buildingName, date) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0];
-      const response = await axios.get(`http://localhost:5000/get-building-stats/${buildingName}/${formattedDate}`);
-      setStats(response.data);
+      // Extract year, month, and day from the selected date
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1; // getMonth() returns 0-based month (0 = January)
+      const day = date.getDate();
+  
+      // Construct the API URL with the full building name
+      const apiUrl = `http://localhost:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
+  
+      // Fetch data from the API
+      const response = await axios.get(apiUrl);
+  
+      // Log the API response for debugging
+      console.log('API Response:', response.data);
+  
+      // Check if the response contains data
+      if (response.data.error) {
+        console.error('No data found for the specified parameters:', response.data.error);
+        setStats(null); // Clear stats if no data is found
+      } else {
+        // Ensure the response is an array
+        const data = Array.isArray(response.data) ? response.data : [response.data];
+  
+        // Set the fetched data as stats
+        setStats({
+          date: selectedDate.toISOString().split('T')[0], // Format the date as YYYY-MM-DD
+          data: data, // Store the fetched data
+        });
+      }
     } catch (error) {
       console.error('Error fetching building stats:', error);
-      setStats(null);
+      setStats(null); // Clear stats on error
     }
+  };
+
+  
+  const deleteBuilding = (buildingName) => {  
+    const updatedBuildings = { ...buildings };
+    delete updatedBuildings[buildingName];
+    setBuildings(updatedBuildings);
   };
 
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
     fetchBuildingStats(buildingName, selectedDate);
-  };
-
-  const deleteBuilding = (buildingName) => {
-    const updatedBuildings = { ...buildings };
-    delete updatedBuildings[buildingName];
-    setBuildings(updatedBuildings);
   };
 
   const handleDragEnd = (buildingName, newLatLng) => {
@@ -246,8 +273,7 @@ const MapComponent = () => {
           </MapContainer>
         )}
       </div>
-
-      {selectedBuilding && (
+        {selectedBuilding && (
         <div style={{
           flex: 1,
           margin: '20px',
@@ -270,10 +296,19 @@ const MapComponent = () => {
           <div>
             {stats ? (
               <div>
-                <h5>Stats for {selectedDate.toISOString().split('T')[0]}:</h5>
-                <p>Energy Usage: {stats.energyUsage} kWh</p>
-                <p>Cost: ${stats.cost}</p>
-                <p>Occupancy: {stats.occupancy}%</p>
+                <h5>Stats for {stats.date}:</h5>
+                {/* Safeguard against non-array data */}
+                {Array.isArray(stats.data) ? (
+                  stats.data.map((entry, index) => (
+                    <div key={index} style={{ marginBottom: '10px' }}>
+                      <p><strong>Consumption:</strong> {entry.consumption} kWh</p>
+                      <p><strong>Cost:</strong> ${entry.cost}</p>
+                      <hr />
+                    </div>
+                  ))
+                ) : (
+                  <p>No valid data available for this day.</p>
+                )}
               </div>
             ) : (
               <p>No stats available for this day.</p>
