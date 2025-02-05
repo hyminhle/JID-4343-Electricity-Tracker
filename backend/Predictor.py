@@ -19,7 +19,7 @@ class Predictor:
                 data = dataset['data']
                 if data:
                     predict_data.extend(data)
-
+            
             if not predict_data:
                 return {'error': 'No data available for the selected datasets'}, 404
 

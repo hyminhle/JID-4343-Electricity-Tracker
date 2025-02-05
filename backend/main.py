@@ -261,13 +261,13 @@ def fetch_data_by_params(year, month, day, building):
         cached_data = cache.get(cache_key)
     
         if cached_data:
-        #    print("Cache contents:")
-        #    if isinstance(cached_data, list):
-        #        for entry in cached_data:
-        #            print(entry)
-        #    else:
-        #        for key in cached_data:
-        #            print(f"{key}: {cached_data[key]}")
+            # print("Cache contents:")
+            # if isinstance(cached_data, list):
+            #     for entry in cached_data:
+            #         print(entry)
+            # else:
+            #     for key in cached_data:
+            #         print(f"{key}: {cached_data[key]}")
             return jsonify(cached_data)
     
     
@@ -279,7 +279,8 @@ def predict_future():
     try:
         data = request.get_json()
         datasets = data.get('datasets')
-        
+        print(datasets)
+
         predictor = Predictor()
         future_predictions = predictor.predict(datasets)
         return jsonify(future_predictions)
