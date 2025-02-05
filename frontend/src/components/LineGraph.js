@@ -22,9 +22,6 @@ const LineGraph = () => {
   const [isAverageDisplayed, setIsAverageDisplayed] = useState(false);
   const [averageDataset, setAverageDataset] = useState(null);
 
-
-
-
   // Fetch available buildings, years, and months
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -316,6 +313,13 @@ const LineGraph = () => {
     chartInstance.update();
   };
 
+  const togglePrimaryDataset = (index) => {
+    setPrimaryDataset(prev => prev === index ? null : index);
+  };
+
+  const toggleSecondaryDataset = (index) => {
+    setSecondaryDataset(prev => prev === index ? null : index);
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -424,7 +428,7 @@ const LineGraph = () => {
     />
     <span>{dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
     <button
-      onClick={() => setPrimaryDataset(index)}
+      onClick={() => togglePrimaryDataset(index)}
       style={{
         marginLeft: 'auto',
         padding: '2px 8px',
@@ -437,7 +441,7 @@ const LineGraph = () => {
       Primary
     </button>
     <button
-      onClick={() => setSecondaryDataset(index)}
+      onClick={() => toggleSecondaryDataset(index)}
       style={{
         marginLeft: '10px',
         padding: '2px 8px',
@@ -510,22 +514,6 @@ const LineGraph = () => {
       >
         Compare
       </button>
-     <button
-      onClick={removeAverageDataset}
-      disabled={!isAverageDisplayed}
-      style={{
-        marginBottom: '5px',
-        padding: '8px 12px',
-        backgroundColor: '#dc3545', // Red color for removal
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-      }}
-    >
-      Remove Average
-    </button>
-
       </div>
       <div style={{
         display: 'flex',
