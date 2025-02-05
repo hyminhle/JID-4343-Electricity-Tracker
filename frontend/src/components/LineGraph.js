@@ -277,7 +277,7 @@ const LineGraph = () => {
         xMax: index + 0.5,
         yMin: Math.min(entry.primary, entry.secondary),
         yMax: Math.max(entry.primary, entry.secondary),
-        backgroundColor: entry.difference > 0 ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 0, 0.3)'
+        backgroundColor: entry.difference > 0 ? 'rgba(86, 235, 60, 0.33)' : 'rgba(250, 112, 52, 0.3)'
       }))
     };
   
