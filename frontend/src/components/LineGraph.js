@@ -49,7 +49,7 @@ const LineGraph = () => {
       setAddError('Please select building, year, and month before adding to graph.');
       return;
     }
-
+    console.log('Selected Building:', selectedBuilding);
     // Check if this combination already exists
     const exists = selectedDatasets.some(
       ds => ds.building === selectedBuilding && 
