@@ -302,7 +302,7 @@ const MapComponent = () => {
                   stats.data.map((entry, index) => (
                     <div key={index} style={{ marginBottom: '10px' }}>
                       <p><strong>Consumption:</strong> {entry.consumption} kWh</p>
-                      <p><strong>Cost:</strong> ${entry.cost}</p>
+                      <p><strong>Cost:</strong> ${(entry.consumption * 0.1).toFixed(2)}</p>
                       <hr />
                     </div>
                   ))
