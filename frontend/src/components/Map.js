@@ -114,6 +114,15 @@ const MapComponent = () => {
           onChange={(e) => {
             setSelectedBuilding(e.target.value);
           }}
+          style={{
+            marginTop: '5px',
+            marginLeft: '10px',
+            marginBottom: '5px',
+            padding: '5px 9px',
+            border: '1px solid black',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
         >
           <option value="" disabled>
             Select Building
@@ -199,9 +208,39 @@ const MapComponent = () => {
                 </div>
               </Tooltip>
               <Popup>
-                {isEditing && (
-                  <button onClick={() => deleteBuilding(buildingName)}>Delete</button>
+                {isEditing ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={buildings[buildingName].name}
+                      onChange={(e) => {
+                        const updatedBuildings = { ...buildings };
+                        updatedBuildings[buildingName].name = e.target.value;
+                        setBuildings(updatedBuildings);
+                      }}
+                      onBlur={() => {
+                        // Rename key in the buildings object
+                        const newName = buildings[buildingName].name.trim();
+                        if (newName && newName !== buildingName) {
+                          setBuildings((prevBuildings) => {
+                            const updatedBuildings = { ...prevBuildings };
+                            updatedBuildings[newName] = { ...updatedBuildings[buildingName] };
+                            delete updatedBuildings[buildingName];
+                            return updatedBuildings;
+                          });
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.target.blur(); // Save on Enter
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <h3>{buildings[buildingName].name}</h3>
                 )}
+
+                {isEditing && <button onClick={() => deleteBuilding(buildingName)}>Delete</button>}
               </Popup>
             </Polygon>
           ))}
