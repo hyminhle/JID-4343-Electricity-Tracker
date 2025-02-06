@@ -148,7 +148,7 @@ const MapComponent = () => {
         for (const year of availableYears) {
           const availableMonths = Object.keys(buildingInfo[year]);
           for (const month of availableMonths) {
-            const url = `http://127.0.0.1:5000/fetch-data/${year}/${month}/0/${encodeURIComponent(selectedBuilding)}`;
+            const url = `http://127.0.0.1:5000/fetch-data/${year}/${month}/0/${selectedBuilding}`;
             console.log('Fetching from URL:', url);
             try {
               const response = await axios.get(url);
@@ -190,12 +190,15 @@ const MapComponent = () => {
     
     try {
       const formattedDate = date.toISOString().split('T')[0];
-      const response = await fetch(`http://127.0.0.1:5000/building-stats/${building}/${formattedDate}`);
+      const [year, month, day] = formattedDate.split('-');
+      const response = await fetch(`http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${building}`);
+      console.log('Response:', building);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       setStats(data);
+      console.log('Stats:', data);
     } catch (error) {
       console.error('Error fetching building stats:', error);
       setStats(null);
@@ -355,37 +358,31 @@ const MapComponent = () => {
 
               <div className="stats-container">
                 {stats ? (
-                  <>
-                    {Array.isArray(stats.data) ? (
-                      stats.data.map((entry, index) => (
-                        <div key={index}>
-                          <div className="stat-item">
-                            <span className="stat-label">Consumption</span>
-                            <span className={`consumption-value ${entry.consumption > 1000 ? 'bad' : 'good'}`}>
-                              {entry.consumption} kWh
-                            </span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-label">Estimated Cost</span>
-                            <span className="stat-value">
-                              ${(entry.consumption * 0.1).toFixed(2)}
-                            </span>
-                          </div>
-                          {index < stats.data.length - 1 && <hr className="stat-divider" />}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="no-stats">
-                        No data available for this date
-                      </div>
-                    )}
-                  </>
+                  <div>
+                    <div className="stat-item">
+                      <span className="stat-label">Consumption</span>
+                      <span className={`consumption-value ${stats.consumption > 1000 ? 'bad' : 'good'}`}>
+                        {stats.consumption} kWh
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Estimated Cost</span>
+                      <span className="stat-value">
+                        ${(stats.consumption * 0.1).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Month</span>
+                      <span className="stat-value">{stats.month}</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="no-stats">
                     Select a date to view statistics
                   </div>
                 )}
               </div>
+
             </div>
           )}
         </div>
