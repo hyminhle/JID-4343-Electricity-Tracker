@@ -47,6 +47,7 @@ const MapComponent = () => {
   
 
   const addBuilding = async () => {
+    console.log('Starting addBuilding function...');
     if (selectedBuilding) {
       try {
         const buildingData = [];
@@ -54,28 +55,76 @@ const MapComponent = () => {
         console.log('Building info:', buildingInfo);
         const availableYears = Object.keys(buildingInfo);
         console.log('Years info:', availableYears);
+        
+        // Test the backend connection using the known working endpoint
+        try {
+          const testResponse = await axios.get('http://127.0.0.1:5000/get-available-data');
+          console.log('Backend connection test successful:', testResponse);
+        } catch (error) {
+          console.error('Backend connection test failed:', error);
+          alert('Cannot connect to backend server. Please ensure it is running.');
+          return;
+        }
+
         for (const year of availableYears) {
           const availableMonths = Object.keys(buildingInfo[year]);
           for (const month of availableMonths) {
-            const response = await axios.get(`http://localhost:5000/fetch-data/${year}/${month}/0/${selectedBuilding}`);
-            buildingData.push(...response.data);
+            const url = `http://127.0.0.1:5000/fetch-data/${year}/${month}/0/${encodeURIComponent(selectedBuilding)}`;
+            console.log('Fetching from URL:', url);
+            try {
+              const response = await axios.get(url, {
+                timeout: 5000,
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+                }
+              });
+              buildingData.push(...response.data);
+            } catch (error) {
+              console.error('Failed to fetch data:', {
+                url,
+                error: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+              });
+              throw error;
+            }
           }
         }
+
+        const baseCoordinates = [29.979500, -95.834000];
+        const offset = 0.0002 * Object.keys(buildings).length;
+        
         const newBuilding = {
           name: selectedBuilding,
           coordinates: [
-            [29.979500, -95.834000],
-            [29.979600, -95.833900],
-            [29.979550, -95.833800],
-            [29.979450, -95.833900]
+            [baseCoordinates[0] + offset, baseCoordinates[1] + offset],
+            [baseCoordinates[0] + offset, baseCoordinates[1] + offset + 0.0002],
+            [baseCoordinates[0] + offset + 0.0002, baseCoordinates[1] + offset + 0.0002],
+            [baseCoordinates[0] + offset + 0.0002, baseCoordinates[1] + offset]
           ],
-          color: "#0066cc",
+          color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
           data: buildingData
         };
-        setBuildings({ ...buildings, [selectedBuilding]: newBuilding });
+
+        console.log('Setting new building:', newBuilding);
+        setBuildings(prev => {
+          const updated = { ...prev, [selectedBuilding]: newBuilding };
+          console.log('Updated buildings state:', updated);
+          return updated;
+        });
       } catch (error) {
-        console.error('Error fetching building data:', error);
+        console.error('Error in addBuilding:', {
+          message: error.message,
+          code: error.code,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        alert(`Failed to add building: ${error.message}`);
       }
+    } else {
+      console.log('No building selected');
+      alert('Please select a building first');
     }
   };
 
