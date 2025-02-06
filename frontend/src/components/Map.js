@@ -14,6 +14,78 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
 });
 
+// Add this CSS at the top of your file or in your CSS file
+const statsBoxStyles = {
+  container: {
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    padding: '20px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    marginTop: '20px',
+    border: '1px solid #e0e0e0'
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '15px',
+    padding: '10px 0',
+    borderBottom: '2px solid #f0f0f0'
+  },
+  buildingName: {
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    margin: '0'
+  },
+  dateContainer: {
+    marginBottom: '15px'
+  },
+  dateLabel: {
+    fontSize: '0.9rem',
+    color: '#666',
+    marginBottom: '5px'
+  },
+  datePicker: {
+    width: '100%',
+    padding: '8px',
+    border: '1px solid #ddd',
+    borderRadius: '5px',
+    fontSize: '1rem'
+  },
+  statsContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    padding: '15px',
+    marginTop: '10px'
+  },
+  statItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 0',
+    borderBottom: '1px solid #eee'
+  },
+  statLabel: {
+    color: '#666',
+    fontSize: '0.9rem'
+  },
+  statValue: {
+    color: '#2c3e50',
+    fontSize: '1.1rem',
+    fontWeight: '500'
+  },
+  consumptionValue: {
+    fontSize: '1.2rem',
+    fontWeight: 'bold',
+    color: '#2ecc71'  // Green for good, can be dynamic based on value
+  },
+  noStats: {
+    textAlign: 'center',
+    color: '#666',
+    padding: '20px 0'
+  }
+};
+
 const MapComponent = () => {
   const [buildings, setBuildings] = useState({});
   const [availableBuildings, setAvailableBuildings] = useState([]);
@@ -233,178 +305,239 @@ const MapComponent = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '500px', width: '80%', margin: '20px auto', border: '1px solid #ccc', borderRadius: '8px' }}>
-      <div style={{ flex: 3 }}>
-        <div>
-          <select 
-            value={selectedBuilding}
-            onChange={(e) => {
-              setSelectedBuilding(e.target.value);
-            }}
-            style={{
-              marginTop: '5px',
-              marginLeft: '10px',
-              marginBottom: '5px',
-              padding: '5px 9px',
-              border: '1px solid black',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="" disabled>Select Building</option>
-            {availableData && Object.keys(availableData).length > 0 ? (
-              Object.keys(availableData).map((building) => (
-                <option key={building} value={building}>
-                  {building}
-                </option>
-              ))
-            ) : (
-              <option disabled>No buildings available</option>
-            )}
-          </select>
-          <button onClick={addBuilding} style={{ marginTop: '5px', marginLeft: '10px', padding: '5px 9px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Add Building</button>
-          <button onClick={() => setIsEditing(!isEditing)} style={{ marginTop: '5px', marginLeft: '10px', padding: '5px 9px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
-          </button>
-        </div>
-
-        {typeof window !== 'undefined' && (
+    <div style={{ height: '100vh', display: 'flex' }}>
+      <div style={{ 
+        flex: '1.4',
+        position: 'relative',
+        paddingRight: '10px',
+        maxWidth: '65%'
+      }}>
+        <div style={{
+          height: '90%',
+          margin: '20px',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}>
           <MapContainer 
-          center={[29.62995132334829, -95.6061221893825]} // New center coordinates
-          zoom={16}
-            style={{ height: '100%', width: '100%', borderRadius: '8px' }} 
+            center={[29.628014, -95.610553]}
+            zoom={16}
+            style={{ height: '100%', width: '100%', borderRadius: '12px' }}
             scrollWheelZoom={true}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
-
-            {Object.keys(buildings).map((buildingName) => (
+            
+            {Object.values(buildings).map((building) => (
               <Polygon
-                key={buildingName}
-                positions={buildings[buildingName].coordinates}
-                pathOptions={{
-                  fillColor: buildings[buildingName].color,
-                  fillOpacity: 0.7,
+                key={building.name}
+                positions={building.coordinates}
+                pathOptions={{ 
+                  color: building.color,
+                  fillOpacity: isEditing ? 0.8 : 0.6,
                   weight: 2,
                   opacity: 1,
-                  color: 'white'
+                  color: selectedBuilding === building.name ? '#000' : building.color
                 }}
                 draggable={isEditing}
                 eventHandlers={{
                   dragend: (e) => {
                     const { lat, lng } = e.target.getLatLngs()[0][0];
-                    handleDragEnd(buildingName, { lat, lng });
+                    handleDragEnd(building.name, { lat, lng });
                   },
-                  click: () => handleBuildingClick(buildingName), 
+                  click: () => {
+                    if (!isEditing) {
+                      handleBuildingClick(building.name);
+                    }
+                  }
                 }}
               >
-                <Tooltip sticky>
-                  <div>
-                    <h3>{buildings[buildingName].name}</h3>
-                    <p>{isEditing ? "Drag to move or delete below" : "Click for more info"}</p>
-                  </div>
+                <Tooltip>
+                  {building.name}
+                  {!isEditing && " (Click for stats)"}
                 </Tooltip>
-                <Popup>
-                  {isEditing ? (
-                    <div>
-                      <input
-                        type="text"
-                        value={buildings[buildingName].name}
-                        onChange={(e) => {
-                          const updatedBuildings = { ...buildings };
-                          updatedBuildings[buildingName].name = e.target.value;
-                          setBuildings(updatedBuildings);
-                        }}
-                        onBlur={() => {
-                          const newName = buildings[buildingName].name.trim();
-                          if (newName && newName !== buildingName) {
-                            setBuildings((prevBuildings) => {
-                              const updatedBuildings = { ...prevBuildings };
-                              updatedBuildings[newName] = { ...updatedBuildings[buildingName] };
-                              delete updatedBuildings[buildingName];
-                              return updatedBuildings;
-                            });
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.target.blur();
-                        }}
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <h3>{buildings[buildingName].name}</h3>
-                  )}
-
-                  {isEditing && <button onClick={() => deleteBuilding(buildingName)}>Delete</button>}
-                </Popup>
               </Polygon>
             ))}
 
-            {isEditing &&
-              Object.keys(buildings).map((buildingName) => (
-                <Marker
-                  key={buildingName}
-                  position={buildings[buildingName].coordinates[0]}
-                  draggable={true}
-                  eventHandlers={{
-                    dragend: (e) => {
-                      const { lat, lng } = e.target.getLatLng();
-                      handleDragEnd(buildingName, { lat, lng });
-                    }
+            {isEditing && Object.values(buildings).map((building) => (
+              <Marker
+                key={`marker-${building.name}`}
+                position={building.coordinates[0]}
+                draggable={true}
+                eventHandlers={{
+                  dragend: (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    handleDragEnd(building.name, { lat, lng });
+                  }
+                }}
+              >
+                <Popup>Drag to move building</Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+      </div>
+
+      <div style={{ 
+        flex: '1',
+        padding: '20px',
+        paddingLeft: '10px',
+        backgroundColor: '#f8f9fa',
+        overflowY: 'auto',
+        minWidth: '350px',
+        maxWidth: '400px',
+        borderLeft: '1px solid #e0e0e0'
+      }}>
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+        }}>
+          <h3 style={{ 
+            color: '#2c3e50', 
+            marginBottom: '20px',
+            fontSize: '1.5rem',
+            borderBottom: '2px solid #f0f0f0',
+            paddingBottom: '10px'
+          }}>Building Controls</h3>
+          
+          <select 
+            value={selectedBuilding || ''} 
+            onChange={(e) => setSelectedBuilding(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '12px',
+              marginBottom: '15px',
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              fontSize: '1rem',
+              backgroundColor: '#fff',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">Select a building</option>
+            {Object.keys(availableData).map(building => (
+              <option key={building} value={building}>{building}</option>
+            ))}
+          </select>
+          
+          <button 
+            onClick={addBuilding}
+            style={{ 
+              width: '100%',
+              padding: '12px',
+              backgroundColor: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              marginBottom: '20px',
+              transition: 'all 0.3s ease',
+              fontWeight: '500'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#2980b9'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#3498db'}
+          >
+            Add Building
+          </button>
+
+          <button 
+            onClick={() => setIsEditing(!isEditing)} 
+            style={{ 
+              width: '100%',
+              padding: '12px',
+              backgroundColor: isEditing ? '#e74c3c' : '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              marginBottom: '20px',
+              transition: 'all 0.3s ease',
+              fontWeight: '500'
+            }}
+          >
+            {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
+          </button>
+
+          {selectedBuilding && buildings[selectedBuilding] && (
+            <div style={statsBoxStyles.container}>
+              <div style={statsBoxStyles.header}>
+                <h4 style={statsBoxStyles.buildingName}>{selectedBuilding}</h4>
+                <button
+                  onClick={() => setSelectedBuilding(null)}
+                  style={{
+                    marginLeft: 'auto',
+                    padding: '5px 10px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#f0f0f0',
+                    cursor: 'pointer'
                   }}
                 >
-                  <Popup>Drag to move building</Popup>
-                </Marker>
-              ))}
-          </MapContainer>
-        )}
-      </div>
-        {selectedBuilding && (
-        <div style={{
-          flex: 1,
-          margin: '20px',
-          padding: '20px',
-          backgroundColor: '#f4f4f4',
-          borderRadius: '8px',
-          border: '1px solid #ccc',
-        }}>
-          <h3>Building Stats</h3>
-          <h4>{selectedBuilding}</h4>
-          <DatePicker
-            selected={selectedDate}
-            onChange={(date) => {
-              setSelectedDate(date);
-              fetchBuildingStats(selectedBuilding, date);
-            }}
-            dateFormat="yyyy/MM/dd"
-            style={{ marginBottom: '20px' }}
-          />
-          <div>
-            {stats ? (
-              <div>
-                <h5>Stats for {stats.date}:</h5>
-                {/* Safeguard against non-array data */}
-                {Array.isArray(stats.data) ? (
-                  stats.data.map((entry, index) => (
-                    <div key={index} style={{ marginBottom: '10px' }}>
-                      <p><strong>Consumption:</strong> {entry.consumption} kWh</p>
-                      <p><strong>Cost:</strong> ${(entry.consumption * 0.1).toFixed(2)}</p>
-                      <hr />
-                    </div>
-                  ))
+                  ✕
+                </button>
+              </div>
+              
+              <div style={statsBoxStyles.dateContainer}>
+                <div style={statsBoxStyles.dateLabel}>Select Date</div>
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={(date) => {
+                    setSelectedDate(date);
+                    fetchBuildingStats(selectedBuilding, date);
+                  }}
+                  dateFormat="yyyy/MM/dd"
+                  customInput={
+                    <input style={statsBoxStyles.datePicker} />
+                  }
+                />
+              </div>
+
+              <div style={statsBoxStyles.statsContainer}>
+                {stats ? (
+                  <>
+                    {Array.isArray(stats.data) ? (
+                      stats.data.map((entry, index) => (
+                        <div key={index}>
+                          <div style={statsBoxStyles.statItem}>
+                            <span style={statsBoxStyles.statLabel}>Consumption</span>
+                            <span style={{
+                              ...statsBoxStyles.consumptionValue,
+                              color: entry.consumption > 1000 ? '#e74c3c' : '#2ecc71'
+                            }}>
+                              {entry.consumption} kWh
+                            </span>
+                          </div>
+                          <div style={statsBoxStyles.statItem}>
+                            <span style={statsBoxStyles.statLabel}>Estimated Cost</span>
+                            <span style={statsBoxStyles.statValue}>
+                              ${(entry.consumption * 0.1).toFixed(2)}
+                            </span>
+                          </div>
+                          {index < stats.data.length - 1 && <hr style={{ margin: '10px 0', border: 'none', borderTop: '1px solid #eee' }} />}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={statsBoxStyles.noStats}>
+                        No data available for this date
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <p>No valid data available for this day.</p>
+                  <div style={statsBoxStyles.noStats}>
+                    Select a date to view statistics
+                  </div>
                 )}
               </div>
-            ) : (
-              <p>No stats available for this day.</p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
