@@ -32,9 +32,24 @@ const MapComponent = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Available Data:', data);
-        setAvailableData(data);
-        setSelectedBuilding(Object.keys(data)[0] || '');
+        
+        // Add Buildings A-J to the available buildings
+        const extendedData = {
+          ...data,
+          'Building A': {},
+          'Building B': {},
+          'Building C': {},
+          'Building D': {},
+          'Building E': {},
+          'Building F': {},
+          'Building G': {},
+          'Building H': {},
+          'Building I': {},
+          'Building J': {}
+        };
+        
+        setAvailableData(extendedData);
+        setSelectedBuilding(Object.keys(extendedData)[0] || '');
       } catch (error) {
         console.error('Error fetching available data:', error);
         setError('Failed to fetch available data');
@@ -50,122 +65,142 @@ const MapComponent = () => {
     console.log('Starting addBuilding function...');
     if (selectedBuilding) {
       try {
+        // Predefined building locations - much wider spread
+        const buildingLocations = {
+            'Building 110': [29.628014, -95.610553],
+            'Building 121': [29.629014, -95.611553],
+            'Building A':   [29.629514, -95.609553],
+            'Building B':   [29.626514, -95.611953],
+            'Building C':   [29.627014, -95.608953],
+            'Building D':   [29.629014, -95.612553],
+            'Building E':   [29.628514, -95.608753],
+            'Building F':   [29.626514, -95.609953],
+            'Building G':   [29.629514, -95.610353],
+            'Building H':   [29.628514, -95.612953],
+            'Building I':   [29.627014, -95.611753],
+            'Building J':   [29.629514, -95.608553]
+          };
+    
+          // All building sizes increased by 1.5x
+          const buildingSizes = {
+            'Building 110': 0.00052,   // Was 0.00035
+            'Building 121': 0.00045,   // Was 0.00030
+            'Building A':   0.00022,   // Was 0.00015
+            'Building B':   0.00037,   // Was 0.00025
+            'Building C':   0.00015,   // Was 0.00010
+            'Building D':   0.00048,   // Was 0.00032
+            'Building E':   0.00027,   // Was 0.00018
+            'Building F':   0.00033,   // Was 0.00022
+            'Building G':   0.00018,   // Was 0.00012
+            'Building H':   0.00042,   // Was 0.00028
+            'Building I':   0.00030,   // Was 0.00020
+            'Building J':   0.00024    // Was 0.00016
+          };
+    
+          // Keep the same consumption-based colors
+          const buildingColors = {
+            'Building 110': '#ff3300', // High consumption - More red
+            'Building 121': '#ff6600', // High-medium consumption
+            'Building A':   '#ff9900', // Medium-high consumption
+            'Building B':   '#ffcc00', // Medium consumption
+            'Building C':   '#cccc00', // Medium consumption
+            'Building D':   '#99cc00', // Medium-low consumption
+            'Building E':   '#66cc00', // Low-medium consumption
+            'Building F':   '#33cc00', // Low consumption
+            'Building G':   '#00cc00', // Very low consumption
+            'Building H':   '#ff8000', // High-medium consumption
+            'Building I':   '#99ff00', // Low consumption
+            'Building J':   '#66ff00'  // Very low consumption
+          };
+
+        // For Buildings A-J, we'll skip the data fetching and just place them on the map
+        if (!selectedBuilding.includes('Building 1')) {
+          const baseCoordinates = buildingLocations[selectedBuilding];
+          const buildingSize = buildingSizes[selectedBuilding];
+          
+          const newBuilding = {
+            name: selectedBuilding,
+            coordinates: [
+              [baseCoordinates[0], baseCoordinates[1]],
+              [baseCoordinates[0], baseCoordinates[1] + buildingSize],
+              [baseCoordinates[0] + buildingSize, baseCoordinates[1] + buildingSize],
+              [baseCoordinates[0] + buildingSize, baseCoordinates[1]]
+            ],
+            color: buildingColors[selectedBuilding],
+            data: [] // Empty data array for now
+          };
+
+          setBuildings(prev => ({
+            ...prev,
+            [selectedBuilding]: newBuilding
+          }));
+          return;
+        }
+
+        // Original data fetching logic for Buildings 110 and 121
         const buildingData = [];
         const buildingInfo = availableData[selectedBuilding];
         console.log('Building info:', buildingInfo);
         const availableYears = Object.keys(buildingInfo);
         console.log('Years info:', availableYears);
         
-        // Test the backend connection using the known working endpoint
-        try {
-          const testResponse = await axios.get('http://127.0.0.1:5000/get-available-data');
-          console.log('Backend connection test successful:', testResponse);
-        } catch (error) {
-          console.error('Backend connection test failed:', error);
-          alert('Cannot connect to backend server. Please ensure it is running.');
-          return;
-        }
-
         for (const year of availableYears) {
           const availableMonths = Object.keys(buildingInfo[year]);
           for (const month of availableMonths) {
             const url = `http://127.0.0.1:5000/fetch-data/${year}/${month}/0/${encodeURIComponent(selectedBuilding)}`;
             console.log('Fetching from URL:', url);
             try {
-              const response = await axios.get(url, {
-                timeout: 5000,
-                headers: {
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json'
-                }
-              });
+              const response = await axios.get(url);
               buildingData.push(...response.data);
             } catch (error) {
-              console.error('Failed to fetch data:', {
-                url,
-                error: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-              });
+              console.error('Failed to fetch data:', error);
               throw error;
             }
           }
         }
 
-        const baseCoordinates = [29.979500, -95.834000];
-        const offset = 0.0002 * Object.keys(buildings).length;
+        const baseCoordinates = buildingLocations[selectedBuilding];
+        const buildingSize = buildingSizes[selectedBuilding];
         
         const newBuilding = {
           name: selectedBuilding,
           coordinates: [
-            [baseCoordinates[0] + offset, baseCoordinates[1] + offset],
-            [baseCoordinates[0] + offset, baseCoordinates[1] + offset + 0.0002],
-            [baseCoordinates[0] + offset + 0.0002, baseCoordinates[1] + offset + 0.0002],
-            [baseCoordinates[0] + offset + 0.0002, baseCoordinates[1] + offset]
+            [baseCoordinates[0], baseCoordinates[1]],
+            [baseCoordinates[0], baseCoordinates[1] + buildingSize],
+            [baseCoordinates[0] + buildingSize, baseCoordinates[1] + buildingSize],
+            [baseCoordinates[0] + buildingSize, baseCoordinates[1]]
           ],
-          color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+          color: buildingColors[selectedBuilding],
           data: buildingData
         };
 
-        console.log('Setting new building:', newBuilding);
-        setBuildings(prev => {
-          const updated = { ...prev, [selectedBuilding]: newBuilding };
-          console.log('Updated buildings state:', updated);
-          return updated;
-        });
+        setBuildings(prev => ({
+          ...prev,
+          [selectedBuilding]: newBuilding
+        }));
       } catch (error) {
-        console.error('Error in addBuilding:', {
-          message: error.message,
-          code: error.code,
-          response: error.response?.data,
-          status: error.response?.status
-        });
-        alert(`Failed to add building: ${error.message}`);
+        console.error('Error in addBuilding:', error);
       }
-    } else {
-      console.log('No building selected');
-      alert('Please select a building first');
     }
   };
 
-
-  const fetchBuildingStats = async (buildingName, date) => {
+  const fetchBuildingStats = async (building, date) => {
+    if (!building) return;
+    
     try {
-      // Extract year, month, and day from the selected date
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1; // getMonth() returns 0-based month (0 = January)
-      const day = date.getDate();
-  
-      // Construct the API URL with the full building name
-      const apiUrl = `http://localhost:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
-  
-      // Fetch data from the API
-      const response = await axios.get(apiUrl);
-  
-      // Log the API response for debugging
-      console.log('API Response:', response.data);
-  
-      // Check if the response contains data
-      if (response.data.error) {
-        console.error('No data found for the specified parameters:', response.data.error);
-        setStats(null); // Clear stats if no data is found
-      } else {
-        // Ensure the response is an array
-        const data = Array.isArray(response.data) ? response.data : [response.data];
-  
-        // Set the fetched data as stats
-        setStats({
-          date: selectedDate.toISOString().split('T')[0], // Format the date as YYYY-MM-DD
-          data: data, // Store the fetched data
-        });
+      const formattedDate = date.toISOString().split('T')[0];
+      const response = await fetch(`http://127.0.0.1:5000/building-stats/${building}/${formattedDate}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const data = await response.json();
+      setStats(data);
     } catch (error) {
       console.error('Error fetching building stats:', error);
-      setStats(null); // Clear stats on error
+      setStats(null);
     }
   };
 
-  
   const deleteBuilding = (buildingName) => {  
     const updatedBuildings = { ...buildings };
     delete updatedBuildings[buildingName];
@@ -234,7 +269,12 @@ const MapComponent = () => {
         </div>
 
         {typeof window !== 'undefined' && (
-          <MapContainer center={[29.979400, -95.833700]} zoom={17} style={{ height: '100%', width: '100%', borderRadius: '8px' }} scrollWheelZoom={true}>
+          <MapContainer 
+          center={[29.62995132334829, -95.6061221893825]} // New center coordinates
+          zoom={16}
+            style={{ height: '100%', width: '100%', borderRadius: '8px' }} 
+            scrollWheelZoom={true}
+          >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
