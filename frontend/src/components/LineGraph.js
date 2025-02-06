@@ -11,7 +11,7 @@ const LineGraph = () => {
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [chartInstance, setChartInstance] = useState(null);
@@ -85,8 +85,26 @@ const LineGraph = () => {
         data: data,
         color: randomColor
       }]);
+
+      const newDataset = {
+        building: selectedBuilding,
+        year: selectedYear,
+        month: selectedMonth,
+        data: data,
+        color: randomColor
+      };
+
+      // Calculate and set statistics for the new dataset
+      const datasetStats = calculateDatasetStatistics(newDataset);
+        setStats(prev => ({
+      ...prev,
+      [`${selectedBuilding}-${selectedYear}-${selectedMonth}`]: {
+        label: `${selectedBuilding} - ${selectedMonth}/${selectedYear}`,
+        ...datasetStats
+      }
+    }));
       
-      setAddError(null);
+    setAddError(null);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -174,6 +192,15 @@ const LineGraph = () => {
   const removeDataset = (index) => {
     setSelectedDatasets((prev) => {
       const updatedDatasets = prev.filter((_, i) => i !== index);
+      const removedDataset = prev[index];
+
+        // Remove statistics for the removed dataset
+        setStats((prevStats) => {
+            const newStats = { ...prevStats };
+            delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
+            return newStats;
+        });
+      
       return updatedDatasets;
     });
   };
@@ -272,18 +299,27 @@ const LineGraph = () => {
       }));
        // Append prediction results to the graph
       const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
-       setSelectedDatasets(prev => [
-        ...prev,
-        {
-          building: 'Prediction',
-          year: 'Future',
-          month: '',
-          data: formattedPredictions,
-          color: randomColor,
-        },
-      ]);
+      const predictionDataset = {
+        building: 'Prediction',
+        year: 'Future',
+        month: '',
+        data: formattedPredictions,
+        color: randomColor,
+      };
+
+        setSelectedDatasets(prev => [...prev, predictionDataset]);
+
+        // Calculate and set statistics for the prediction dataset
+        const predictionStats = calculateDatasetStatistics(predictionDataset);
+        setStats(prev => ({
+            ...prev,
+            'Prediction-Future': {
+            label: 'Prediction - Future',
+            ...predictionStats
+            }
+        }));
       
-       setError(null);
+        setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
       setError(`Prediction failed: ${error.message}`);
@@ -292,30 +328,22 @@ const LineGraph = () => {
     }
   };
 
-  const displayStatisticsBox = () => {
-    if (selectedDatasets.length == 0) {
-      setError('No datasets available for statistics');
-      return;
-    }
-
-    const statistics = selectedDatasets.map(dataset => {
-      const consumptionValues = dataset.data.map(entry => entry.consumption);
-      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-      const max = Math.max(...consumptionValues);
-      const min = Math.min(...consumptionValues);
-      const total = consumptionValues.reduce((a, b) => a + b, 0);
-
-      return {
+  //Calculate statistics for the statistics box
+  const calculateDatasetStatistics = (dataset) => {
+    const consumptionValues = dataset.data.map(entry => entry.consumption);
+    const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+    const max = Math.max(...consumptionValues);
+    const min = Math.min(...consumptionValues);
+    const total = consumptionValues.reduce((a, b) => a + b, 0);
+  
+    return {
         label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
         average: average.toFixed(2),
         max: max.toFixed(2),
         min: min.toFixed(2),
         total: total.toFixed(2)
-      };
-    });
-
-    setStats(statistics);
-  }
+    };
+  };
  
 
   const compareDatasets = () => {
@@ -545,20 +573,6 @@ const LineGraph = () => {
       >
         Compare
       </button>
-      <button 
-        onClick={displayStatisticsBox}
-        style={{
-          marginBottom: '5px',
-          padding: '8px 12px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Statistics
-      </button>
       </div>
       <div style={{
         display: 'flex',
@@ -572,7 +586,7 @@ const LineGraph = () => {
         }}>
           <canvas ref={chartRef}></canvas>
         </div>
-        {stats && (
+        {Object.keys(stats).length >  0 && (
         <div style={{
             width: '300px',  
             padding: '20px',  
@@ -583,7 +597,7 @@ const LineGraph = () => {
             overflowY: 'auto'
         }}>
             <h3>Statistics</h3>
-            {stats.map((stat, index) => (
+            {Object.entries(stats).map(([key, statData], index) => (
             <div key={index} style={{ 
                 marginBottom: '15px', 
                 padding: '10px', 
@@ -591,11 +605,11 @@ const LineGraph = () => {
                 borderRadius: '4px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}>
-                <h4 style={{ marginBottom: '10px' }}>{stat.label}</h4>
-                <p><strong>Average:</strong> {stat.average} kWh</p>
-                <p><strong>Max:</strong> {stat.max} kWh</p>
-                <p><strong>Min:</strong> {stat.min} kWh</p>
-                <p><strong>Total:</strong> {stat.total} kWh</p>
+                <h4 style={{ marginBottom: '10px' }}>{statData.label}</h4>
+                <p><strong>Average:</strong> {statData.average} kWh</p>
+                <p><strong>Max:</strong> {statData.max} kWh</p>
+                <p><strong>Min:</strong> {statData.min} kWh</p>
+                <p><strong>Total:</strong> {statData.total} kWh</p>
             </div>
             ))}
         </div>
