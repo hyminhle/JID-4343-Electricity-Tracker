@@ -93,6 +93,7 @@ const LineGraph = () => {
         data: data,
         color: randomColor
       };
+      console.log("New Data Set:", newDataset);
 
       // Calculate and set statistics for the new dataset
       const datasetStats = calculateDatasetStatistics(newDataset);
@@ -103,6 +104,7 @@ const LineGraph = () => {
         ...datasetStats
       }
     }));
+    console.log("Data Set Stats:", datasetStats);
       
     setAddError(null);
 
@@ -297,6 +299,7 @@ const LineGraph = () => {
         date: prediction.ds, // Ensure this matches the format used in the graph
         consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
       }));
+
        // Append prediction results to the graph
       const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
       const predictionDataset = {
@@ -305,7 +308,9 @@ const LineGraph = () => {
         month: '',
         data: formattedPredictions,
         color: randomColor,
+        evaluation: predictionData.evaluation,
       };
+      console.log('Prediction Dataset:', predictionDataset);
 
         setSelectedDatasets(prev => [...prev, predictionDataset]);
 
@@ -330,20 +335,42 @@ const LineGraph = () => {
 
   //Calculate statistics for the statistics box
   const calculateDatasetStatistics = (dataset) => {
-    const consumptionValues = dataset.data.map(entry => entry.consumption);
-    const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-    const max = Math.max(...consumptionValues);
-    const min = Math.min(...consumptionValues);
-    const total = consumptionValues.reduce((a, b) => a + b, 0);
-  
-    return {
-        label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
-        average: average.toFixed(2),
-        max: max.toFixed(2),
-        min: min.toFixed(2),
-        total: total.toFixed(2)
+    // Check if the dataset is the prediction dataset
+  if (dataset.building === 'Prediction') {
+        const consumptionValues = dataset.data.map(entry => entry.consumption).slice(30);
+        const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+        const max = Math.max(...consumptionValues);
+        const min = Math.min(...consumptionValues);
+        const total = consumptionValues.reduce((a, b) => a + b, 0);
+        const meanAbsoluteError = dataset.evaluation?.mean_absolute_error || 0;
+        const meanSquaredError = dataset.evaluation?.mean_squared_error || 0;
+
+        return {
+            label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+            average: average.toFixed(2),
+            max: max.toFixed(2),
+            min: min.toFixed(2),
+            total: total.toFixed(2),
+            meanAbsoluteError: meanAbsoluteError.toFixed(2),
+            meanSquaredError: meanSquaredError.toFixed(2),
+        };
+
+    } else {
+        const consumptionValues = dataset.data.map(entry => entry.consumption);
+        const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+        const max = Math.max(...consumptionValues);
+        const min = Math.min(...consumptionValues);
+        const total = consumptionValues.reduce((a, b) => a + b, 0);
+    
+        return {
+            label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+            average: average.toFixed(2),
+            max: max.toFixed(2),
+            min: min.toFixed(2),
+            total: total.toFixed(2)
+        };
+    }
     };
-  };
  
 
   const compareDatasets = () => {
@@ -610,6 +637,12 @@ const LineGraph = () => {
                 <p><strong>Max:</strong> {statData.max} kWh</p>
                 <p><strong>Min:</strong> {statData.min} kWh</p>
                 <p><strong>Total:</strong> {statData.total} kWh</p>
+                {statData.meanAbsoluteError && (
+                    <p><strong>Mean Absolute Error:</strong> {statData.meanAbsoluteError}</p>
+                )}
+                {statData.meanSquaredError && (
+                    <p><strong>Mean Squared Error:</strong> {statData.meanSquaredError}</p>
+                )}
             </div>
             ))}
         </div>
