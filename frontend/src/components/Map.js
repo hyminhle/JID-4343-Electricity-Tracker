@@ -5,6 +5,7 @@ import L from 'leaflet';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import './Map.css';
 
 // Fix for default markers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -13,78 +14,6 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
 });
-
-// Add this CSS at the top of your file or in your CSS file
-const statsBoxStyles = {
-  container: {
-    backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    padding: '20px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    marginTop: '20px',
-    border: '1px solid #e0e0e0'
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '15px',
-    padding: '10px 0',
-    borderBottom: '2px solid #f0f0f0'
-  },
-  buildingName: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    margin: '0'
-  },
-  dateContainer: {
-    marginBottom: '15px'
-  },
-  dateLabel: {
-    fontSize: '0.9rem',
-    color: '#666',
-    marginBottom: '5px'
-  },
-  datePicker: {
-    width: '100%',
-    padding: '8px',
-    border: '1px solid #ddd',
-    borderRadius: '5px',
-    fontSize: '1rem'
-  },
-  statsContainer: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    padding: '15px',
-    marginTop: '10px'
-  },
-  statItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '10px 0',
-    borderBottom: '1px solid #eee'
-  },
-  statLabel: {
-    color: '#666',
-    fontSize: '0.9rem'
-  },
-  statValue: {
-    color: '#2c3e50',
-    fontSize: '1.1rem',
-    fontWeight: '500'
-  },
-  consumptionValue: {
-    fontSize: '1.2rem',
-    fontWeight: 'bold',
-    color: '#2ecc71'  // Green for good, can be dynamic based on value
-  },
-  noStats: {
-    textAlign: 'center',
-    color: '#666',
-    padding: '20px 0'
-  }
-};
 
 const MapComponent = () => {
   const [buildings, setBuildings] = useState({});
@@ -305,24 +234,13 @@ const MapComponent = () => {
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex' }}>
-      <div style={{ 
-        flex: '1.4',
-        position: 'relative',
-        paddingRight: '10px',
-        maxWidth: '65%'
-      }}>
-        <div style={{
-          height: '90%',
-          margin: '20px',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-        }}>
+    <div className="map-container">
+      <div className="map-section">
+        <div className="map-wrapper">
           <MapContainer 
             center={[29.628014, -95.610553]}
             zoom={16}
-            style={{ height: '100%', width: '100%', borderRadius: '12px' }}
+            className="leaflet-container"
             scrollWheelZoom={true}
           >
             <TileLayer
@@ -380,43 +298,13 @@ const MapComponent = () => {
         </div>
       </div>
 
-      <div style={{ 
-        flex: '1',
-        padding: '20px',
-        paddingLeft: '10px',
-        backgroundColor: '#f8f9fa',
-        overflowY: 'auto',
-        minWidth: '350px',
-        maxWidth: '400px',
-        borderLeft: '1px solid #e0e0e0'
-      }}>
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '20px',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-        }}>
-          <h3 style={{ 
-            color: '#2c3e50', 
-            marginBottom: '20px',
-            fontSize: '1.5rem',
-            borderBottom: '2px solid #f0f0f0',
-            paddingBottom: '10px'
-          }}>Building Controls</h3>
-          
+      <div className="controls-section">
+        <div className="controls-container">
+          <h3 className="controls-header">Building Controls</h3>
           <select 
-            value={selectedBuilding || ''} 
+            className="building-select"
+            value={selectedBuilding || ''}
             onChange={(e) => setSelectedBuilding(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '12px',
-              marginBottom: '15px',
-              borderRadius: '8px',
-              border: '1px solid #ddd',
-              fontSize: '1rem',
-              backgroundColor: '#fff',
-              cursor: 'pointer'
-            }}
           >
             <option value="">Select a building</option>
             {Object.keys(availableData).map(building => (
@@ -425,66 +313,33 @@ const MapComponent = () => {
           </select>
           
           <button 
+            className="control-button add-button"
             onClick={addBuilding}
-            style={{ 
-              width: '100%',
-              padding: '12px',
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              marginBottom: '20px',
-              transition: 'all 0.3s ease',
-              fontWeight: '500'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#2980b9'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#3498db'}
           >
             Add Building
           </button>
 
           <button 
-            onClick={() => setIsEditing(!isEditing)} 
-            style={{ 
-              width: '100%',
-              padding: '12px',
-              backgroundColor: isEditing ? '#e74c3c' : '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              marginBottom: '20px',
-              transition: 'all 0.3s ease',
-              fontWeight: '500'
-            }}
+            className={`control-button edit-button ${isEditing ? 'active' : ''}`}
+            onClick={() => setIsEditing(!isEditing)}
           >
             {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
           </button>
 
           {selectedBuilding && buildings[selectedBuilding] && (
-            <div style={statsBoxStyles.container}>
-              <div style={statsBoxStyles.header}>
-                <h4 style={statsBoxStyles.buildingName}>{selectedBuilding}</h4>
+            <div className="stats-box">
+              <div className="stats-header">
+                <h4 className="building-name">{selectedBuilding}</h4>
                 <button
                   onClick={() => setSelectedBuilding(null)}
-                  style={{
-                    marginLeft: 'auto',
-                    padding: '5px 10px',
-                    border: 'none',
-                    borderRadius: '4px',
-                    backgroundColor: '#f0f0f0',
-                    cursor: 'pointer'
-                  }}
+                  className="close-button"
                 >
                   ✕
                 </button>
               </div>
               
-              <div style={statsBoxStyles.dateContainer}>
-                <div style={statsBoxStyles.dateLabel}>Select Date</div>
+              <div className="date-container">
+                <div className="date-label">Select Date</div>
                 <DatePicker
                   selected={selectedDate}
                   onChange={(date) => {
@@ -493,43 +348,40 @@ const MapComponent = () => {
                   }}
                   dateFormat="yyyy/MM/dd"
                   customInput={
-                    <input style={statsBoxStyles.datePicker} />
+                    <input className="date-picker" />
                   }
                 />
               </div>
 
-              <div style={statsBoxStyles.statsContainer}>
+              <div className="stats-container">
                 {stats ? (
                   <>
                     {Array.isArray(stats.data) ? (
                       stats.data.map((entry, index) => (
                         <div key={index}>
-                          <div style={statsBoxStyles.statItem}>
-                            <span style={statsBoxStyles.statLabel}>Consumption</span>
-                            <span style={{
-                              ...statsBoxStyles.consumptionValue,
-                              color: entry.consumption > 1000 ? '#e74c3c' : '#2ecc71'
-                            }}>
+                          <div className="stat-item">
+                            <span className="stat-label">Consumption</span>
+                            <span className={`consumption-value ${entry.consumption > 1000 ? 'bad' : 'good'}`}>
                               {entry.consumption} kWh
                             </span>
                           </div>
-                          <div style={statsBoxStyles.statItem}>
-                            <span style={statsBoxStyles.statLabel}>Estimated Cost</span>
-                            <span style={statsBoxStyles.statValue}>
+                          <div className="stat-item">
+                            <span className="stat-label">Estimated Cost</span>
+                            <span className="stat-value">
                               ${(entry.consumption * 0.1).toFixed(2)}
                             </span>
                           </div>
-                          {index < stats.data.length - 1 && <hr style={{ margin: '10px 0', border: 'none', borderTop: '1px solid #eee' }} />}
+                          {index < stats.data.length - 1 && <hr className="stat-divider" />}
                         </div>
                       ))
                     ) : (
-                      <div style={statsBoxStyles.noStats}>
+                      <div className="no-stats">
                         No data available for this date
                       </div>
                     )}
                   </>
                 ) : (
-                  <div style={statsBoxStyles.noStats}>
+                  <div className="no-stats">
                     Select a date to view statistics
                   </div>
                 )}
