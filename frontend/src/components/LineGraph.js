@@ -44,6 +44,7 @@ const LineGraph = () => {
     fetchAvailableData();
 
   }, []);
+
   
   // Add this function to handle adding new datasets
   const addDataset = async () => {
@@ -86,6 +87,7 @@ const LineGraph = () => {
       }]);
       
       setAddError(null);
+
     } catch (error) {
       console.error('Error fetching data:', error);
       setAddError(`Failed to fetch data: ${error.message}`);
@@ -280,6 +282,7 @@ const LineGraph = () => {
           color: randomColor,
         },
       ]);
+      
        setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
@@ -288,6 +291,31 @@ const LineGraph = () => {
       setLoading(false);
     }
   };
+
+  const displayStatisticsBox = () => {
+    if (selectedDatasets.length == 0) {
+      setError('No datasets available for statistics');
+      return;
+    }
+
+    const statistics = selectedDatasets.map(dataset => {
+      const consumptionValues = dataset.data.map(entry => entry.consumption);
+      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+      const max = Math.max(...consumptionValues);
+      const min = Math.min(...consumptionValues);
+      const total = consumptionValues.reduce((a, b) => a + b, 0);
+
+      return {
+        label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+        average: average.toFixed(2),
+        max: max.toFixed(2),
+        min: min.toFixed(2),
+        total: total.toFixed(2)
+      };
+    });
+
+    setStats(statistics);
+  }
  
 
   const compareDatasets = () => {
@@ -312,6 +340,9 @@ const LineGraph = () => {
     // Update the chart to reflect the changes
     chartInstance.update();
   };
+
+
+  // Creates the statistic box for the graph
 
   const togglePrimaryDataset = (index) => {
     setPrimaryDataset(prev => prev === index ? null : index);
@@ -514,6 +545,20 @@ const LineGraph = () => {
       >
         Compare
       </button>
+      <button 
+        onClick={displayStatisticsBox}
+        style={{
+          marginBottom: '5px',
+          padding: '8px 12px',
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Statistics
+      </button>
       </div>
       <div style={{
         display: 'flex',
@@ -527,72 +572,34 @@ const LineGraph = () => {
         }}>
           <canvas ref={chartRef}></canvas>
         </div>
-
         {stats && (
-          <div style={{
+        <div style={{
             width: '300px',  
             padding: '20px',  
             backgroundColor: '#f8f9fa',
             borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{
-              margin: '0 0 15px 0',
-              color: '#333',
-              borderBottom: '2px solid #dee2e6',
-              paddingBottom: '8px',
-              fontSize: '18px'  
-            }}>Statistics</h3>
-           
-            {stats.currentMonth && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{
-                  color: 'rgb(75, 192, 192)',
-                  margin: '0 0 10px 0',
-                  fontSize: '16px'  
-                }}>{stats.currentMonth}</h4>
-                <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Average:</strong> {stats.currentMonth.average.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Maximum:</strong> {stats.currentMonth.max.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Minimum:</strong> {stats.currentMonth.min.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Total:</strong> {stats.currentMonth.total.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
-            )}
-           
-            {stats.previousMonth && (
-              <div>
-                <h4 style={{
-                  color: 'rgb(255, 99, 132)',
-                  margin: '0 0 10px 0',
-                  fontSize: '16px'  
-                }}>{stats.previousMonth}</h4>
-                <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Average:</strong> {stats.previousMonth.average.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Maximum:</strong> {stats.previousMonth.max.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Minimum:</strong> {stats.previousMonth.min.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Total:</strong> {stats.previousMonth.total.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            maxHeight: '600px',
+            overflowY: 'auto'
+        }}>
+            <h3>Statistics</h3>
+            {stats.map((stat, index) => (
+            <div key={index} style={{ 
+                marginBottom: '15px', 
+                padding: '10px', 
+                backgroundColor: 'white', 
+                borderRadius: '4px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+                <h4 style={{ marginBottom: '10px' }}>{stat.label}</h4>
+                <p><strong>Average:</strong> {stat.average} kWh</p>
+                <p><strong>Max:</strong> {stat.max} kWh</p>
+                <p><strong>Min:</strong> {stat.min} kWh</p>
+                <p><strong>Total:</strong> {stat.total} kWh</p>
+            </div>
+            ))}
+        </div>
+    )}
       </div>
     </div>
   );

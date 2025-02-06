@@ -6,7 +6,13 @@
     "chartjs-adapter-date-fns": "^3.0.0",
     "chartjs-plugin-annotation": "^3.1.0",
     "leaflet": "^1.9.4",
+    "plotly": "^1.0.6",
+    "prophet": "^0.1.1",
+    "react": "^18.3.1",
+    "react-datepicker": "^8.0.0",
+    "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
-    "react-router-dom": "^7.1.4"
+    "react-router-dom": "^7.1.5",
+    "scikit-learn": "^0.1.0"
   }
 }
