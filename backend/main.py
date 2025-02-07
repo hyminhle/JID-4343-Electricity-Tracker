@@ -38,6 +38,25 @@ class ElectricityData(db.Model):
         self.date = date
         self.consumption = consumption
         self.building = building
+
+class ElectricityStatistics(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.String(20), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    mean = db.Column(db.Float, nullable=False)
+    highest = db.Column(db.Float, nullable=False)
+    lowest = db.Column(db.Float, nullable=False)
+    median = db.Column(db.Float, nullable=False)
+    building = db.Column(db.String(50), nullable=False)
+    def __init__(self, month, date, mean, highest, lowest, median, building):
+        self.month = month
+        self.date = date
+        self.mean = mean
+        self.highest = highest
+        self.lowest = lowest    
+        self.median = median    
+        self.building = building
+
 # Create tables 
 with app.app_context():
     db.create_all()
@@ -100,6 +119,24 @@ def parse_csv(file):
             db.session.add(new_entry)
         db.session.commit()
 
+        mean_value = float(np.mean(consumption_data))
+        highest_value = float(np.max(consumption_data))
+        lowest_value = float(np.min(consumption_data))
+        median_value = float(np.median(consumption_data))
+        
+        # Insert statistics data into ElectricityStatistics table
+        stat_entry = ElectricityStatistics(
+            month=month_name,
+            date=parsed_date.date(),  # Store the first date of the month
+            mean=mean_value,
+            highest=highest_value,
+            lowest=lowest_value,
+            median=median_value,
+            building=f"Building {building_number}"
+        )
+        db.session.add(stat_entry)
+        db.session.commit()
+        
         # Store the data for the month
         monthly_data[month_name] = consumption_data
 
