@@ -141,6 +141,10 @@ const LineGraph = () => {
       tension: 0.1,
       fill: ds.fill || false,
       borderDash: ds.borderDash,
+      borderWidth: ds.borderWidth || 2,
+      pointBackgroundColor: ds.pointBackgroundColor || ds.color,
+      pointRadius: ds.pointRadius || 3,
+      pointStyle: ds.pointStyle || 'circle',
     }));
   
     const newChart = new Chart(ctx, {
@@ -198,9 +202,23 @@ const LineGraph = () => {
 
         // Remove statistics for the removed dataset
         setStats((prevStats) => {
-            const newStats = { ...prevStats };
+          const newStats = { ...prevStats };
+          if (removedDataset.label === 'Prediction') {
+            delete newStats['Prediction-Future'];
+          } else if (removedDataset.label === 'Average Aggregate') {
+            delete newStats['Average-Aggregate'];
+            setIsAverageDisplayed(false);
+          } else {
             delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
-            return newStats;
+          }
+
+          // If there are no datasets left, remove the average aggregate
+          if (updatedDatasets.length === 0) {
+            delete newStats['Average-Aggregate'];
+            setIsAverageDisplayed(false);
+          }
+
+          return newStats;
         });
       
       return updatedDatasets;
@@ -269,20 +287,13 @@ const LineGraph = () => {
     setIsAverageDisplayed(true); // Indicate that the average is displayed
     setError(null);
   };
-
-  const removeAverageDataset = () => {
-    setAverageDataset(null); // Remove the average dataset
-    setIsAverageDisplayed(false); // Update the state to indicate the average is removed
-  };
-
-
   const fetchPrediction = async () => {
     if (!selectedDatasets.length) {
       setError('No data available for prediction.');
       return;
     }
-     setLoading(true);
-     // Extract relevant data for the predictor
+    setLoading(true);
+    // Extract relevant data for the predictor
     const selectedData = selectedDatasets.map(ds => ({
       building: ds.building,
       year: ds.year,
@@ -292,7 +303,7 @@ const LineGraph = () => {
         consumption: entry.consumption
       }))
     }));
-     try {
+    try {
       const response = await fetch('http://127.0.0.1:5000/predict', {
         method: 'POST',
         headers: {
@@ -300,42 +311,46 @@ const LineGraph = () => {
         },
         body: JSON.stringify({ datasets: selectedData }),
       });
-       if (!response.ok) {
+      if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-       const predictionData = await response.json();
+      const predictionData = await response.json();
       console.log('Prediction Data:', predictionData);
-       // Format the prediction data for the graph
+      // Format the prediction data for the graph
       const formattedPredictions = predictionData.predictions.map(prediction => ({
         date: prediction.ds, // Ensure this matches the format used in the graph
         consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
       }));
 
-       // Append prediction results to the graph
+      // Append prediction results to the graph
       const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
       const predictionDataset = {
-        building: 'Prediction',
-        year: 'Future',
-        month: '',
+        label: 'Prediction',
         data: formattedPredictions,
         color: randomColor,
-        evaluation: predictionData.evaluation,
+        borderColor: randomColor,
+        borderWidth: 3, 
+        borderDash: [10, 5], 
+        pointBackgroundColor: "rgba(72, 182, 255, 0.91)", 
+        pointRadius: 3, 
+        tension: 0.4, 
+        fill: false, 
+        hoverBorderColor: randomColor, 
+        borderColor: randomColor,
+        evaluation: predictionData.evaluation
       };
-      console.log('Prediction Dataset:', predictionDataset);
+      setSelectedDatasets(prev => [...prev, predictionDataset]);
 
-        setSelectedDatasets(prev => [...prev, predictionDataset]);
+      const predictionStats = calculateDatasetStatistics(predictionDataset);
+      setStats(prev => ({
+          ...prev,
+          'Prediction-Future': {
+          label: 'Prediction - Future',
+          ...predictionStats
+          }
+      }));
 
-        // Calculate and set statistics for the prediction dataset
-        const predictionStats = calculateDatasetStatistics(predictionDataset);
-        setStats(prev => ({
-            ...prev,
-            'Prediction-Future': {
-            label: 'Prediction - Future',
-            ...predictionStats
-            }
-        }));
-      
-        setError(null);
+      setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
       setError(`Prediction failed: ${error.message}`);
@@ -347,7 +362,7 @@ const LineGraph = () => {
   //Calculate statistics for the statistics box
   const calculateDatasetStatistics = (dataset) => {
     // Check if the dataset is the prediction dataset
-  if (dataset.building === 'Prediction') {
+  if (dataset.label === 'Prediction') {
         const consumptionValues = dataset.data.map(entry => entry.consumption).slice(30);
         const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
         const max = Math.max(...consumptionValues);
@@ -502,86 +517,86 @@ const LineGraph = () => {
       </div>
       {/* Display active datasets */}
       <div style={{ marginBottom: '20px' }}>
-      {selectedDatasets.map((dataset, index) => (
-  <div
-    key={index}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      marginBottom: '5px',
-      padding: '5px',
-      backgroundColor: '#f5f5f5',
-      borderRadius: '4px',
-    }}
-  >
-    <div
-      style={{
-        width: '20px',
-        height: '20px',
-        backgroundColor: dataset.color,
-        borderRadius: '50%',
-      }}
-    />
-    <span>{dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
-    <button
-      onClick={() => togglePrimaryDataset(index)}
-      style={{
-        marginLeft: 'auto',
-        padding: '2px 8px',
-        borderRadius: '4px',
-        border: '1px solid #ddd',
-        backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
-        color: primaryDataset === index ? '#fff' : '#000',
-      }}
-    >
-      Primary
-    </button>
-    <button
-      onClick={() => toggleSecondaryDataset(index)}
-      style={{
-        marginLeft: '10px',
-        padding: '2px 8px',
-        borderRadius: '4px',
-        border: '1px solid #ddd',
-        backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
-        color: secondaryDataset === index ? '#fff' : '#000',
-      }}
-    >
-      Secondary
-    </button>
-    <button
-      onClick={() => removeDataset(index)}
-      style={{
-        marginLeft: '10px',
-        padding: '2px 8px',
-        borderRadius: '4px',
-        border: '1px solid #ddd',
-      }}
-    >
-      Remove
-    </button>
-  </div>
-))}
-</div>
+        {selectedDatasets.map((dataset, index) => (
+          <div
+            key={index}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '5px',
+              padding: '5px',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '4px',
+            }}
+          >
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                backgroundColor: dataset.color,
+                borderRadius: '50%',
+              }}
+            />
+            <span>{dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
+            <button
+              onClick={() => togglePrimaryDataset(index)}
+              style={{
+                marginLeft: 'auto',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
+                color: primaryDataset === index ? '#fff' : '#000',
+              }}
+            >
+              Primary
+            </button>
+            <button
+              onClick={() => toggleSecondaryDataset(index)}
+              style={{
+                marginLeft: '10px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
+                color: secondaryDataset === index ? '#fff' : '#000',
+              }}
+            >
+              Secondary
+            </button>
+            <button
+              onClick={() => removeDataset(index)}
+              style={{
+                marginLeft: '10px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-      <button  
-      onClick={fetchPrediction} 
-      disabled={loading}
-      style={{
-        marginBottom: '5px',
-        padding: '8px 12px',
-        backgroundColor: '#007bff',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-      }}
-    >
-      {loading ? 'Predicting...' : 'Predict'}
-      </button>
-      
-      <button
+        <button  
+          onClick={fetchPrediction} 
+          disabled={loading}
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          {loading ? 'Predicting...' : 'Predict'}
+        </button>
+        
+        <button
           onClick={() => calculateAverageAggregate()}
           disabled={selectedDatasets.length === 0}
           style={{
@@ -598,19 +613,19 @@ const LineGraph = () => {
         </button>
 
         <button 
-        onClick={compareDatasets}
-        style={{
-          marginBottom: '5px',
-          padding: '8px 12px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        Compare
-      </button>
+          onClick={compareDatasets}
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Compare
+        </button>
       </div>
       <div style={{
         display: 'flex',
