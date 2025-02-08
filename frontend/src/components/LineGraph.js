@@ -252,9 +252,20 @@ const LineGraph = () => {
       borderDash: [5, 5],
       fill: false,
     };
+
+    const averageStats = calculateDatasetStatistics(averageDataset);
   
     // Add the average dataset to the selectedDatasets array
     setSelectedDatasets((prev) => [...prev, averageDataset]);
+
+    setStats((prev) => ({
+      ...prev,
+      'Average-Aggregate': {
+        label: 'Average Aggregate',
+        ...averageStats
+      }
+    }));
+
     setIsAverageDisplayed(true); // Indicate that the average is displayed
     setError(null);
   };
