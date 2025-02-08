@@ -242,6 +242,7 @@ const LineGraph = () => {
     });
   
     const averageData = aggregateData.map((total, index) => total / counts[index]);
+    console.log('Average Data:', averageData);
   
     // Create the average dataset
     const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
@@ -363,6 +364,22 @@ const LineGraph = () => {
             meanSquaredError: meanSquaredError.toFixed(2),
         };
 
+    } else if (dataset.label === 'Average Aggregate') {
+      // For Average Aggregate, take only the first 30 values
+      const consumptionValues = dataset.data.slice(0, 30).map(entry => entry.consumption);
+      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+      const max = Math.max(...consumptionValues);
+      const min = Math.min(...consumptionValues);
+      const total = consumptionValues.reduce((a, b) => a + b, 0);
+  
+      return {
+        label: dataset.label,
+        average: average.toFixed(2),
+        max: max.toFixed(2),
+        min: min.toFixed(2),
+        total: total.toFixed(2)
+      };
+      
     } else {
         const consumptionValues = dataset.data.map(entry => entry.consumption);
         const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
