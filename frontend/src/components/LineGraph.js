@@ -11,7 +11,7 @@ const LineGraph = () => {
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [chartInstance, setChartInstance] = useState(null);
@@ -44,6 +44,7 @@ const LineGraph = () => {
     fetchAvailableData();
 
   }, []);
+
   
   // Add this function to handle adding new datasets
   const addDataset = async () => {
@@ -84,8 +85,29 @@ const LineGraph = () => {
         data: data,
         color: randomColor
       }]);
+
+      const newDataset = {
+        building: selectedBuilding,
+        year: selectedYear,
+        month: selectedMonth,
+        data: data,
+        color: randomColor
+      };
+      console.log("New Data Set:", newDataset);
+
+      // Calculate and set statistics for the new dataset
+      const datasetStats = calculateDatasetStatistics(newDataset);
+        setStats(prev => ({
+      ...prev,
+      [`${selectedBuilding}-${selectedYear}-${selectedMonth}`]: {
+        label: `${selectedBuilding} - ${selectedMonth}/${selectedYear}`,
+        ...datasetStats
+      }
+    }));
+    console.log("Data Set Stats:", datasetStats);
       
-      setAddError(null);
+    setAddError(null);
+
     } catch (error) {
       console.error('Error fetching data:', error);
       setAddError(`Failed to fetch data: ${error.message}`);
@@ -176,6 +198,29 @@ const LineGraph = () => {
   const removeDataset = (index) => {
     setSelectedDatasets((prev) => {
       const updatedDatasets = prev.filter((_, i) => i !== index);
+      const removedDataset = prev[index];
+
+        // Remove statistics for the removed dataset
+        setStats((prevStats) => {
+          const newStats = { ...prevStats };
+          if (removedDataset.label === 'Prediction') {
+            delete newStats['Prediction-Future'];
+          } else if (removedDataset.label === 'Average Aggregate') {
+            delete newStats['Average-Aggregate'];
+            setIsAverageDisplayed(false);
+          } else {
+            delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
+          }
+
+          // If there are no datasets left, remove the average aggregate
+          if (updatedDatasets.length === 0) {
+            delete newStats['Average-Aggregate'];
+            setIsAverageDisplayed(false);
+          }
+
+          return newStats;
+        });
+      
       return updatedDatasets;
     });
   };
@@ -211,6 +256,7 @@ const LineGraph = () => {
     });
   
     const averageData = aggregateData.map((total, index) => total / counts[index]);
+    console.log('Average Data:', averageData);
   
     // Create the average dataset
     const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
@@ -225,9 +271,20 @@ const LineGraph = () => {
       borderDash: [5, 5],
       fill: false,
     };
+
+    const averageStats = calculateDatasetStatistics(averageDataset);
   
     // Add the average dataset to the selectedDatasets array
     setSelectedDatasets((prev) => [...prev, averageDataset]);
+
+    setStats((prev) => ({
+      ...prev,
+      'Average-Aggregate': {
+        label: 'Average Aggregate',
+        ...averageStats
+      }
+    }));
+
     setIsAverageDisplayed(true); // Indicate that the average is displayed
     setError(null);
   };
@@ -265,6 +322,7 @@ const LineGraph = () => {
         date: prediction.ds, // Ensure this matches the format used in the graph
         consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
       }));
+
       // Append prediction results to the graph
       const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
       const predictionDataset = {
@@ -280,8 +338,19 @@ const LineGraph = () => {
         fill: false, 
         hoverBorderColor: randomColor, 
         borderColor: randomColor,
+        evaluation: predictionData.evaluation
       };
       setSelectedDatasets(prev => [...prev, predictionDataset]);
+
+      const predictionStats = calculateDatasetStatistics(predictionDataset);
+      setStats(prev => ({
+          ...prev,
+          'Prediction-Future': {
+          label: 'Prediction - Future',
+          ...predictionStats
+          }
+      }));
+
       setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
@@ -290,6 +359,62 @@ const LineGraph = () => {
       setLoading(false);
     }
   };
+
+  //Calculate statistics for the statistics box
+  const calculateDatasetStatistics = (dataset) => {
+    // Check if the dataset is the prediction dataset
+  if (dataset.label === 'Prediction') {
+        const consumptionValues = dataset.data.map(entry => entry.consumption).slice(30);
+        const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+        const max = Math.max(...consumptionValues);
+        const min = Math.min(...consumptionValues);
+        const total = consumptionValues.reduce((a, b) => a + b, 0);
+        const meanAbsoluteError = dataset.evaluation?.mean_absolute_error || 0;
+        const meanSquaredError = dataset.evaluation?.mean_squared_error || 0;
+
+        return {
+            label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+            average: average.toFixed(2),
+            max: max.toFixed(2),
+            min: min.toFixed(2),
+            total: total.toFixed(2),
+            meanAbsoluteError: meanAbsoluteError.toFixed(2),
+            meanSquaredError: meanSquaredError.toFixed(2),
+        };
+
+    } else if (dataset.label === 'Average Aggregate') {
+      // For Average Aggregate, take only the first 30 values
+      const consumptionValues = dataset.data.slice(0, 30).map(entry => entry.consumption);
+      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+      const max = Math.max(...consumptionValues);
+      const min = Math.min(...consumptionValues);
+      const total = consumptionValues.reduce((a, b) => a + b, 0);
+  
+      return {
+        label: dataset.label,
+        average: average.toFixed(2),
+        max: max.toFixed(2),
+        min: min.toFixed(2),
+        total: total.toFixed(2)
+      };
+      
+    } else {
+        const consumptionValues = dataset.data.map(entry => entry.consumption);
+        const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+        const max = Math.max(...consumptionValues);
+        const min = Math.min(...consumptionValues);
+        const total = consumptionValues.reduce((a, b) => a + b, 0);
+    
+        return {
+            label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+            average: average.toFixed(2),
+            max: max.toFixed(2),
+            min: min.toFixed(2),
+            total: total.toFixed(2)
+        };
+    }
+    };
+ 
 
   const compareDatasets = () => {
     if (primaryDataset === null || secondaryDataset === null) {
@@ -313,6 +438,9 @@ const LineGraph = () => {
     // Update the chart to reflect the changes
     chartInstance.update();
   };
+
+
+  // Creates the statistic box for the graph
 
   const togglePrimaryDataset = (index) => {
     setPrimaryDataset(prev => prev === index ? null : index);
@@ -528,72 +656,40 @@ const LineGraph = () => {
         }}>
           <canvas ref={chartRef}></canvas>
         </div>
-
-        {stats && (
-          <div style={{
+        {Object.keys(stats).length >  0 && (
+        <div style={{
             width: '300px',  
             padding: '20px',  
             backgroundColor: '#f8f9fa',
             borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
-            <h3 style={{
-              margin: '0 0 15px 0',
-              color: '#333',
-              borderBottom: '2px solid #dee2e6',
-              paddingBottom: '8px',
-              fontSize: '18px'  
-            }}>Statistics</h3>
-           
-            {stats.currentMonth && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{
-                  color: 'rgb(75, 192, 192)',
-                  margin: '0 0 10px 0',
-                  fontSize: '16px'  
-                }}>{stats.currentMonth}</h4>
-                <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Average:</strong> {stats.currentMonth.average.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Maximum:</strong> {stats.currentMonth.max.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Minimum:</strong> {stats.currentMonth.min.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Total:</strong> {stats.currentMonth.total.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
-            )}
-           
-            {stats.previousMonth && (
-              <div>
-                <h4 style={{
-                  color: 'rgb(255, 99, 132)',
-                  margin: '0 0 10px 0',
-                  fontSize: '16px'  
-                }}>{stats.previousMonth}</h4>
-                <div style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Average:</strong> {stats.previousMonth.average.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Maximum:</strong> {stats.previousMonth.max.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Minimum:</strong> {stats.previousMonth.min.toFixed(2)} kWh
-                  </p>
-                  <p style={{ margin: '5px 0' }}>
-                    <strong>Total:</strong> {stats.previousMonth.total.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            maxHeight: '600px',
+            overflowY: 'auto'
+        }}>
+            <h3>Statistics</h3>
+            {Object.entries(stats).map(([key, statData], index) => (
+            <div key={index} style={{ 
+                marginBottom: '15px', 
+                padding: '10px', 
+                backgroundColor: 'white', 
+                borderRadius: '4px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            }}>
+                <h4 style={{ marginBottom: '10px' }}>{statData.label}</h4>
+                <p><strong>Average:</strong> {statData.average} kWh</p>
+                <p><strong>Max:</strong> {statData.max} kWh</p>
+                <p><strong>Min:</strong> {statData.min} kWh</p>
+                <p><strong>Total:</strong> {statData.total} kWh</p>
+                {statData.meanAbsoluteError && (
+                    <p><strong>Mean Absolute Error:</strong> {statData.meanAbsoluteError}</p>
+                )}
+                {statData.meanSquaredError && (
+                    <p><strong>Mean Squared Error:</strong> {statData.meanSquaredError}</p>
+                )}
+            </div>
+            ))}
+        </div>
+    )}
       </div>
     </div>
   );
