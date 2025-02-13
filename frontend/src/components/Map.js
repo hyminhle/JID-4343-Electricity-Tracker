@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Polygon, Tooltip, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Tooltip, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet.heat';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import './Map.css';
+import HeatmapLayer from './HeatmapLayer';
 
 // Fix for default markers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -24,6 +26,14 @@ const MapComponent = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(null);
+  const [buildingStats, setBuildingStats] = useState({});
+  const [minDate, setMinDate] = useState(null);
+  const [maxDate, setMaxDate] = useState(null);
+  const [isHeatmap, setIsHeatmap] = useState(false);
+  const [heatmapPoints, setHeatmapPoints] = useState([]);
+
+  // Add MapTiler key from environment variable
+  const MAPTILER_KEY = process.env.REACT_APP_MAPTILER_KEY;
 
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -34,23 +44,27 @@ const MapComponent = () => {
         }
         const data = await response.json();
         
-        // Add Buildings A-J to the available buildings
-        const extendedData = {
-          ...data,
-          'Building A': {},
-          'Building B': {},
-          'Building C': {},
-          'Building D': {},
-          'Building E': {},
-          'Building F': {},
-          'Building G': {},
-          'Building H': {},
-          'Building I': {},
-          'Building J': {}
-        };
+        // Find min and max dates from available data
+        let minYear = '9999', maxYear = '0';
+        let minMonth = '12', maxMonth = '1';
         
-        setAvailableData(extendedData);
-        setSelectedBuilding(Object.keys(extendedData)[0] || '');
+        Object.entries(data).forEach(([building, years]) => {
+          Object.keys(years).forEach(year => {
+            if (year < minYear) minYear = year;
+            if (year > maxYear) maxYear = year;
+            
+            Object.keys(years[year]).forEach(month => {
+              if (year === minYear && month < minMonth) minMonth = month;
+              if (year === maxYear && month > maxMonth) maxMonth = month;
+            });
+          });
+        });
+        
+        setMinDate(new Date(minYear, parseInt(minMonth) - 1, 1));
+        setMaxDate(new Date(maxYear, parseInt(maxMonth) - 1, 31));
+        setSelectedDate(new Date(minYear, parseInt(minMonth) - 1, 1));
+        
+        setAvailableData(data);
       } catch (error) {
         console.error('Error fetching available data:', error);
         setError('Failed to fetch available data');
@@ -179,29 +193,119 @@ const MapComponent = () => {
           ...prev,
           [selectedBuilding]: newBuilding
         }));
+
+        // After adding the building, fetch its stats
+        await fetchBuildingStats(selectedBuilding, selectedDate);
       } catch (error) {
         console.error('Error in addBuilding:', error);
       }
     }
   };
 
-  const fetchBuildingStats = async (building, date) => {
-    if (!building) return;
+  // Modify getHeatmapColor to use actual consumption data ranges
+  const getHeatmapColor = (consumption) => {
+    if (!consumption) return '#cccccc'; // Default gray for no data
     
+    // Using the ranges we see in LineGraph data (8000-12000 kWh)
+    const low = 8500;     // Green zone
+    const medium = 10000; // Yellow zone
+    const high = 11500;   // Red zone
+    
+    if (consumption <= low) {
+      // Green to Yellow gradient
+      const ratio = consumption / low;
+      return `rgb(${Math.floor(255 * ratio)}, 255, 0)`;
+    } else if (consumption <= medium) {
+      // Yellow to Red gradient
+      const ratio = (consumption - low) / (medium - low);
+      return `rgb(255, ${Math.floor(255 * (1 - ratio))}, 0)`;
+    } else {
+      // Deep red for high consumption
+      return '#ff0000';
+    }
+  };
+
+  // Add function to fetch and calculate building statistics
+  const fetchBuildingStats = async (buildingName, date) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0];
-      const [year, month, day] = formattedDate.split('-');
-      const response = await fetch(`http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${building}`);
-      console.log('Response:', building);
+      // First check if we have data for this building and date
+      if (!availableData[buildingName]) {
+        console.log('No data available for building:', buildingName);
+        return;
+      }
+
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();  // Get the actual selected day
+
+      // Check if we have data for this year and month
+      const buildingInfo = availableData[buildingName];
+      console.log('Available data for building:', buildingInfo);
+
+      // Get available years
+      const availableYears = Object.keys(buildingInfo);
+      if (!availableYears.includes(year.toString())) {
+        console.log('No data for year:', year);
+        setError(`No data available for ${year}`);
+        return;
+      }
+
+      // Get available months for this year
+      const availableMonths = Object.keys(buildingInfo[year.toString()]);
+      if (!availableMonths.includes(month.toString())) {
+        console.log('No data for month:', month);
+        setError(`No data available for month ${month}`);
+        return;
+      }
+
+      const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
+      console.log('Fetching from URL:', API_URL);
+
+      const response = await fetch(API_URL);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data = await response.json();
-      setStats(data);
-      console.log('Stats:', data);
+      console.log('Received data:', data);
+
+      // Update stats with the processed data
+      setStats({
+        consumption: data.consumption,
+        month: `${month}/${year}`,
+        day: day
+      });
+      
+      // Update building colors based on consumption
+      if (buildings[buildingName]) {
+        setBuildings(prev => ({
+          ...prev,
+          [buildingName]: {
+            ...prev[buildingName],
+            color: getHeatmapColor(parseFloat(data.consumption))
+          }
+        }));
+      }
+
+      setBuildingStats(prev => ({
+        ...prev,
+        [buildingName]: {
+          ...prev[buildingName],
+          consumption: data.consumption
+        }
+      }));
     } catch (error) {
       console.error('Error fetching building stats:', error);
+      setError('Failed to fetch building statistics');
       setStats(null);
+    }
+  };
+
+  // Update the DatePicker onChange handler
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (selectedBuilding) {
+      fetchBuildingStats(selectedBuilding, date);
     }
   };
 
@@ -236,6 +340,94 @@ const MapComponent = () => {
     });
   };
 
+  // Add this function to check if a date has data available
+  const isDateAvailable = (date) => {
+    if (!selectedBuilding || !availableData[selectedBuilding]) return false;
+    
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString();
+    
+    return availableData[selectedBuilding][year] && 
+           availableData[selectedBuilding][year][month];
+  };
+
+  // Add function to toggle between point and heatmap view
+  const toggleHeatmap = () => {
+    setIsHeatmap(!isHeatmap);
+  };
+
+  // Update generateHeatmapData function
+  const generateHeatmapData = () => {
+    const points = [];
+    
+    // First find the max consumption to normalize properly
+    let maxConsumption = 0;
+    Object.entries(buildingStats).forEach(([name, stats]) => {
+      if (stats && stats.consumption) {
+        maxConsumption = Math.max(maxConsumption, parseFloat(stats.consumption));
+      }
+    });
+
+    console.log('Max consumption:', maxConsumption);
+
+    Object.entries(buildings).forEach(([name, building]) => {
+      if (building.coordinates && 
+          Array.isArray(building.coordinates) && 
+          building.coordinates.length > 0 && 
+          Array.isArray(building.coordinates[0]) && 
+          building.coordinates[0].length >= 2) {
+        
+        // Get consumption from buildingStats
+        const consumption = buildingStats[name]?.consumption 
+          ? parseFloat(buildingStats[name].consumption) 
+          : 0;
+        
+        // Only process if we have valid consumption data
+        if (consumption > 0 && maxConsumption > 0) {
+          const intensity = consumption / maxConsumption;
+          
+          // Get center point of the building
+          const lat = parseFloat(building.coordinates[0][0]);
+          const lng = parseFloat(building.coordinates[0][1]);
+          
+          // Validate coordinates
+          if (!isNaN(lat) && !isNaN(lng) && 
+              lat >= -90 && lat <= 90 && 
+              lng >= -180 && lng <= 180) {
+            
+            console.log(`Building ${name}: lat=${lat}, lng=${lng}, consumption=${consumption}, intensity=${intensity}`);
+            
+            // Add center point
+            points.push([lat, lng, intensity]);
+            
+            // Add spread points if intensity is valid
+            if (!isNaN(intensity) && intensity > 0) {
+              const spread = Math.min(intensity * 0.0002, 0.001);
+              points.push([lat + spread, lng + spread, intensity * 0.8]);
+              points.push([lat - spread, lng - spread, intensity * 0.8]);
+              points.push([lat + spread, lng - spread, intensity * 0.8]);
+              points.push([lat - spread, lng + spread, intensity * 0.8]);
+            }
+          } else {
+            console.warn(`Invalid coordinates for building ${name}: lat=${lat}, lng=${lng}`);
+          }
+        } else {
+          console.warn(`No consumption data for building ${name}`);
+        }
+      }
+    });
+
+    console.log('Generated heatmap points:', points);
+    setHeatmapPoints(points);
+  };
+
+  // Update heatmap when buildingStats changes
+  useEffect(() => {
+    if (isHeatmap) {
+      generateHeatmapData();
+    }
+  }, [buildingStats, isHeatmap]);
+
   return (
     <div className="map-container">
       <div className="map-section">
@@ -246,57 +438,88 @@ const MapComponent = () => {
             className="leaflet-container"
             scrollWheelZoom={true}
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
+            <div className="map-controls">
+              <button 
+                className="control-button toggle-view"
+                onClick={toggleHeatmap}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  zIndex: 1000,
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {isHeatmap ? 'Show Points' : 'Show Heatmap'}
+              </button>
+            </div>
             
-            {Object.values(buildings).map((building) => (
-              <Polygon
-                key={building.name}
-                positions={building.coordinates}
-                pathOptions={{ 
-                  color: building.color,
-                  fillOpacity: isEditing ? 0.8 : 0.6,
-                  weight: 2,
-                  opacity: 1,
-                  color: selectedBuilding === building.name ? '#000' : building.color
-                }}
-                draggable={isEditing}
-                eventHandlers={{
-                  dragend: (e) => {
-                    const { lat, lng } = e.target.getLatLngs()[0][0];
-                    handleDragEnd(building.name, { lat, lng });
-                  },
-                  click: () => {
-                    if (!isEditing) {
-                      handleBuildingClick(building.name);
-                    }
-                  }
-                }}
-              >
-                <Tooltip>
-                  {building.name}
-                  {!isEditing && " (Click for stats)"}
-                </Tooltip>
-              </Polygon>
-            ))}
+            {isHeatmap ? (
+              <HeatmapLayer points={heatmapPoints} />
+            ) : (
+              <>
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                
+                {Object.values(buildings).map((building) => (
+                  <Polygon
+                    key={building.name}
+                    positions={building.coordinates}
+                    pathOptions={{ 
+                      color: selectedBuilding === building.name ? '#000' : building.color,
+                      fillColor: buildingStats[building.name]?.average 
+                        ? getHeatmapColor(parseFloat(buildingStats[building.name].average))
+                        : building.color,
+                      fillOpacity: isEditing ? 0.8 : 0.6,
+                      weight: 2,
+                      opacity: 1
+                    }}
+                    draggable={isEditing}
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const { lat, lng } = e.target.getLatLngs()[0][0];
+                        handleDragEnd(building.name, { lat, lng });
+                      },
+                      click: () => {
+                        if (!isEditing) {
+                          handleBuildingClick(building.name);
+                        }
+                      }
+                    }}
+                  >
+                    <Tooltip>
+                      {building.name}
+                      {buildingStats[building.name] && 
+                        ` - ${buildingStats[building.name].average} kWh`}
+                      {!isEditing && " (Click for stats)"}
+                    </Tooltip>
+                  </Polygon>
+                ))}
 
-            {isEditing && Object.values(buildings).map((building) => (
-              <Marker
-                key={`marker-${building.name}`}
-                position={building.coordinates[0]}
-                draggable={true}
-                eventHandlers={{
-                  dragend: (e) => {
-                    const { lat, lng } = e.target.getLatLng();
-                    handleDragEnd(building.name, { lat, lng });
-                  }
-                }}
-              >
-                <Popup>Drag to move building</Popup>
-              </Marker>
-            ))}
+                {isEditing && Object.values(buildings).map((building) => (
+                  <Marker
+                    key={`marker-${building.name}`}
+                    position={building.coordinates[0]}
+                    draggable={true}
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const { lat, lng } = e.target.getLatLng();
+                        handleDragEnd(building.name, { lat, lng });
+                      }
+                    }}
+                  >
+                    <Popup>Drag to move building</Popup>
+                  </Marker>
+                ))}
+              </>
+            )}
           </MapContainer>
         </div>
       </div>
@@ -345,11 +568,11 @@ const MapComponent = () => {
                 <div className="date-label">Select Date</div>
                 <DatePicker
                   selected={selectedDate}
-                  onChange={(date) => {
-                    setSelectedDate(date);
-                    fetchBuildingStats(selectedBuilding, date);
-                  }}
+                  onChange={handleDateChange}
                   dateFormat="yyyy/MM/dd"
+                  minDate={minDate}
+                  maxDate={maxDate}
+                  filterDate={isDateAvailable}
                   customInput={
                     <input className="date-picker" />
                   }

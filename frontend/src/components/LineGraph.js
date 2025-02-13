@@ -202,23 +202,9 @@ const LineGraph = () => {
 
         // Remove statistics for the removed dataset
         setStats((prevStats) => {
-          const newStats = { ...prevStats };
-          if (removedDataset.label === 'Prediction') {
-            delete newStats['Prediction-Future'];
-          } else if (removedDataset.label === 'Average Aggregate') {
-            delete newStats['Average-Aggregate'];
-            setIsAverageDisplayed(false);
-          } else {
+            const newStats = { ...prevStats };
             delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
-          }
-
-          // If there are no datasets left, remove the average aggregate
-          if (updatedDatasets.length === 0) {
-            delete newStats['Average-Aggregate'];
-            setIsAverageDisplayed(false);
-          }
-
-          return newStats;
+            return newStats;
         });
       
       return updatedDatasets;
@@ -323,35 +309,31 @@ const LineGraph = () => {
         consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
       }));
 
-      // Append prediction results to the graph
+       // Append prediction results to the graph
       const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
       const predictionDataset = {
-        label: 'Prediction',
+        building: 'Prediction',
+        year: 'Future',
+        month: '',
         data: formattedPredictions,
         color: randomColor,
-        borderColor: randomColor,
-        borderWidth: 3, 
-        borderDash: [10, 5], 
-        pointBackgroundColor: "rgba(72, 182, 255, 0.91)", 
-        pointRadius: 3, 
-        tension: 0.4, 
-        fill: false, 
-        hoverBorderColor: randomColor, 
-        borderColor: randomColor,
-        evaluation: predictionData.evaluation
+        evaluation: predictionData.evaluation,
       };
-      setSelectedDatasets(prev => [...prev, predictionDataset]);
+      console.log('Prediction Dataset:', predictionDataset);
 
-      const predictionStats = calculateDatasetStatistics(predictionDataset);
-      setStats(prev => ({
-          ...prev,
-          'Prediction-Future': {
-          label: 'Prediction - Future',
-          ...predictionStats
-          }
-      }));
+        setSelectedDatasets(prev => [...prev, predictionDataset]);
 
-      setError(null);
+        // Calculate and set statistics for the prediction dataset
+        const predictionStats = calculateDatasetStatistics(predictionDataset);
+        setStats(prev => ({
+            ...prev,
+            'Prediction-Future': {
+            label: 'Prediction - Future',
+            ...predictionStats
+            }
+        }));
+      
+        setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
       setError(`Prediction failed: ${error.message}`);
@@ -363,7 +345,7 @@ const LineGraph = () => {
   //Calculate statistics for the statistics box
   const calculateDatasetStatistics = (dataset) => {
     // Check if the dataset is the prediction dataset
-  if (dataset.label === 'Prediction') {
+  if (dataset.building === 'Prediction') {
         const consumptionValues = dataset.data.map(entry => entry.consumption).slice(30);
         const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
         const max = Math.max(...consumptionValues);

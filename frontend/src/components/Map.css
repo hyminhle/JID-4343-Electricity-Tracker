@@ -190,3 +190,12 @@
   color: #666;
   padding: 20px 0;
 }
+
+.toggle-view {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: background-color 0.3s ease;
+}
+
+.toggle-view:hover {
+  background-color: #0056b3 !important;
+}
