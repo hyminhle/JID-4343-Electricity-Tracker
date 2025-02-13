@@ -25,6 +25,8 @@ const MapComponent = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(null);
   const [buildingStats, setBuildingStats] = useState({});
+  const [minDate, setMinDate] = useState(null);
+  const [maxDate, setMaxDate] = useState(null);
 
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -35,23 +37,27 @@ const MapComponent = () => {
         }
         const data = await response.json();
         
-        // Add Buildings A-J to the available buildings
-        const extendedData = {
-          ...data,
-          'Building A': {},
-          'Building B': {},
-          'Building C': {},
-          'Building D': {},
-          'Building E': {},
-          'Building F': {},
-          'Building G': {},
-          'Building H': {},
-          'Building I': {},
-          'Building J': {}
-        };
+        // Find min and max dates from available data
+        let minYear = '9999', maxYear = '0';
+        let minMonth = '12', maxMonth = '1';
         
-        setAvailableData(extendedData);
-        setSelectedBuilding(Object.keys(extendedData)[0] || '');
+        Object.entries(data).forEach(([building, years]) => {
+          Object.keys(years).forEach(year => {
+            if (year < minYear) minYear = year;
+            if (year > maxYear) maxYear = year;
+            
+            Object.keys(years[year]).forEach(month => {
+              if (year === minYear && month < minMonth) minMonth = month;
+              if (year === maxYear && month > maxMonth) maxMonth = month;
+            });
+          });
+        });
+        
+        setMinDate(new Date(minYear, parseInt(minMonth) - 1, 1));
+        setMaxDate(new Date(maxYear, parseInt(maxMonth) - 1, 31));
+        setSelectedDate(new Date(minYear, parseInt(minMonth) - 1, 1));
+        
+        setAvailableData(data);
       } catch (error) {
         console.error('Error fetching available data:', error);
         setError('Failed to fetch available data');
@@ -182,7 +188,7 @@ const MapComponent = () => {
         }));
 
         // After adding the building, fetch its stats
-        await fetchBuildingStats(selectedBuilding);
+        await fetchBuildingStats(selectedBuilding, selectedDate);
       } catch (error) {
         console.error('Error in addBuilding:', error);
       }
@@ -213,60 +219,70 @@ const MapComponent = () => {
   };
 
   // Add function to fetch and calculate building statistics
-  const fetchBuildingStats = async (buildingName) => {
+  const fetchBuildingStats = async (buildingName, date) => {
     try {
-      if (!availableData[buildingName]) return;
+      // First check if we have data for this building and date
+      if (!availableData[buildingName]) {
+        console.log('No data available for building:', buildingName);
+        return;
+      }
 
-      const years = Object.keys(availableData[buildingName]);
-      if (years.length === 0) return;
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();  // Get the actual selected day
 
-      const latestYear = years[years.length - 1];
-      const months = Object.keys(availableData[buildingName][latestYear]);
-      const latestMonth = months[months.length - 1];
+      // Check if we have data for this year and month
+      const buildingInfo = availableData[buildingName];
+      console.log('Available data for building:', buildingInfo);
 
-      const response = await fetch(
-        `http://127.0.0.1:5000/fetch-data/${latestYear}/${latestMonth}/0/${buildingName}`
-      );
-      
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      // Get available years
+      const availableYears = Object.keys(buildingInfo);
+      if (!availableYears.includes(year.toString())) {
+        console.log('No data for year:', year);
+        setError(`No data available for ${year}`);
+        return;
+      }
+
+      // Get available months for this year
+      const availableMonths = Object.keys(buildingInfo[year.toString()]);
+      if (!availableMonths.includes(month.toString())) {
+        console.log('No data for month:', month);
+        setError(`No data available for month ${month}`);
+        return;
+      }
+
+      const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
+      console.log('Fetching from URL:', API_URL);
+
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
+      console.log('Received data:', data);
+
+      // Update stats with the processed data
+      setStats({
+        consumption: data.consumption,
+        month: `${month}/${year}`,
+        day: day
+      });
       
-      // Calculate statistics like in LineGraph
-      const consumptionValues = data.map(entry => entry.consumption);
-      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-      
-      // Update building color based on average consumption
+      // Update building colors based on consumption
       if (buildings[buildingName]) {
         setBuildings(prev => ({
           ...prev,
           [buildingName]: {
             ...prev[buildingName],
-            color: getHeatmapColor(average)
-          }
-        }));
-
-        // Store statistics
-        setBuildingStats(prev => ({
-          ...prev,
-          [buildingName]: {
-            average: average.toFixed(2),
-            consumption: average.toFixed(2),
-            month: `${latestMonth}/${latestYear}`
+            color: getHeatmapColor(parseFloat(data.consumption))
           }
         }));
       }
-
-      // Update stats for the selected building
-      if (buildingName === selectedBuilding) {
-        setStats({
-          consumption: average.toFixed(2),
-          month: `${latestMonth}/${latestYear}`
-        });
-      }
-
     } catch (error) {
       console.error('Error fetching building stats:', error);
+      setError('Failed to fetch building statistics');
+      setStats(null);
     }
   };
 
@@ -274,7 +290,7 @@ const MapComponent = () => {
   const handleDateChange = (date) => {
     setSelectedDate(date);
     if (selectedBuilding) {
-      fetchBuildingStats(selectedBuilding);
+      fetchBuildingStats(selectedBuilding, date);
     }
   };
 
@@ -286,7 +302,7 @@ const MapComponent = () => {
 
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
-    fetchBuildingStats(buildingName);
+    fetchBuildingStats(buildingName, selectedDate);
   };
 
   const handleDragEnd = (buildingName, newLatLng) => {
@@ -307,6 +323,17 @@ const MapComponent = () => {
         }
       };
     });
+  };
+
+  // Add this function to check if a date has data available
+  const isDateAvailable = (date) => {
+    if (!selectedBuilding || !availableData[selectedBuilding]) return false;
+    
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString();
+    
+    return availableData[selectedBuilding][year] && 
+           availableData[selectedBuilding][year][month];
   };
 
   return (
@@ -424,6 +451,9 @@ const MapComponent = () => {
                   selected={selectedDate}
                   onChange={handleDateChange}
                   dateFormat="yyyy/MM/dd"
+                  minDate={minDate}
+                  maxDate={maxDate}
+                  filterDate={isDateAvailable}
                   customInput={
                     <input className="date-picker" />
                   }
