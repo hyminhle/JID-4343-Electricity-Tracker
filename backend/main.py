@@ -68,6 +68,10 @@ monthly_data = {}
 def is_duplicate_data(year, month, day, building):
     formatted_date = datetime(year, month, day).date()
     return db.session.query(ElectricityData.id).filter_by(date=formatted_date, building=building).first() is not None
+def is_duplicate_stats(year, month, building):
+    formatted_date = datetime(year, month, 1).date()
+    return db.session.query(ElectricityStatistics.id).filter_by(date=formatted_date, building=building).first() is not None
+
 
 def parse_csv(file):
     try:
@@ -83,33 +87,33 @@ def parse_csv(file):
         # Extract the consumption data and ensure it's converted to a list of floats
         consumption_data = df.iloc[0, 2:].astype(float)
 
-        # Extract the month from the first date
-        first_date = date_columns[0]
-        parsed_date = datetime.strptime(first_date, '%m/%d/%Y %H:%M')  # Parse the date and time
-        month_number = parsed_date.month
-        year_number = parsed_date.year
-        day_number = parsed_date.day
-
-        # Map numeric month to month name
-        months = {
-            1: 'January', 2: 'February', 3: 'March', 4: 'April',
-            5: 'May', 6: 'June', 7: 'July', 8: 'August',
-            9: 'September', 10: 'October', 11: 'November', 12: 'December'
-        }
-
-        month_name = months.get(month_number, 'Unknown')
-
         # Check for empty consumption data
         if not any(consumption_data):  # Check if the list has valid non-zero data
             return None, "No valid consumption data found in the file."
         
-        # Check for duplicate data
-        if is_duplicate_data(year_number, int(month_number), int(day_number), f"Building {building_number}"):
-            return None, "Duplicate data detected."
+        monthly_consumption_data = {}
 
         # Input data into database
         for date, consumption in zip(date_columns, consumption_data):
-            formatted_date = datetime.strptime(date, '%m/%d/%Y %H:%M').date()
+            parsed_date = datetime.strptime(date, '%m/%d/%Y %H:%M')  # Parse the date and time
+            month_number = parsed_date.month
+            year_number = parsed_date.year
+            day_number = parsed_date.day
+
+            # Map numeric month to month name
+            months = {
+                1: 'January', 2: 'February', 3: 'March', 4: 'April',
+                5: 'May', 6: 'June', 7: 'July', 8: 'August',
+                9: 'September', 10: 'October', 11: 'November', 12: 'December'
+            }
+
+            month_name = months.get(month_number, 'Unknown')
+
+            # Check for duplicate data
+            if is_duplicate_data(year_number, int(month_number), int(day_number), f"Building {building_number}"):
+                continue  # Skip duplicate data
+
+            formatted_date = parsed_date.date()
             new_entry = ElectricityData(
                 month=month_name,
                 date=formatted_date,
@@ -117,34 +121,45 @@ def parse_csv(file):
                 building=f"Building {building_number}"
             )
             db.session.add(new_entry)
+
+            # Collect monthly consumption data
+            if month_name not in monthly_consumption_data:
+                monthly_consumption_data[month_name] = []
+            monthly_consumption_data[month_name].append(consumption)
+
         db.session.commit()
 
-        mean_value = float(np.mean(consumption_data))
-        highest_value = float(np.max(consumption_data))
-        lowest_value = float(np.min(consumption_data))
-        median_value = float(np.median(consumption_data))
-        
-        # Insert statistics data into ElectricityStatistics table
-        stat_entry = ElectricityStatistics(
-            month=month_name,
-            date=parsed_date.date(),  # Store the first date of the month
-            mean=mean_value,
-            highest=highest_value,
-            lowest=lowest_value,
-            median=median_value,
-            building=f"Building {building_number}"
-        )
-        db.session.add(stat_entry)
-        db.session.commit()
-        
-        # Store the data for the month
-        monthly_data[month_name] = consumption_data
+        for month_name, consumption_data in monthly_consumption_data.items():
+            mean_value = float(np.mean(consumption_data))
+            highest_value = float(np.max(consumption_data))
+            lowest_value = float(np.min(consumption_data))
+            median_value = float(np.median(consumption_data))
+
+            if is_duplicate_stats(year_number, list(months.keys())[list(months.values()).index(month_name)], f"Building {building_number}"):
+                continue  # Skip duplicate statistics data
+
+            # Insert statistics data into ElectricityStatistics table
+            stat_entry = ElectricityStatistics(
+                month=month_name,
+                date=datetime(year_number, list(months.keys())[list(months.values()).index(month_name)], 1).date(), 
+                mean=mean_value,
+                highest=highest_value,
+                lowest=lowest_value,
+                median=median_value,
+                building=f"Building {building_number}"
+            )
+            db.session.add(stat_entry)
+            db.session.commit()
+            
+            # Store the data for the month
+            monthly_data[month_name] = consumption_data
 
         return month_name, consumption_data
 
     except Exception as e:
         db.session.rollback()
         return None, f"Error processing file: {str(e)}"
+    
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
