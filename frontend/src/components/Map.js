@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Polygon, Tooltip, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Tooltip, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet.heat';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import './Map.css';
+import HeatmapLayer from './HeatmapLayer';
 
 // Fix for default markers
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,6 +29,11 @@ const MapComponent = () => {
   const [buildingStats, setBuildingStats] = useState({});
   const [minDate, setMinDate] = useState(null);
   const [maxDate, setMaxDate] = useState(null);
+  const [isHeatmap, setIsHeatmap] = useState(false);
+  const [heatmapPoints, setHeatmapPoints] = useState([]);
+
+  // Add MapTiler key from environment variable
+  const MAPTILER_KEY = process.env.REACT_APP_MAPTILER_KEY;
 
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -279,6 +286,14 @@ const MapComponent = () => {
           }
         }));
       }
+
+      setBuildingStats(prev => ({
+        ...prev,
+        [buildingName]: {
+          ...prev[buildingName],
+          consumption: data.consumption
+        }
+      }));
     } catch (error) {
       console.error('Error fetching building stats:', error);
       setError('Failed to fetch building statistics');
@@ -336,6 +351,83 @@ const MapComponent = () => {
            availableData[selectedBuilding][year][month];
   };
 
+  // Add function to toggle between point and heatmap view
+  const toggleHeatmap = () => {
+    setIsHeatmap(!isHeatmap);
+  };
+
+  // Update generateHeatmapData function
+  const generateHeatmapData = () => {
+    const points = [];
+    
+    // First find the max consumption to normalize properly
+    let maxConsumption = 0;
+    Object.entries(buildingStats).forEach(([name, stats]) => {
+      if (stats && stats.consumption) {
+        maxConsumption = Math.max(maxConsumption, parseFloat(stats.consumption));
+      }
+    });
+
+    console.log('Max consumption:', maxConsumption);
+
+    Object.entries(buildings).forEach(([name, building]) => {
+      if (building.coordinates && 
+          Array.isArray(building.coordinates) && 
+          building.coordinates.length > 0 && 
+          Array.isArray(building.coordinates[0]) && 
+          building.coordinates[0].length >= 2) {
+        
+        // Get consumption from buildingStats
+        const consumption = buildingStats[name]?.consumption 
+          ? parseFloat(buildingStats[name].consumption) 
+          : 0;
+        
+        // Only process if we have valid consumption data
+        if (consumption > 0 && maxConsumption > 0) {
+          const intensity = consumption / maxConsumption;
+          
+          // Get center point of the building
+          const lat = parseFloat(building.coordinates[0][0]);
+          const lng = parseFloat(building.coordinates[0][1]);
+          
+          // Validate coordinates
+          if (!isNaN(lat) && !isNaN(lng) && 
+              lat >= -90 && lat <= 90 && 
+              lng >= -180 && lng <= 180) {
+            
+            console.log(`Building ${name}: lat=${lat}, lng=${lng}, consumption=${consumption}, intensity=${intensity}`);
+            
+            // Add center point
+            points.push([lat, lng, intensity]);
+            
+            // Add spread points if intensity is valid
+            if (!isNaN(intensity) && intensity > 0) {
+              const spread = Math.min(intensity * 0.0002, 0.001);
+              points.push([lat + spread, lng + spread, intensity * 0.8]);
+              points.push([lat - spread, lng - spread, intensity * 0.8]);
+              points.push([lat + spread, lng - spread, intensity * 0.8]);
+              points.push([lat - spread, lng + spread, intensity * 0.8]);
+            }
+          } else {
+            console.warn(`Invalid coordinates for building ${name}: lat=${lat}, lng=${lng}`);
+          }
+        } else {
+          console.warn(`No consumption data for building ${name}`);
+        }
+      }
+    });
+
+    console.log('Generated heatmap points:', points);
+    setHeatmapPoints(points);
+  };
+
+  // Update heatmap when buildingStats changes
+  useEffect(() => {
+    if (isHeatmap) {
+      generateHeatmapData();
+    }
+  }, [buildingStats, isHeatmap]);
+
   return (
     <div className="map-container">
       <div className="map-section">
@@ -346,61 +438,88 @@ const MapComponent = () => {
             className="leaflet-container"
             scrollWheelZoom={true}
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
+            <div className="map-controls">
+              <button 
+                className="control-button toggle-view"
+                onClick={toggleHeatmap}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  zIndex: 1000,
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {isHeatmap ? 'Show Points' : 'Show Heatmap'}
+              </button>
+            </div>
             
-            {Object.values(buildings).map((building) => (
-              <Polygon
-                key={building.name}
-                positions={building.coordinates}
-                pathOptions={{ 
-                  color: selectedBuilding === building.name ? '#000' : building.color,
-                  fillColor: buildingStats[building.name]?.average 
-                    ? getHeatmapColor(parseFloat(buildingStats[building.name].average))
-                    : building.color,
-                  fillOpacity: isEditing ? 0.8 : 0.6,
-                  weight: 2,
-                  opacity: 1
-                }}
-                draggable={isEditing}
-                eventHandlers={{
-                  dragend: (e) => {
-                    const { lat, lng } = e.target.getLatLngs()[0][0];
-                    handleDragEnd(building.name, { lat, lng });
-                  },
-                  click: () => {
-                    if (!isEditing) {
-                      handleBuildingClick(building.name);
-                    }
-                  }
-                }}
-              >
-                <Tooltip>
-                  {building.name}
-                  {buildingStats[building.name] && 
-                    ` - ${buildingStats[building.name].average} kWh`}
-                  {!isEditing && " (Click for stats)"}
-                </Tooltip>
-              </Polygon>
-            ))}
+            {isHeatmap ? (
+              <HeatmapLayer points={heatmapPoints} />
+            ) : (
+              <>
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                
+                {Object.values(buildings).map((building) => (
+                  <Polygon
+                    key={building.name}
+                    positions={building.coordinates}
+                    pathOptions={{ 
+                      color: selectedBuilding === building.name ? '#000' : building.color,
+                      fillColor: buildingStats[building.name]?.average 
+                        ? getHeatmapColor(parseFloat(buildingStats[building.name].average))
+                        : building.color,
+                      fillOpacity: isEditing ? 0.8 : 0.6,
+                      weight: 2,
+                      opacity: 1
+                    }}
+                    draggable={isEditing}
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const { lat, lng } = e.target.getLatLngs()[0][0];
+                        handleDragEnd(building.name, { lat, lng });
+                      },
+                      click: () => {
+                        if (!isEditing) {
+                          handleBuildingClick(building.name);
+                        }
+                      }
+                    }}
+                  >
+                    <Tooltip>
+                      {building.name}
+                      {buildingStats[building.name] && 
+                        ` - ${buildingStats[building.name].average} kWh`}
+                      {!isEditing && " (Click for stats)"}
+                    </Tooltip>
+                  </Polygon>
+                ))}
 
-            {isEditing && Object.values(buildings).map((building) => (
-              <Marker
-                key={`marker-${building.name}`}
-                position={building.coordinates[0]}
-                draggable={true}
-                eventHandlers={{
-                  dragend: (e) => {
-                    const { lat, lng } = e.target.getLatLng();
-                    handleDragEnd(building.name, { lat, lng });
-                  }
-                }}
-              >
-                <Popup>Drag to move building</Popup>
-              </Marker>
-            ))}
+                {isEditing && Object.values(buildings).map((building) => (
+                  <Marker
+                    key={`marker-${building.name}`}
+                    position={building.coordinates[0]}
+                    draggable={true}
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const { lat, lng } = e.target.getLatLng();
+                        handleDragEnd(building.name, { lat, lng });
+                      }
+                    }}
+                  >
+                    <Popup>Drag to move building</Popup>
+                  </Marker>
+                ))}
+              </>
+            )}
           </MapContainer>
         </div>
       </div>

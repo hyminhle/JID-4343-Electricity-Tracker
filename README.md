@@ -8,7 +8,7 @@ The Electricity Consumption Tracker is a web application designed to help users 
 Running the code will require users to install these applications first into their virtual environment:
 - pip install flask flask-cors matplotlib panda mysql-connector mysql-connector-python mysql-connector-python-rf pymysql flask-sqlalchemy Flask-Caching apscheduler
 - npm install chart.js axios chartjs-plugin-annotation react-router-dom
-react-leaflet@4.2.1 leaflet@1.9.4 @types/leaflet --legacy-peer-deps
+react-leaflet@4.2.1 leaflet@1.9.4 @types/leaflet --legacy-peer-deps leaflet.heat
 # Release Notes
 
 ## Release 0.0.0
