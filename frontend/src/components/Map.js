@@ -24,6 +24,7 @@ const MapComponent = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(null);
+  const [buildingStats, setBuildingStats] = useState({});
 
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -179,29 +180,101 @@ const MapComponent = () => {
           ...prev,
           [selectedBuilding]: newBuilding
         }));
+
+        // After adding the building, fetch its stats
+        await fetchBuildingStats(selectedBuilding);
       } catch (error) {
         console.error('Error in addBuilding:', error);
       }
     }
   };
 
-  const fetchBuildingStats = async (building, date) => {
-    if (!building) return;
+  // Modify getHeatmapColor to use actual consumption data ranges
+  const getHeatmapColor = (consumption) => {
+    if (!consumption) return '#cccccc'; // Default gray for no data
     
+    // Using the ranges we see in LineGraph data (8000-12000 kWh)
+    const low = 8500;     // Green zone
+    const medium = 10000; // Yellow zone
+    const high = 11500;   // Red zone
+    
+    if (consumption <= low) {
+      // Green to Yellow gradient
+      const ratio = consumption / low;
+      return `rgb(${Math.floor(255 * ratio)}, 255, 0)`;
+    } else if (consumption <= medium) {
+      // Yellow to Red gradient
+      const ratio = (consumption - low) / (medium - low);
+      return `rgb(255, ${Math.floor(255 * (1 - ratio))}, 0)`;
+    } else {
+      // Deep red for high consumption
+      return '#ff0000';
+    }
+  };
+
+  // Add function to fetch and calculate building statistics
+  const fetchBuildingStats = async (buildingName) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0];
-      const [year, month, day] = formattedDate.split('-');
-      const response = await fetch(`http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${building}`);
-      console.log('Response:', building);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!availableData[buildingName]) return;
+
+      const years = Object.keys(availableData[buildingName]);
+      if (years.length === 0) return;
+
+      const latestYear = years[years.length - 1];
+      const months = Object.keys(availableData[buildingName][latestYear]);
+      const latestMonth = months[months.length - 1];
+
+      const response = await fetch(
+        `http://127.0.0.1:5000/fetch-data/${latestYear}/${latestMonth}/0/${buildingName}`
+      );
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
       const data = await response.json();
-      setStats(data);
-      console.log('Stats:', data);
+      
+      // Calculate statistics like in LineGraph
+      const consumptionValues = data.map(entry => entry.consumption);
+      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+      
+      // Update building color based on average consumption
+      if (buildings[buildingName]) {
+        setBuildings(prev => ({
+          ...prev,
+          [buildingName]: {
+            ...prev[buildingName],
+            color: getHeatmapColor(average)
+          }
+        }));
+
+        // Store statistics
+        setBuildingStats(prev => ({
+          ...prev,
+          [buildingName]: {
+            average: average.toFixed(2),
+            consumption: average.toFixed(2),
+            month: `${latestMonth}/${latestYear}`
+          }
+        }));
+      }
+
+      // Update stats for the selected building
+      if (buildingName === selectedBuilding) {
+        setStats({
+          consumption: average.toFixed(2),
+          month: `${latestMonth}/${latestYear}`
+        });
+      }
+
     } catch (error) {
       console.error('Error fetching building stats:', error);
-      setStats(null);
+    }
+  };
+
+  // Update the DatePicker onChange handler
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (selectedBuilding) {
+      fetchBuildingStats(selectedBuilding);
     }
   };
 
@@ -213,7 +286,7 @@ const MapComponent = () => {
 
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
-    fetchBuildingStats(buildingName, selectedDate);
+    fetchBuildingStats(buildingName);
   };
 
   const handleDragEnd = (buildingName, newLatLng) => {
@@ -256,11 +329,13 @@ const MapComponent = () => {
                 key={building.name}
                 positions={building.coordinates}
                 pathOptions={{ 
-                  color: building.color,
+                  color: selectedBuilding === building.name ? '#000' : building.color,
+                  fillColor: buildingStats[building.name]?.average 
+                    ? getHeatmapColor(parseFloat(buildingStats[building.name].average))
+                    : building.color,
                   fillOpacity: isEditing ? 0.8 : 0.6,
                   weight: 2,
-                  opacity: 1,
-                  color: selectedBuilding === building.name ? '#000' : building.color
+                  opacity: 1
                 }}
                 draggable={isEditing}
                 eventHandlers={{
@@ -277,6 +352,8 @@ const MapComponent = () => {
               >
                 <Tooltip>
                   {building.name}
+                  {buildingStats[building.name] && 
+                    ` - ${buildingStats[building.name].average} kWh`}
                   {!isEditing && " (Click for stats)"}
                 </Tooltip>
               </Polygon>
@@ -345,10 +422,7 @@ const MapComponent = () => {
                 <div className="date-label">Select Date</div>
                 <DatePicker
                   selected={selectedDate}
-                  onChange={(date) => {
-                    setSelectedDate(date);
-                    fetchBuildingStats(selectedBuilding, date);
-                  }}
+                  onChange={handleDateChange}
                   dateFormat="yyyy/MM/dd"
                   customInput={
                     <input className="date-picker" />
