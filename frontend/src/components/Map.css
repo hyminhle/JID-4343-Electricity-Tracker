@@ -199,3 +199,33 @@
 .toggle-view:hover {
   background-color: #0056b3 !important;
 }
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.slider {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 5px;
+  background: #007bff;
+  outline: none;
+  opacity: 0.9;
+  transition: opacity .15s ease-in-out;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  background: #fff;
+  border: 2px solid #007bff;
+  cursor: pointer;
+  border-radius: 50%;
+}

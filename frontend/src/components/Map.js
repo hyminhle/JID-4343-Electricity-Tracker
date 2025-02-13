@@ -31,6 +31,8 @@ const MapComponent = () => {
   const [maxDate, setMaxDate] = useState(null);
   const [isHeatmap, setIsHeatmap] = useState(false);
   const [heatmapPoints, setHeatmapPoints] = useState([]);
+  const [selectedDay, setSelectedDay] = useState(1);
+
 
   // Add MapTiler key from environment variable
   const MAPTILER_KEY = process.env.REACT_APP_MAPTILER_KEY;
@@ -340,6 +342,82 @@ const MapComponent = () => {
     });
   };
 
+  const handleDayChange = (event) => {
+    const day = parseInt(event.target.value);
+    setSelectedDay(day);
+    const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
+    setSelectedDate(newDate);
+    if (selectedBuilding) {
+      fetchBuildingStats(selectedBuilding, newDate);
+      updateAllBuildings(newDate);
+    }
+  };
+  
+  const updateAllBuildings = async (newDate) => {
+    try {
+      const updatedBuildings = { ...buildings };
+  
+      for (const buildingName of Object.keys(updatedBuildings)) {
+        // First check if data is available for the building
+        if (!availableData[buildingName]) {
+          console.log('No data available for building:', buildingName);
+          continue;
+        }
+  
+        const year = newDate.getFullYear();
+        const month = newDate.getMonth() + 1; // JavaScript months are 0-based
+        const day = newDate.getDate();
+  
+        const buildingInfo = availableData[buildingName];
+        console.log(`Available data for ${buildingName}:`, buildingInfo);
+  
+        // Validate year availability
+        const availableYears = Object.keys(buildingInfo);
+        if (!availableYears.includes(year.toString())) {
+          console.log(`No data for year ${year} in ${buildingName}`);
+          continue;
+        }
+  
+        // Validate month availability
+        const availableMonths = Object.keys(buildingInfo[year.toString()]);
+        if (!availableMonths.includes(month.toString())) {
+          console.log(`No data for month ${month} in ${buildingName}`);
+          continue;
+        }
+  
+        const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
+        console.log(`Fetching stats for ${buildingName} from ${API_URL}`);
+  
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+  
+        const data = await response.json();
+        console.log(`Received data for ${buildingName}:`, data);
+  
+        // Update building stats and colors
+        updatedBuildings[buildingName] = {
+          ...updatedBuildings[buildingName],
+          stats: {
+            consumption: data.consumption,
+            month: `${month}/${year}`,
+            day: day,
+          },
+          color: getHeatmapColor(parseFloat(data.consumption)), // Dynamically update color
+        };
+      }
+  
+      // Update the state with new building data
+      setBuildings(updatedBuildings);
+    } catch (error) {
+      console.error('Error updating all buildings:', error);
+      setError('Failed to update all buildings');
+    }
+  };
+  
+  
+
   // Add this function to check if a date has data available
   const isDateAvailable = (date) => {
     if (!selectedBuilding || !availableData[selectedBuilding]) return false;
@@ -576,6 +654,17 @@ const MapComponent = () => {
                   customInput={
                     <input className="date-picker" />
                   }
+                />
+              </div>
+              <div className="slider-container">
+                <label>Day: {selectedDay}</label>
+                <input
+                  type="range"
+                  min="1"
+                  max={new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate()} 
+                  value={selectedDay}
+                  onChange={handleDayChange}
+                  className="slider"
                 />
               </div>
 
