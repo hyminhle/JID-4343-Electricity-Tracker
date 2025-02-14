@@ -2,54 +2,21 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
 const FileUpload = () => {
-  const [files, setFiles] = useState({
-    month1: null,
-    month2: null
-  });
+  const [files, setFiles] = useState([]);
   const [error, setError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const fileInputRefs = {
-    month1: useRef(null),
-    month2: useRef(null)
-  };
+  const fileInputRef = useRef(null);
 
-  const validateFile = (file) => {
-    if (!file.name.endsWith('.csv')) {
-      throw new Error('Please select a CSV file');
-    }
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      throw new Error('File size must be less than 5MB');
-    }
-  };
-
-  const handleFileChange = (month) => (event) => {
-    try {
-      const selectedFile = event.target.files[0];
-      if (!selectedFile) return;
-
-      validateFile(selectedFile);
-      setFiles(prev => ({
-        ...prev,
-        [month]: selectedFile
-      }));
-      setError('');
-      setUploadSuccess('');
-    } catch (err) {
-      setError(err.message);
-      if (fileInputRefs[month].current) {
-        fileInputRefs[month].current.value = '';
-      }
-      setFiles(prev => ({
-        ...prev,
-        [month]: null
-      }));
-    }
+  const handleFileChange = (event) => {
+    const selectedFiles = Array.from(event.target.files);
+    setFiles(selectedFiles);
+    setError('');
+    setUploadSuccess('');
   };
 
   const handleFileUpload = async () => {
-    if (!files.month1) {
+    if (files.length === 0) {
       setError("Please select at least one file to upload");
       return;
     }
@@ -60,9 +27,9 @@ const FileUpload = () => {
 
     try {
       const formData = new FormData();
-      if (files.month1) {
-        formData.append('file1', files.month1);
-      }
+      files.forEach((file, index) => {
+        formData.append('files', file);
+      });
 
       const response = await axios.post('http://localhost:5000/upload', formData, {
         headers: {
@@ -71,12 +38,10 @@ const FileUpload = () => {
       });
 
       setUploadSuccess('Files uploaded successfully!');
-      Object.values(fileInputRefs).forEach(ref => {
-        if (ref.current) {
-          ref.current.value = '';
-        }
-      });
-      setFiles({ month1: null});
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setFiles([]);
     } catch (error) {
       setError(error.response?.data?.error || 'Error uploading files');
     } finally {
@@ -104,6 +69,7 @@ const FileUpload = () => {
 
       <div style={{
         display: 'flex',
+        flexDirection: 'column',
         gap: '20px',
         marginBottom: '20px'
       }}>
@@ -119,7 +85,7 @@ const FileUpload = () => {
             color: '#2c3e50',
             fontSize: '18px',
             fontWeight: '500'
-          }}>Month 1</h3>
+          }}>Select Files</h3>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -127,9 +93,10 @@ const FileUpload = () => {
           }}>
             <input
               type="file"
-              onChange={handleFileChange('month1')}
-              ref={fileInputRefs.month1}
+              onChange={handleFileChange}
+              ref={fileInputRef}
               accept=".csv"
+              multiple
               disabled={loading}
               style={{
                 flex: '1',
@@ -142,10 +109,10 @@ const FileUpload = () => {
               }}
             />
             <div style={{
-              color: files.month1 ? '#28a745' : '#6c757d',
+              color: files.length > 0 ? '#28a745' : '#6c757d',
               fontSize: '14px'
             }}>
-              {files.month1 ? '✓ Selected' : 'No file'}
+              {files.length > 0 ? `${files.length} file(s) selected` : 'No files'}
             </div>
           </div>
         </div>
@@ -158,14 +125,14 @@ const FileUpload = () => {
       }}>
         <button 
           onClick={handleFileUpload} 
-          disabled={loading || (!files.month1)}
+          disabled={loading || files.length === 0}
           style={{
             padding: '10px 20px',
-            backgroundColor: loading || (!files.month1) ? '#6c757d' : '#007bff',
+            backgroundColor: loading || files.length === 0 ? '#6c757d' : '#007bff',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: loading || (!files.month1) ? 'not-allowed' : 'pointer',
+            cursor: loading || files.length === 0 ? 'not-allowed' : 'pointer',
             fontSize: '16px',
             fontWeight: '500',
             transition: 'background-color 0.2s'

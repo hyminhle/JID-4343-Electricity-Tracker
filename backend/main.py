@@ -20,6 +20,7 @@ db = SQLAlchemy(app)
 
 # Add cache
 app.config['CACHE_TYPE'] = 'SimpleCache'
+app.config['CACHE_THRESHOLD'] = 10000 
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache timeout in seconds (5 minutes)
 cache = Cache(app)
 
@@ -154,7 +155,10 @@ def parse_csv(file):
             # Store the data for the month
             monthly_data[month_name] = consumption_data
 
-        return month_name, consumption_data
+        # Convert consumption data to a list to ensure it is serializable
+        serializable_data = {month: data for month, data in monthly_consumption_data.items()}
+
+        return month_name, serializable_data
 
     except Exception as e:
         db.session.rollback()
@@ -164,31 +168,22 @@ def parse_csv(file):
 @app.route('/upload', methods=['POST'])
 def upload_files():
     try:
-        files = request.files
+        files = request.files.getlist('files')
         
-        if 'file1' not in files and 'file2' not in files:
+        if not files:
             return jsonify({'error': 'No files uploaded'}), 400
 
-        # Process first file if present
-        if 'file1' in files:
-            file1 = files['file1']
-            month1, data1 = parse_csv(file1)
-            if not month1:
-                return jsonify({'error': data1}), 400
-
-        # Process second file if present
-        if 'file2' in files:
-            file2 = files['file2']
-            month2, data2 = parse_csv(file2)
-            if not month2:
-                return jsonify({'error': data2}), 400
+        results = []
+        for file in files:
+            print(f"Processing file: {file.filename}")  # Debug statement
+            month, data = parse_csv(file)
+            if not month:
+                return jsonify({'error': data}), 400
+            results.append({'month': month, 'data': data})
 
         return jsonify({
             'message': 'Files uploaded successfully',
-            'data': {
-                'month1': month1 if 'file1' in files else None,
-                'month2': month2 if 'file2' in files else None
-            }
+            'results': results
         })
 
     except Exception as e:
@@ -248,7 +243,7 @@ def refresh_cache():
         with app.app_context():  # Ensure the application context is set up
             # Fetch all data from the database
             data = ElectricityData.query.all()
-
+            
             # Group data by year, month, and building
             grouped_data = {}
             for entry in data:
@@ -257,7 +252,7 @@ def refresh_cache():
                 month = formatted_date.month
                 day = formatted_date.day
                 building = entry.building
-
+                
                 # Create a cache key for the specific day
                 cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
                 formatted_data = {
@@ -266,6 +261,7 @@ def refresh_cache():
                     'consumption': entry.consumption,
                     'building': entry.building
                 }
+                print("cachekey:", cache_key)
                 # Store the fetched data in the cache for the specific day
                 cache.set(cache_key, formatted_data)
 
@@ -299,6 +295,16 @@ def start_scheduler_with_context():
     with app.app_context():
         start_scheduler()
 
+def print_cache_keys():
+    try:
+        cache_keys = list(cache.cache._cache.keys())  # Retrieve all cache keys
+        print("Current Cache Keys:")
+        for key in cache_keys:
+            print(key)
+    except Exception as e:
+        print(f"Error retrieving cache keys: {e}")
+
+    
 
 
 @app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
