@@ -684,7 +684,7 @@ const MapComponent = () => {
                       </span>
                     </div>
                     <div className="stat-item">
-                      <span className="stat-label">Month</span>
+                      <span className="stat-label">Month/Year</span>
                       <span className="stat-value">{stats.month}</span>
                     </div>
                   </div>
