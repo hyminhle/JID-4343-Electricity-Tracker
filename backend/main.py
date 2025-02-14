@@ -181,6 +181,7 @@ def upload_files():
                 return jsonify({'error': data}), 400
             results.append({'month': month, 'data': data})
 
+        refresh_cache()
         return jsonify({
             'message': 'Files uploaded successfully',
             'results': results

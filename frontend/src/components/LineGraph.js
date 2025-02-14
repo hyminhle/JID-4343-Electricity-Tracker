@@ -117,6 +117,28 @@ const LineGraph = () => {
     }
   };
 
+
+  const toggleTransparency = (index) => {
+    setSelectedDatasets((prev) => {
+      return prev.map((dataset, i) => {
+        if (i === index) {
+          const isTransparent = dataset.transparency ?? false;
+          return {
+            ...dataset,
+            transparency: !isTransparent,
+            borderColor: isTransparent
+              ? dataset.color // Restore original color
+              : dataset.color.replace('rgb', 'rgba').replace(')', ', 0.15)'), // Make it translucent
+            backgroundColor: isTransparent
+              ? 'transparent'
+              : dataset.color.replace('rgb', 'rgba').replace(')', ', 0.075)'), // Lighter background fill
+          };
+        }
+        return dataset;
+      });
+    });
+  };
+
   // Modify the chart update effect
   useEffect(() => {
     if (loading || error || selectedDatasets.length === 0) {
@@ -138,13 +160,14 @@ const LineGraph = () => {
     const datasets = selectedDatasets.map((ds) => ({
       label: ds.label || `${ds.building} - ${ds.month}/${ds.year}`,
       data: ds.data.map((entry) => entry.consumption),
-      borderColor: ds.color,
+      borderColor: ds.borderColor || ds.color,
+      backgroundColor: ds.backgroundColor || 'transparent',
       tension: 0.1,
       fill: ds.fill || false,
       borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
-      borderWidth: ds.borderWidth || 2,
+      borderWidth: ds.borderWidth || 1.5,
       pointBackgroundColor: ds.pointBackgroundColor || ds.color,
-      pointRadius: ds.pointRadius || 3,
+      pointRadius: ds.pointRadius || 0.5,
       pointStyle: ds.pointStyle || 'circle',
     }));
   
@@ -253,14 +276,14 @@ const LineGraph = () => {
     console.log('Average Data:', averageData);
   
     // Create the average dataset
-    const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+    
     const averageDataset = {
       label: 'Average Aggregate',
       data: averageData.map((y, i) => ({ day: i + 1, consumption: y })), // Ensure proper format
       building: 'Data',
       year: selectedDatasets.length + ' Months',
       month: 'Aggregate Average',
-      color: randomColor,
+      color: 'rgba(8, 252, 57, 0.82)',
       tension: 0.1,
       borderDash: [5, 5],
       fill: false,
@@ -319,13 +342,13 @@ const LineGraph = () => {
       console.log('Formatted Predictions:', formattedPredictions);
 
        // Append prediction results to the graph
-      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+      
       const predictionDataset = {
         building: 'Prediction',
         year: 'Future',
         month: '',
         data: formattedPredictions,
-        color: randomColor,
+        color: 'rgba(29, 67, 205, 0.82)',
         evaluation: predictionData.evaluation,
       };
       console.log('Prediction Dataset:', predictionDataset);
@@ -576,6 +599,17 @@ const LineGraph = () => {
               }}
             >
               Secondary
+            </button>
+            <button onClick={() => toggleTransparency(index)} 
+            style={{
+              marginLeft: '10px',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              border: '1px solid #ddd',
+              backgroundColor: 'white'
+              }}
+            >
+              {dataset.transparency ? 'Restore' : 'Make Translucent'}
             </button>
             <button
               onClick={() => removeDataset(index)}
