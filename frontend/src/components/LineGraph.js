@@ -76,14 +76,14 @@ const LineGraph = () => {
       const data = await response.json();
       
       // Generate a random color for the new dataset
-      const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
+      const randomColor = `rgb(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)})`;
       
       setSelectedDatasets(prev => [...prev, {
         building: selectedBuilding,
         year: selectedYear,
         month: selectedMonth,
         data: data,
-        color: randomColor
+        color: randomColor,
       }]);
 
       const newDataset = {
@@ -91,7 +91,8 @@ const LineGraph = () => {
         year: selectedYear,
         month: selectedMonth,
         data: data,
-        color: randomColor
+        color: randomColor,
+        borderDash: (selectedBuilding === 'Prediction' || selectedBuilding === 'Average Aggregate') ? [] : [5, 5],
       };
       console.log("New Data Set:", newDataset);
 
@@ -140,7 +141,7 @@ const LineGraph = () => {
       borderColor: ds.color,
       tension: 0.1,
       fill: ds.fill || false,
-      borderDash: ds.borderDash,
+      borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
       borderWidth: ds.borderWidth || 2,
       pointBackgroundColor: ds.pointBackgroundColor || ds.color,
       pointRadius: ds.pointRadius || 3,
@@ -669,7 +670,16 @@ const LineGraph = () => {
                 borderRadius: '4px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}>
-                <h4 style={{ marginBottom: '10px' }}>{statData.label}</h4>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                    <div style={{
+                        width: '15px',
+                        height: '15px',
+                        backgroundColor: selectedDatasets[index]?.color || 'transparent',
+                        borderRadius: '3px',
+                        marginRight: '10px'
+                    }} />
+                    <h4>{statData.label}</h4>
+                </div>
                 <p><strong>Average:</strong> {statData.average} kWh</p>
                 <p><strong>Max:</strong> {statData.max} kWh</p>
                 <p><strong>Min:</strong> {statData.min} kWh</p>
