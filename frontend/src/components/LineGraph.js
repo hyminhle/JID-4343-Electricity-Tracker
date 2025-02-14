@@ -203,7 +203,14 @@ const LineGraph = () => {
         // Remove statistics for the removed dataset
         setStats((prevStats) => {
             const newStats = { ...prevStats };
-            delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
+            // If the dataset is the prediction dataset
+            if (removedDataset.building === 'Prediction') {
+              delete newStats['Prediction-Future'];
+            } else if (removedDataset.label === 'Average Aggregate') {
+              delete newStats['Average-Aggregate'];
+            } else {
+              delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
+            }
             return newStats;
         });
       
@@ -308,6 +315,7 @@ const LineGraph = () => {
         date: prediction.ds, // Ensure this matches the format used in the graph
         consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
       }));
+      console.log('Formatted Predictions:', formattedPredictions);
 
        // Append prediction results to the graph
       const randomColor = `rgb(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)})`;
@@ -346,13 +354,15 @@ const LineGraph = () => {
   const calculateDatasetStatistics = (dataset) => {
     // Check if the dataset is the prediction dataset
   if (dataset.building === 'Prediction') {
-        const consumptionValues = dataset.data.map(entry => entry.consumption).slice(30);
+        const consumptionValues = dataset.data.slice(0,30).map(entry => entry.consumption);
         const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
         const max = Math.max(...consumptionValues);
         const min = Math.min(...consumptionValues);
         const total = consumptionValues.reduce((a, b) => a + b, 0);
         const meanAbsoluteError = dataset.evaluation?.mean_absolute_error || 0;
-        const meanSquaredError = dataset.evaluation?.mean_squared_error || 0;
+        const rootMeanSquaredError = dataset.evaluation?.root_mean_squared_error || 0;
+        const percentageMAE = dataset.evaluation?.percentage_mae || 0;
+        const percentageRMSE = dataset.evaluation?.percentage_rmse || 0;
 
         return {
             label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
@@ -361,7 +371,9 @@ const LineGraph = () => {
             min: min.toFixed(2),
             total: total.toFixed(2),
             meanAbsoluteError: meanAbsoluteError.toFixed(2),
-            meanSquaredError: meanSquaredError.toFixed(2),
+            rootMeanSquaredError: rootMeanSquaredError.toFixed(2),
+            percentageMAE: percentageMAE.toFixed(2),
+            percentageRMSE: percentageRMSE.toFixed(2),
         };
 
     } else if (dataset.label === 'Average Aggregate') {
@@ -640,7 +652,7 @@ const LineGraph = () => {
         </div>
         {Object.keys(stats).length >  0 && (
         <div style={{
-            width: '300px',  
+            width: '320px',  
             padding: '20px',  
             backgroundColor: '#f8f9fa',
             borderRadius: '8px',
@@ -665,8 +677,14 @@ const LineGraph = () => {
                 {statData.meanAbsoluteError && (
                     <p><strong>Mean Absolute Error:</strong> {statData.meanAbsoluteError}</p>
                 )}
-                {statData.meanSquaredError && (
-                    <p><strong>Mean Squared Error:</strong> {statData.meanSquaredError}</p>
+                {statData.percentageMAE && (
+                    <p><strong>MAE percentage:</strong> {statData.percentageMAE}%</p>
+                )}
+                {statData.rootMeanSquaredError && (
+                    <p><strong>Root Mean Squared Error:</strong> {statData.rootMeanSquaredError}</p>
+                )}
+                {statData.percentageRMSE && (
+                    <p><strong>RMSE percentage:</strong> {statData.percentageRMSE}%</p>
                 )}
             </div>
             ))}
