@@ -316,27 +316,33 @@ const MapComponent = () => {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       const day = date.getDate();  // Get the actual selected day
-  
-      // Check if we have data for this year and month
-      const buildingInfo = availableData[buildingName];
-      console.log('Available data for building:', buildingInfo);
-  
-      // Get available years
-      const availableYears = Object.keys(buildingInfo);
-      if (!availableYears.includes(year.toString())) {
-        console.log('No data for year:', year);
-        setError(`No data available for ${year}`);
-        return;
+      const dateKey = '${year}-${month}-${day}';
+      
+      if (buildings[buildingName]?.data?.[dateKey]) {
+        setStats(buildings[buildingName].data[dateKey]);
+        return; // Skip fetching if data is already stored
       }
+
+      // // Check if we have data for this year and month
+      // const buildingInfo = availableData[buildingName];
+      // console.log('Available data for building:', buildingInfo);
   
-      // Get available months for this year
-      const availableMonths = Object.keys(buildingInfo[year.toString()]);
-      if (!availableMonths.includes(month.toString())) {
-        console.log('No data for month:', month);
-        setError(`No data available for month ${month}`);
-        return;
-      }
+      // // Get available years
+      // const availableYears = Object.keys(buildingInfo);
+      // if (!availableYears.includes(year.toString())) {
+      //   console.log('No data for year:', year);
+      //   setError(`No data available for ${year}`);
+      //   return;
+      // }
   
+      // // Get available months for this year
+      // const availableMonths = Object.keys(buildingInfo[year.toString()]);
+      // if (!availableMonths.includes(month.toString())) {
+      //   console.log('No data for month:', month);
+      //   setError(`No data available for month ${month}`);
+      //   return;
+      // }
+
       const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
       console.log('Fetching from URL:', API_URL);
   
@@ -360,41 +366,45 @@ const MapComponent = () => {
       console.log('Received data:', stat_data);
   
       // Update stats with the processed data
-      setStats({
-        consumption: data.consumption,
-        month: `${month}/${year}`,
-        day: day,
-        average: stat_data.mean,
-        max: stat_data.highest,
-        min: stat_data.lowest,
-        median: stat_data.median
-      });
-      
-      // Update building colors based on consumption and average
-      if (buildings[buildingName]) {
-        setBuildings(prev => ({
-          ...prev,
-          [buildingName]: {
-            ...prev[buildingName],
-            color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean))
-          }
-        }));
-      }
-  
-      setBuildingStats(prev => ({
+      const statsData = {
+      consumption: data.consumption,
+      month: `${month}/${year}`,
+      day: day,
+      average: stat_data.mean,
+      max: stat_data.highest,
+      min: stat_data.lowest,
+      median: stat_data.median
+    };
+
+    // Set the current stats
+    setStats(statsData);
+
+    // Update building colors based on consumption and average
+    if (buildings[buildingName]) {
+      setBuildings(prev => ({
         ...prev,
         [buildingName]: {
           ...prev[buildingName],
-          consumption: data.consumption,
-          average: stat_data.mean
+          color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean))
         }
       }));
-    } catch (error) {
-      console.error('Error fetching building stats:', error);
-      setError('Failed to fetch building statistics');
-      setStats(null);
     }
-  };
+
+    // Safely update buildingStats with the newly fetched data,
+    // ensuring previous data is preserved or defaulted to an empty object.
+    setBuildingStats(prev => ({
+      ...prev,
+      [buildingName]: {
+        ...(prev[buildingName] || {}),
+        data: { ...(prev[buildingName]?.data || {}), [dateKey]: statsData }
+      }
+    }));
+  } catch (error) {
+    console.error('Error fetching building stats:', error);
+    setError('Failed to fetch building statistics');
+    setStats(null);
+  }
+};
 
   // Update the DatePicker onChange handler
   const handleDateChange = (date) => {
@@ -449,7 +459,11 @@ const MapComponent = () => {
   const updateAllBuildings = async (newDate) => {
     try {
       const updatedBuildings = { ...buildings };
-  
+      const year = newDate.getFullYear();
+      const month = newDate.getMonth() + 1; // JavaScript months are 0-based
+      const day = newDate.getDate();
+      const dateKey = `${year}-${month}-${day}`;
+
       for (const buildingName of Object.keys(updatedBuildings)) {
         // First check if data is available for the building
         if (!availableData[buildingName]) {
@@ -457,9 +471,7 @@ const MapComponent = () => {
           continue;
         }
   
-        const year = newDate.getFullYear();
-        const month = newDate.getMonth() + 1; // JavaScript months are 0-based
-        const day = newDate.getDate();
+        
   
         const buildingInfo = availableData[buildingName];
         console.log(`Available data for ${buildingName}:`, buildingInfo);
@@ -477,39 +489,55 @@ const MapComponent = () => {
           console.log(`No data for month ${month} in ${buildingName}`);
           continue;
         }
-  
-        const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
-        console.log(`Fetching stats for ${buildingName} from ${API_URL}`);
-  
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-  
-        const data = await response.json();
-        console.log(`Received data for ${buildingName}:`, data);
-  
-        const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${buildingName}`;
-        console.log(`Fetching stats for ${buildingName} from ${API_URL2}`);
-  
-        const response2 = await fetch(API_URL2);
-        if (!response2.ok) {
-          throw new Error(`HTTP error! status: ${response2.status}`);
-        }
-  
-        const stat_data = await response2.json();
-        console.log(`Received stats for ${buildingName}:`, stat_data);
-  
-        // Update building stats and colors
-        updatedBuildings[buildingName] = {
-          ...updatedBuildings[buildingName],
-          stats: {
+
+        
+        let statsData;
+        // Check if data is already cached for this date
+        if (updatedBuildings[buildingName]?.data?.[dateKey]) {
+          statsData = updatedBuildings[buildingName].data[dateKey];
+          console.log(`Using cached data for ${buildingName} on ${dateKey}`);
+        } else {
+          // Fetch data if not cached
+          const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
+          console.log(`Fetching stats for ${buildingName} from ${API_URL}`);
+
+          const response = await fetch(API_URL);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+
+          const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${buildingName}`;
+          console.log(`Fetching stats for ${buildingName} from ${API_URL2}`);
+
+          const response2 = await fetch(API_URL2);
+          if (!response2.ok) {
+            throw new Error(`HTTP error! status: ${response2.status}`);
+          }
+          const stat_data = await response2.json();
+
+          statsData = { 
             consumption: data.consumption,
             month: `${month}/${year}`,
             day: day,
             average: stat_data.mean,
-          },
-          color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean)), // Dynamically update color
+            max: stat_data.highest,
+            min: stat_data.lowest,
+            median: stat_data.median
+          };
+          
+    
+          // Update building stats and colors
+          updatedBuildings[buildingName] = {
+            ...updatedBuildings[buildingName],
+            data: { ...updatedBuildings[buildingName].data, [dateKey]: statsData }
+          };
+        }
+
+        updatedBuildings[buildingName] = {
+          ...updatedBuildings[buildingName],
+          stats: statsData,
+          color: getHeatmapColor(parseFloat(statsData.consumption), parseFloat(statsData.average))
         };
       }
   
@@ -542,67 +570,51 @@ const MapComponent = () => {
   // Update generateHeatmapData function
   const generateHeatmapData = () => {
     const points = [];
-    
-    // First find the max consumption to normalize properly
+    // Create a dateKey matching the caching format: "year-month-day"
+    const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
+  
+    // Determine the maximum consumption among buildings for normalization
     let maxConsumption = 0;
-    Object.entries(buildingStats).forEach(([name, stats]) => {
-      if (stats && stats.consumption) {
-        maxConsumption = Math.max(maxConsumption, parseFloat(stats.consumption));
+    Object.values(buildings).forEach((building) => {
+      // Check if the building's cached data for this date exists
+      if (building.data && building.data[dateKey] && building.data[dateKey].consumption) {
+        maxConsumption = Math.max(maxConsumption, parseFloat(building.data[dateKey].consumption));
       }
     });
-
     console.log('Max consumption:', maxConsumption);
-
-    Object.entries(buildings).forEach(([name, building]) => {
-      if (building.coordinates && 
-          Array.isArray(building.coordinates) && 
-          building.coordinates.length > 0 && 
-          Array.isArray(building.coordinates[0]) && 
-          building.coordinates[0].length >= 2) {
-        
-        // Get consumption from buildingStats
-        const consumption = buildingStats[name]?.consumption 
-          ? parseFloat(buildingStats[name].consumption) 
-          : 0;
-        
-        // Only process if we have valid consumption data
+  
+    // Generate heatmap points using the cached data from each building
+    Object.values(buildings).forEach((building) => {
+      if (building.data && building.data[dateKey] && building.data[dateKey].consumption) {
+        const consumption = parseFloat(building.data[dateKey].consumption);
         if (consumption > 0 && maxConsumption > 0) {
           const intensity = consumption / maxConsumption;
-          
-          // Get center point of the building
+          // Assume the first coordinate is the center
           const lat = parseFloat(building.coordinates[0][0]);
           const lng = parseFloat(building.coordinates[0][1]);
-          
-          // Validate coordinates
-          if (!isNaN(lat) && !isNaN(lng) && 
-              lat >= -90 && lat <= 90 && 
-              lng >= -180 && lng <= 180) {
-            
-            console.log(`Building ${name}: lat=${lat}, lng=${lng}, consumption=${consumption}, intensity=${intensity}`);
-            
-            // Add center point
+          if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            // Add the center point
             points.push([lat, lng, intensity]);
-            
-            // Add spread points if intensity is valid
-            if (!isNaN(intensity) && intensity > 0) {
-              const spread = Math.min(intensity * 0.0002, 0.001);
-              points.push([lat + spread, lng + spread, intensity * 0.8]);
-              points.push([lat - spread, lng - spread, intensity * 0.8]);
-              points.push([lat + spread, lng - spread, intensity * 0.8]);
-              points.push([lat - spread, lng + spread, intensity * 0.8]);
-            }
+            // Generate additional points for a spread effect
+            const spread = Math.min(intensity * 0.0002, 0.001);
+            points.push([lat + spread, lng + spread, intensity * 0.8]);
+            points.push([lat - spread, lng - spread, intensity * 0.8]);
+            points.push([lat + spread, lng - spread, intensity * 0.8]);
+            points.push([lat - spread, lng + spread, intensity * 0.8]);
           } else {
-            console.warn(`Invalid coordinates for building ${name}: lat=${lat}, lng=${lng}`);
+            console.warn(`Invalid coordinates for building ${building.name}: lat=${lat}, lng=${lng}`);
           }
-        } else {
-          console.warn(`No consumption data for building ${name}`);
         }
+      } else {
+        console.warn(`No consumption data for building ${building.name}`);
       }
     });
-
     console.log('Generated heatmap points:', points);
     setHeatmapPoints(points);
   };
+  
+
+  
 
   // Update heatmap when buildingStats changes
   useEffect(() => {
