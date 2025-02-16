@@ -7,8 +7,9 @@ import Submit from './components/Submit';
 import Graph from './components/Graph';
 import Sidebar from './components/Sidebar';
 
+
 // Lazy load the Map component
-const Map = React.lazy(() => import('./components/Map'));
+const Map = React.lazy(() => import('./components/MapVisual'));
 
 function App() {
   return (

@@ -3,14 +3,22 @@
   height: 100vh;
   display: flex;
 }
-
+.map-page {
+  padding: 2rem;
+}
 .map-section {
   flex: 1.4;
   position: relative;
   padding-right: 10px;
   max-width: 65%;
 }
-
+.map-visual-container {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+}
 .map-wrapper {
   height: 90%;
   margin: 20px;

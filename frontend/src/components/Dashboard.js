@@ -2,6 +2,7 @@ import React from 'react';
 import './Dashboard.css';
 import FileUpload from './FileUpload';
 import LineGraph from './LineGraph';
+import Map from './Map';
 
 const Dashboard = () => {
   return (
@@ -12,7 +13,7 @@ const Dashboard = () => {
           <div className="dashboard-card">
             <h2>Graph</h2>
             <div className="card-content">
-              <LineGraph />
+              {/* Graph component will go here */}
             </div>
           </div>
           <div className="dashboard-card">

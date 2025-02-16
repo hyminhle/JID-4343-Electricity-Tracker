@@ -22,6 +22,7 @@ const LineGraph = () => {
   const [isAverageDisplayed, setIsAverageDisplayed] = useState(false);
   const [averageDataset, setAverageDataset] = useState(null);
 
+  
   // Fetch available buildings, years, and months
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -34,6 +35,12 @@ const LineGraph = () => {
         console.log('Available Data:', data);
         setAvailableData(data);
         setSelectedBuilding(Object.keys(data)[0] || '');
+
+        const savedDatasets = localStorage.getItem('selectedDatasets');
+        if (savedDatasets) {
+          setSelectedDatasets(JSON.parse(savedDatasets));
+        }
+
       } catch (error) {
         console.error('Error fetching available data:', error);
         setError('Failed to fetch available data');
@@ -45,6 +52,9 @@ const LineGraph = () => {
 
   }, []);
 
+  const saveDatasetsToLocalStorage = (datasets) => {
+    localStorage.setItem('selectedDatasets', JSON.stringify(datasets));
+  };
   
   // Add this function to handle adding new datasets
   const addDataset = async () => {
@@ -77,14 +87,7 @@ const LineGraph = () => {
       
       // Generate a random color for the new dataset
       const randomColor = `rgb(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)})`;
-      
-      setSelectedDatasets(prev => [...prev, {
-        building: selectedBuilding,
-        year: selectedYear,
-        month: selectedMonth,
-        data: data,
-        color: randomColor,
-      }]);
+
 
       const newDataset = {
         building: selectedBuilding,
@@ -108,6 +111,12 @@ const LineGraph = () => {
     console.log("Data Set Stats:", datasetStats);
       
     setAddError(null);
+
+    setSelectedDatasets(prev => {
+      const updatedDatasets = [...prev, newDataset];
+      saveDatasetsToLocalStorage(updatedDatasets);
+      return updatedDatasets;
+    });
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -237,7 +246,7 @@ const LineGraph = () => {
             }
             return newStats;
         });
-      
+      saveDatasetsToLocalStorage(updatedDatasets);
       return updatedDatasets;
     });
   };
@@ -292,7 +301,11 @@ const LineGraph = () => {
     const averageStats = calculateDatasetStatistics(averageDataset);
   
     // Add the average dataset to the selectedDatasets array
-    setSelectedDatasets((prev) => [...prev, averageDataset]);
+    setSelectedDatasets((prev) => {
+      const newDatasets = [...prev, averageDataset];
+      saveDatasetsToLocalStorage(newDatasets);
+      return newDatasets;
+    });
 
     setStats((prev) => ({
       ...prev,
@@ -353,7 +366,11 @@ const LineGraph = () => {
       };
       console.log('Prediction Dataset:', predictionDataset);
 
-        setSelectedDatasets(prev => [...prev, predictionDataset]);
+      setSelectedDatasets((prev) => {
+        const newDatasets = [...prev, predictionDataset];
+        saveDatasetsToLocalStorage(newDatasets);
+        return newDatasets;
+      });
 
         // Calculate and set statistics for the prediction dataset
         const predictionStats = calculateDatasetStatistics(predictionDataset);
@@ -475,6 +492,7 @@ const LineGraph = () => {
     <div>
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
         <select
+          className="data-select"
           value={selectedBuilding}
           onChange={(e) => {
             setSelectedBuilding(e.target.value);
@@ -494,6 +512,7 @@ const LineGraph = () => {
 
         <select
           value={selectedYear}
+          className="data-select"
           onChange={(e) => {
             setSelectedYear(e.target.value);
             setSelectedMonth('');
@@ -513,6 +532,7 @@ const LineGraph = () => {
 
         <select
           value={selectedMonth}
+          className="data-select"
           onChange={(e) => setSelectedMonth(e.target.value)}
           disabled={!selectedYear}
         >
