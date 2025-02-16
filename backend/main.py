@@ -244,7 +244,7 @@ def refresh_cache():
         with app.app_context():  # Ensure the application context is set up
             # Fetch all data from the database
             data = ElectricityData.query.all()
-            
+            stats = ElectricityStatistics.query.all()
             # Group data by year, month, and building
             grouped_data = {}
             for entry in data:
@@ -256,15 +256,17 @@ def refresh_cache():
                 
                 # Create a cache key for the specific day
                 cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
-                formatted_data = {
-                    'month': entry.month,
-                    'date': entry.date,
-                    'consumption': entry.consumption,
-                    'building': entry.building
-                }
-                print("cachekey:", cache_key)
-                # Store the fetched data in the cache for the specific day
-                cache.set(cache_key, formatted_data)
+                
+                if cache.get(cache_key) is None:
+                    formatted_data = {
+                        'month': entry.month,
+                        'date': entry.date,
+                        'consumption': entry.consumption,
+                        'building': entry.building
+                    }
+                    print("cachekey:", cache_key)
+                    # Store the fetched data in the cache for the specific day
+                    cache.set(cache_key, formatted_data)
 
 
                 # Group data for all days in the month
@@ -277,6 +279,21 @@ def refresh_cache():
             for (year, month, building), monthly_data in grouped_data.items():
                 monthly_cache_key = f"electricity_data_{year}_{month}_all_{building}"
                 cache.set(monthly_cache_key, monthly_data)
+
+            # Cache the statistics data
+            for stat in stats:
+                stat_cache_key = f"electricity_stats_{stat.date.year}_{stat.date.month}_{stat.building}"
+                if cache.get(stat_cache_key) is None:
+                    stat_data = {
+                        'month': stat.month,
+                        'date': stat.date,
+                        'mean': stat.mean,
+                        'highest': stat.highest,
+                        'lowest': stat.lowest,
+                        'median': stat.median,
+                        'building': stat.building
+                    }
+                    cache.set(stat_cache_key, stat_data)
 
             print(f"Cache refreshed at {datetime.now()}")  # Log when cache is refreshed
 
@@ -306,7 +323,46 @@ def print_cache_keys():
         print(f"Error retrieving cache keys: {e}")
 
     
-
+@app.route('/stats/<int:year>/<int:month>/<building>', methods=['GET'])
+def get_stats_by_params(year, month, building):
+    try:
+        with app.app_context():
+            # Create a cache key for the statistics
+            stat_cache_key = f"electricity_stats_{year}_{month}_{building}"
+            
+            # Check if the statistics data is already in the cache
+            cached_stats = cache.get(stat_cache_key)
+            if cached_stats:
+                return jsonify(cached_stats)
+            
+            # If not in cache, query the database
+            stats = ElectricityStatistics.query.filter_by(
+                date=datetime(year, month, 1).date(),
+                building=building
+            ).first()
+            
+            if not stats:
+                return jsonify({'error': 'No statistics found for the specified parameters'}), 404
+            
+            # Prepare the statistics data
+            stat_data = {
+                'month': stats.month,
+                'date': stats.date,
+                'mean': stats.mean,
+                'highest': stats.highest,
+                'lowest': stats.lowest,
+                'median': stats.median,
+                'building': stats.building
+            }
+            
+            # Store the statistics data in the cache
+            cache.set(stat_cache_key, stat_data)
+            
+            return jsonify(stat_data)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 
 @app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
 def fetch_data_by_params(year, month, day, building):
