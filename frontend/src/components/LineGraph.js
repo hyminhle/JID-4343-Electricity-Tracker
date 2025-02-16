@@ -366,7 +366,11 @@ const LineGraph = () => {
       };
       console.log('Prediction Dataset:', predictionDataset);
 
-        setSelectedDatasets(prev => [...prev, predictionDataset]);
+      setSelectedDatasets((prev) => {
+        const newDatasets = [...prev, predictionDataset];
+        saveDatasetsToLocalStorage(newDatasets);
+        return newDatasets;
+      });
 
         // Calculate and set statistics for the prediction dataset
         const predictionStats = calculateDatasetStatistics(predictionDataset);
