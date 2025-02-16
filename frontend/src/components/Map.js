@@ -373,7 +373,8 @@ const MapComponent = () => {
       average: stat_data.mean,
       max: stat_data.highest,
       min: stat_data.lowest,
-      median: stat_data.median
+      median: stat_data.median,
+      color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean))
     };
 
     // Set the current stats
@@ -384,8 +385,7 @@ const MapComponent = () => {
       setBuildings(prev => ({
         ...prev,
         [buildingName]: {
-          ...prev[buildingName],
-          color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean))
+          ...prev[buildingName]
         }
       }));
     }
@@ -523,7 +523,8 @@ const MapComponent = () => {
             average: stat_data.mean,
             max: stat_data.highest,
             min: stat_data.lowest,
-            median: stat_data.median
+            median: stat_data.median,
+            color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean))
           };
           
     
@@ -537,7 +538,7 @@ const MapComponent = () => {
         updatedBuildings[buildingName] = {
           ...updatedBuildings[buildingName],
           stats: statsData,
-          color: getHeatmapColor(parseFloat(statsData.consumption), parseFloat(statsData.average))
+          color: statsData.color
         };
       }
   
