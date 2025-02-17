@@ -32,7 +32,16 @@ const MapComponent = () => {
   const [isHeatmap, setIsHeatmap] = useState(false);
   const [heatmapPoints, setHeatmapPoints] = useState([]);
   const [selectedDay, setSelectedDay] = useState(1);
+  const [showBuildingNames, setShowBuildingNames] = useState(false);
 
+  const toggleBuildingNames = () => {
+    setShowBuildingNames(!showBuildingNames);
+  };
+
+  const [buildingFilter, setBuildingFilter] = useState('all'); 
+  const handleFilterChange = (filter) => {
+    setBuildingFilter(filter);
+  };
 
   // Add MapTiler key from environment variable
   const MAPTILER_KEY = process.env.REACT_APP_MAPTILER_KEY;
@@ -613,7 +622,16 @@ const MapComponent = () => {
     console.log('Generated heatmap points:', points);
     setHeatmapPoints(points);
   };
+
   
+  const filteredBuildings = Object.values(buildings).filter((building) => {
+    const buildingNumber = building.name.split(' ')[1]; // Extract the number from the building name
+    if (buildingFilter === 'all') return true;
+    if (buildingFilter === '100s') return buildingNumber.startsWith('1');
+    if (buildingFilter === '200s') return buildingNumber.startsWith('2');
+    if (buildingFilter === '500s') return buildingNumber.startsWith('5');
+    return true;
+  });
 
   
 
@@ -629,6 +647,7 @@ const MapComponent = () => {
       <div className="map-section">
         <div className="map-wrapper">
           <MapContainer 
+          
             center={[29.628014, -95.610553]}
             zoom={16}
             className="leaflet-container"
@@ -664,7 +683,7 @@ const MapComponent = () => {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 
-                {Object.values(buildings).map((building) => (
+                {filteredBuildings.map((building) => (
                   <Polygon
                     key={building.name}
                     positions={building.coordinates}
@@ -698,6 +717,26 @@ const MapComponent = () => {
                     </Tooltip>
                   </Polygon>
                 ))}
+
+                {!isHeatmap && showBuildingNames && filteredBuildings.map((building) => {
+                  const buildingNumber = building.name.split(' ')[1]; // Extract the number from the building name
+                  const centerLat = (building.coordinates[0][0] + building.coordinates[2][0]) / 2;
+                  const centerLng = (building.coordinates[0][1] + building.coordinates[2][1]) / 2;
+
+                  return (
+                    <Marker
+                      key={`label-${building.name}`}
+                      position={[centerLat, centerLng]}
+                      icon={L.divIcon({
+                        className: 'building-label',
+                        html: `<div>${buildingNumber}</div>`,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                      })}
+                      interactive={false}
+                    />
+                  );
+                })}
 
                 {isEditing && Object.values(buildings).map((building) => (
                   <Marker
@@ -747,6 +786,41 @@ const MapComponent = () => {
           >
             {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
           </button>
+
+           {/* Add the Show/Hide Building Names button */}
+            <button 
+              className={`control-button toggle-names-button ${showBuildingNames ? 'active' : ''}`}
+              onClick={toggleBuildingNames}
+            >
+              {showBuildingNames ? 'Hide Names' : 'Show Names'}
+            </button>
+
+            <div className="filter-buttons">
+              <button 
+                className={`filter-button ${buildingFilter === 'all' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('all')}
+              >
+                All Buildings
+              </button>
+              <button 
+                className={`filter-button ${buildingFilter === '100s' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('100s')}
+              >
+                100s
+              </button>
+              <button 
+                className={`filter-button ${buildingFilter === '200s' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('200s')}
+              >
+                200s
+              </button>
+              <button 
+                className={`filter-button ${buildingFilter === '500s' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('500s')}
+              >
+                500s
+              </button>
+            </div>
 
           {selectedBuilding && buildings[selectedBuilding] && (
             <div className="stats-box">
