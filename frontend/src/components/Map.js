@@ -38,6 +38,11 @@ const MapComponent = () => {
     setShowBuildingNames(!showBuildingNames);
   };
 
+  const [buildingFilter, setBuildingFilter] = useState('all'); 
+  const handleFilterChange = (filter) => {
+    setBuildingFilter(filter);
+  };
+
   // Add MapTiler key from environment variable
   const MAPTILER_KEY = process.env.REACT_APP_MAPTILER_KEY;
 
@@ -617,7 +622,16 @@ const MapComponent = () => {
     console.log('Generated heatmap points:', points);
     setHeatmapPoints(points);
   };
+
   
+  const filteredBuildings = Object.values(buildings).filter((building) => {
+    const buildingNumber = building.name.split(' ')[1]; // Extract the number from the building name
+    if (buildingFilter === 'all') return true;
+    if (buildingFilter === '100s') return buildingNumber.startsWith('1');
+    if (buildingFilter === '200s') return buildingNumber.startsWith('2');
+    if (buildingFilter === '500s') return buildingNumber.startsWith('5');
+    return true;
+  });
 
   
 
@@ -669,7 +683,7 @@ const MapComponent = () => {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 
-                {Object.values(buildings).map((building) => (
+                {filteredBuildings.map((building) => (
                   <Polygon
                     key={building.name}
                     positions={building.coordinates}
@@ -704,7 +718,7 @@ const MapComponent = () => {
                   </Polygon>
                 ))}
 
-                {!isHeatmap && showBuildingNames && Object.values(buildings).map((building) => {
+                {!isHeatmap && showBuildingNames && filteredBuildings.map((building) => {
                   const buildingNumber = building.name.split(' ')[1]; // Extract the number from the building name
                   const centerLat = (building.coordinates[0][0] + building.coordinates[2][0]) / 2;
                   const centerLng = (building.coordinates[0][1] + building.coordinates[2][1]) / 2;
@@ -780,6 +794,33 @@ const MapComponent = () => {
             >
               {showBuildingNames ? 'Hide Names' : 'Show Names'}
             </button>
+
+            <div className="filter-buttons">
+              <button 
+                className={`filter-button ${buildingFilter === 'all' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('all')}
+              >
+                All Buildings
+              </button>
+              <button 
+                className={`filter-button ${buildingFilter === '100s' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('100s')}
+              >
+                100s
+              </button>
+              <button 
+                className={`filter-button ${buildingFilter === '200s' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('200s')}
+              >
+                200s
+              </button>
+              <button 
+                className={`filter-button ${buildingFilter === '500s' ? 'active' : ''}`}
+                onClick={() => handleFilterChange('500s')}
+              >
+                500s
+              </button>
+            </div>
 
           {selectedBuilding && buildings[selectedBuilding] && (
             <div className="stats-box">

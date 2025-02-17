@@ -266,3 +266,26 @@
   cursor: pointer;
   border-radius: 50%;
 }
+
+
+.filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.filter-button {
+  background-color: #6c757d; /* Gray color for the button */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+}
+
+.filter-button.active {
+  background-color: #007bff; /* Blue color when active */
+}
