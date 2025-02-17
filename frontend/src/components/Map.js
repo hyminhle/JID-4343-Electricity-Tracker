@@ -32,7 +32,11 @@ const MapComponent = () => {
   const [isHeatmap, setIsHeatmap] = useState(false);
   const [heatmapPoints, setHeatmapPoints] = useState([]);
   const [selectedDay, setSelectedDay] = useState(1);
+  const [showBuildingNames, setShowBuildingNames] = useState(false);
 
+  const toggleBuildingNames = () => {
+    setShowBuildingNames(!showBuildingNames);
+  };
 
   // Add MapTiler key from environment variable
   const MAPTILER_KEY = process.env.REACT_APP_MAPTILER_KEY;
@@ -629,6 +633,7 @@ const MapComponent = () => {
       <div className="map-section">
         <div className="map-wrapper">
           <MapContainer 
+          
             center={[29.628014, -95.610553]}
             zoom={16}
             className="leaflet-container"
@@ -699,6 +704,26 @@ const MapComponent = () => {
                   </Polygon>
                 ))}
 
+                {!isHeatmap && showBuildingNames && Object.values(buildings).map((building) => {
+                  const buildingNumber = building.name.split(' ')[1]; // Extract the number from the building name
+                  const centerLat = (building.coordinates[0][0] + building.coordinates[2][0]) / 2;
+                  const centerLng = (building.coordinates[0][1] + building.coordinates[2][1]) / 2;
+
+                  return (
+                    <Marker
+                      key={`label-${building.name}`}
+                      position={[centerLat, centerLng]}
+                      icon={L.divIcon({
+                        className: 'building-label',
+                        html: `<div>${buildingNumber}</div>`,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                      })}
+                      interactive={false}
+                    />
+                  );
+                })}
+
                 {isEditing && Object.values(buildings).map((building) => (
                   <Marker
                     key={`marker-${building.name}`}
@@ -747,6 +772,14 @@ const MapComponent = () => {
           >
             {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
           </button>
+
+           {/* Add the Show/Hide Building Names button */}
+            <button 
+              className={`control-button toggle-names-button ${showBuildingNames ? 'active' : ''}`}
+              onClick={toggleBuildingNames}
+            >
+              {showBuildingNames ? 'Hide Names' : 'Show Names'}
+            </button>
 
           {selectedBuilding && buildings[selectedBuilding] && (
             <div className="stats-box">
