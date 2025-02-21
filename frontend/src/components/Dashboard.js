@@ -3,6 +3,7 @@ import './Dashboard.css';
 import FileUpload from './FileUpload';
 import LineGraph from './LineGraph';
 import Map from './Map';
+import Calendar from './Calendar';
 
 const Dashboard = () => {
   return (
