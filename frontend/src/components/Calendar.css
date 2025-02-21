@@ -1,0 +1,187 @@
+.calendar-page {
+  margin-left: 40px;
+  margin-top: 40px;
+  padding: 20px;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.calendar-page h1 {
+  margin: 0 0 20px 0;
+  font-size: 28px;
+  color: #333;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.calendar-container {
+  background: white;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  margin-top: 20px;
+}
+
+.custom-calendar {
+  width: 100% !important;
+  border: none !important;
+  font-family: 'Inter', sans-serif;
+}
+
+.calendar-day {
+  border-radius: 4px;
+  margin: 2px;
+  height: 80px !important;
+  padding: 5px !important;
+}
+
+.day-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.day-number {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.consumption-indicator {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.low-consumption {
+  background-color: rgba(46, 204, 113, 0.2) !important;
+}
+
+.medium-consumption {
+  background-color: rgba(241, 196, 15, 0.2) !important;
+}
+
+.high-consumption {
+  background-color: rgba(231, 76, 60, 0.2) !important;
+}
+
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.react-datepicker {
+  width: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.react-datepicker__month-container {
+  width: 100% !important;
+}
+
+.react-datepicker__month {
+  margin: 0 !important;
+  padding: 10px !important;
+}
+
+.react-datepicker__day {
+  margin: 0 !important;
+  width: calc(100% / 7) !important;
+}
+
+.react-datepicker__header {
+  background-color: white !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  padding: 10px !important;
+}
+
+/* Update the toggle buttons styles */
+.toggle-buttons {
+  display: flex;
+  gap: 2px;
+  background: #f0f0f0;
+  padding: 3px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.toggle-button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.toggle-button:hover:not(.active) {
+  background: rgba(0,0,0,0.05);
+  color: #333;
+}
+
+.toggle-button.active {
+  background: white;
+  color: #007bff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Optional: Add some spacing between the label and toggle buttons */
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.control-group label {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.calendar-controls {
+  background: white;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.building-select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  min-width: 120px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+} 
