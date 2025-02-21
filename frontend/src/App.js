@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import Submit from './components/Submit';
 import Graph from './components/Graph';
 import Sidebar from './components/Sidebar';
+import Calendar from './components/Calendar';
 
 
 // Lazy load the Map component
@@ -23,6 +24,7 @@ function App() {
               <Route path="/submit" element={<Submit />} />
               <Route path="/graph" element={<Graph />} />
               <Route path="/map" element={<Map />} />
+              <Route path="/calendar" element={<Calendar />} />
             </Routes>
           </Suspense>
         </div>
