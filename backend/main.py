@@ -264,7 +264,7 @@ def refresh_cache():
                         'consumption': entry.consumption,
                         'building': entry.building
                     }
-                    print("cachekey:", cache_key)
+                    #print("cachekey:", cache_key)
                     # Store the fetched data in the cache for the specific day
                     cache.set(cache_key, formatted_data)
 
@@ -394,7 +394,7 @@ def predict_future():
     try:
         data = request.get_json()
         datasets = data.get('datasets')
-        print(datasets)
+        #print(datasets)
 
         predictor = Predictor()
         future_predictions = predictor.predict(datasets)
@@ -443,7 +443,7 @@ def get_available_data():
                 available_data[building][year][month].append(day)
 
 
-        print("Available Data:", available_data)
+        #print("Available Data:", available_data)
         
         # Convert days to a sorted list, excluding 'all', and prepare the final data
         for building in available_data:

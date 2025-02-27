@@ -32,12 +32,40 @@ const MapComponent = () => {
   const [isHeatmap, setIsHeatmap] = useState(false);
   const [heatmapPoints, setHeatmapPoints] = useState([]);
   const [selectedDay, setSelectedDay] = useState(1);
-  const [showBuildingNames, setShowBuildingNames] = useState(false);
+  const [showBuildingNames, setShowBuildingNames] = useState(true);
 
-  const toggleBuildingNames = () => {
-    setShowBuildingNames(!showBuildingNames);
+
+  const saveBuildingsToLocalStorage = (buildings) => {
+    localStorage.setItem('savedBuildings', JSON.stringify(buildings));
+  };
+  
+  // Function to load buildings from localStorage
+  const loadBuildingsFromLocalStorage = () => {
+    const savedBuildings = localStorage.getItem('savedBuildings');
+    return savedBuildings ? JSON.parse(savedBuildings) : {};
   };
 
+  const saveSelectedBuildingToLocalStorage = (buildingName) => {
+    localStorage.setItem('selectedBuilding', JSON.stringify(buildingName));
+  };
+  
+  // Function to load buildings from localStorage
+  const loadSelectedBuildingFromLocalStorage = () => {
+    const selectedBuilding = localStorage.getItem('selectedBuilding');
+    return selectedBuilding ? JSON.parse(selectedBuilding) : {};
+  };
+
+
+  const saveSelectedDateToLocalStorage = (date) => {
+    localStorage.setItem('selectedDate', date.toISOString());
+  };
+  
+  // Function to load selected date from localStorage
+  const loadSelectedDateFromLocalStorage = () => {
+    const savedDate = localStorage.getItem('selectedDate');
+    return savedDate ? new Date(savedDate) : new Date();
+  };
+  
   const [buildingFilter, setBuildingFilter] = useState('all'); 
   const handleFilterChange = (filter) => {
     setBuildingFilter(filter);
@@ -54,7 +82,10 @@ const MapComponent = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
+        const savedBuildings = loadBuildingsFromLocalStorage();
+        const savedDate = loadSelectedDateFromLocalStorage();
+        const selectedBuilding = loadSelectedBuildingFromLocalStorage();
+
         // Find min and max dates from available data
         let minYear = '9999', maxYear = '0';
         let minMonth = '12', maxMonth = '1';
@@ -75,88 +106,94 @@ const MapComponent = () => {
         setMaxDate(new Date(maxYear, parseInt(maxMonth) - 1, 31));
         setSelectedDate(new Date(minYear, parseInt(minMonth) - 1, 1));
         
-        setAvailableData(data);
-        const buildingLocations = {
-          'Building 110': [29.628014, -95.610553],
-          'Building 121': [29.629014, -95.611553],
-          'Building 200':   [29.629514, -95.609553],
-          'Building 210':   [29.626514, -95.611953],
-          'Building 300':   [29.627014, -95.608953],
-          'Building 525':   [29.629014, -95.612553],
-          'Building 545':   [29.628514, -95.608753],
-          'Building 555':   [29.626514, -95.609953],
-          'Building 125':   [29.629514, -95.610353],
-          'Building 145':   [29.628514, -95.612953],
-          'Building 150':   [29.627014, -95.611753],
-          'Building 155':   [29.629514, -95.608553],
-          'Building 170':   [29.630124, -95.608653],
-          'Building 180':   [29.627124, -95.608653]
-        };
-
-        // All building sizes increased by 1.5x
-        const buildingSizes = {
-          'Building 110': 0.00052,   // Was 0.00035
-          'Building 121': 0.00045,   // Was 0.00030
-          'Building 200':   0.00022,   // Was 0.00015
-          'Building 210':   0.00037,   // Was 0.00025
-          'Building 300':   0.00015,   // Was 0.00010
-          'Building 525':   0.00048,   // Was 0.00032
-          'Building 545':   0.00027,   // Was 0.00018
-          'Building 555':   0.00033,   // Was 0.00022
-          'Building 125':   0.00018,   // Was 0.00012
-          'Building 145':   0.00042,   // Was 0.00028
-          'Building 150':   0.00030,   // Was 0.00020
-          'Building 155':   0.00024,    // Was 0.00016
-          'Building 170':   0.00034,    // Was 0.00016
-          'Building 180':   0.00034    // Was 0.00016
-        };
-
-        // Keep the same consumption-based colors
-        const buildingColors = {
-          'Building 110': '#ff3300', // High consumption - More red
-          'Building 121': '#ff6600', // High-medium consumption
-          'Building 200':   '#ff9900', // Medium-high consumption
-          'Building 210':   '#ffcc00', // Medium consumption
-          'Building 300':   '#cccc00', // Medium consumption
-          'Building 525':   '#99cc00', // Medium-low consumption
-          'Building 545':   '#66cc00', // Low-medium consumption
-          'Building 555':   '#33cc00', // Low consumption
-          'Building 125':   '#00cc00', // Very low consumption
-          'Building 145':   '#ff8000', // High-medium consumption
-          'Building 150':   '#99ff00', // Low consumption
-          'Building 155':   '#66ff00',  // Very low consumption
-          'Building 170':   '#66ff00',
-          'Building 180':   '#66ff00'
-        };
-
-
-        // Add all buildings to the map
-        const newBuildings = {};
-        for (const [buildingName, coordinates] of Object.entries(buildingLocations)) {
-          const buildingSize = buildingSizes[buildingName];
-          newBuildings[buildingName] = {
-            name: buildingName,
-            coordinates: [
-              [coordinates[0], coordinates[1]],
-              [coordinates[0], coordinates[1] + buildingSize],
-              [coordinates[0] + buildingSize, coordinates[1] + buildingSize],
-              [coordinates[0] + buildingSize, coordinates[1]]
-            ],
-            color: buildingColors[buildingName],
-            data: [] // Empty data array for now
+        if (savedBuildings && Object.keys(savedBuildings).length > 0) {
+          setBuildings(savedBuildings);
+          setSelectedDate(savedDate);
+          setSelectedBuilding(selectedBuilding);
+          fetchBuildingStats(selectedBuilding, savedDate);
+        } else {
+          const buildingLocations = {
+            'Building 110': [29.628014, -95.610553],
+            'Building 121': [29.629014, -95.611553],
+            'Building 200':   [29.629514, -95.609553],
+            'Building 210':   [29.626514, -95.611953],
+            'Building 300':   [29.627014, -95.608953],
+            'Building 525':   [29.629014, -95.612553],
+            'Building 545':   [29.628514, -95.608753],
+            'Building 555':   [29.626514, -95.609953],
+            'Building 125':   [29.629514, -95.610353],
+            'Building 145':   [29.628514, -95.612953],
+            'Building 150':   [29.627014, -95.611753],
+            'Building 155':   [29.629514, -95.608553],
+            'Building 170':   [29.630124, -95.608653],
+            'Building 180':   [29.627124, -95.608653]
           };
+  
+          // All building sizes increased by 1.5x
+          const buildingSizes = {
+            'Building 110': 0.00052,   // Was 0.00035
+            'Building 121': 0.00045,   // Was 0.00030
+            'Building 200':   0.00022,   // Was 0.00015
+            'Building 210':   0.00037,   // Was 0.00025
+            'Building 300':   0.00015,   // Was 0.00010
+            'Building 525':   0.00048,   // Was 0.00032
+            'Building 545':   0.00027,   // Was 0.00018
+            'Building 555':   0.00033,   // Was 0.00022
+            'Building 125':   0.00018,   // Was 0.00012
+            'Building 145':   0.00042,   // Was 0.00028
+            'Building 150':   0.00030,   // Was 0.00020
+            'Building 155':   0.00024,    // Was 0.00016
+            'Building 170':   0.00034,    // Was 0.00016
+            'Building 180':   0.00034    // Was 0.00016
+          };
+  
+          // Keep the same consumption-based colors
+          const buildingColors = {
+            'Building 110': '#ff3300', // High consumption - More red
+            'Building 121': '#ff6600', // High-medium consumption
+            'Building 200':   '#ff9900', // Medium-high consumption
+            'Building 210':   '#ffcc00', // Medium consumption
+            'Building 300':   '#cccc00', // Medium consumption
+            'Building 525':   '#99cc00', // Medium-low consumption
+            'Building 545':   '#66cc00', // Low-medium consumption
+            'Building 555':   '#33cc00', // Low consumption
+            'Building 125':   '#00cc00', // Very low consumption
+            'Building 145':   '#ff8000', // High-medium consumption
+            'Building 150':   '#99ff00', // Low consumption
+            'Building 155':   '#66ff00',  // Very low consumption
+            'Building 170':   '#66ff00',
+            'Building 180':   '#66ff00'
+          };
+  
+          // Add all buildings to the map
+          const newBuildings = {};
+          for (const [buildingName, coordinates] of Object.entries(buildingLocations)) {
+            const buildingSize = buildingSizes[buildingName];
+            newBuildings[buildingName] = {
+              name: buildingName,
+              coordinates: [
+                [coordinates[0], coordinates[1]],
+                [coordinates[0], coordinates[1] + buildingSize],
+                [coordinates[0] + buildingSize, coordinates[1] + buildingSize],
+                [coordinates[0] + buildingSize, coordinates[1]]
+              ],
+              color: buildingColors[buildingName],
+              data: [] // Empty data array for now
+            };
+          }
+          setBuildings(newBuildings);
+          saveBuildingsToLocalStorage(newBuildings); 
         }
-        setBuildings(newBuildings);
+  
+        setAvailableData(data);
       } catch (error) {
         console.error('Error fetching available data:', error);
         setError('Failed to fetch available data');
         setAvailableData({});
       }
     };
-  
     fetchAvailableData();
   }, []);
-  
 
   const addBuilding = async () => {
     console.log('Starting addBuilding function...');
@@ -216,31 +253,6 @@ const MapComponent = () => {
           'Building 180':   '#66ff00'
         };
 
-
-        // For Buildings A-J, we'll skip the data fetching and just place them on the map
-        if (!selectedBuilding.includes('Building 1')) {
-          const baseCoordinates = buildingLocations[selectedBuilding];
-          const buildingSize = buildingSizes[selectedBuilding];
-          
-          const newBuilding = {
-            name: selectedBuilding,
-            coordinates: [
-              [baseCoordinates[0], baseCoordinates[1]],
-              [baseCoordinates[0], baseCoordinates[1] + buildingSize],
-              [baseCoordinates[0] + buildingSize, baseCoordinates[1] + buildingSize],
-              [baseCoordinates[0] + buildingSize, baseCoordinates[1]]
-            ],
-            color: buildingColors[selectedBuilding],
-            data: [] // Empty data array for now
-          };
-
-          setBuildings(prev => ({
-            ...prev,
-            [selectedBuilding]: newBuilding
-          }));
-          return;
-        }
-
         // Original data fetching logic for Buildings 110 and 121
         const buildingData = [];
         const buildingInfo = availableData[selectedBuilding];
@@ -278,10 +290,11 @@ const MapComponent = () => {
           data: buildingData
         };
 
-        setBuildings(prev => ({
-          ...prev,
-          [selectedBuilding]: newBuilding
-        }));
+        setBuildings(prev => {
+          const newBuildings = { ...prev, [selectedBuilding]: newBuilding };
+          saveBuildingsToLocalStorage(newBuildings); // Save to localStorage
+          return newBuildings;
+        });
 
         // After adding the building, fetch its stats
         await fetchBuildingStats(selectedBuilding, selectedDate);
@@ -295,9 +308,9 @@ const MapComponent = () => {
     if (!consumption) return '#cccccc'; // Default gray for no data
   
     // Adjust the ranges based on the average consumption
-    const low = average * 0.85;     // Green zone
+    const low = average ;     // Green zone
     const medium = average;         // Yellow zone
-    const high = average * 1.15;    // Red zone
+    const high = average * 1.000005;    // Red zone
   
     if (consumption <= low) {
       // Green to Yellow gradient
@@ -418,6 +431,7 @@ const MapComponent = () => {
   // Update the DatePicker onChange handler
   const handleDateChange = (date) => {
     setSelectedDate(date);
+    saveSelectedDateToLocalStorage(date); // Save to localStorage
     if (selectedBuilding) {
       fetchBuildingStats(selectedBuilding, date);
     }
@@ -431,6 +445,7 @@ const MapComponent = () => {
 
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
+    saveSelectedBuildingToLocalStorage(buildingName); // Save to localStorage
     fetchBuildingStats(buildingName, selectedDate);
   };
 
@@ -459,6 +474,7 @@ const MapComponent = () => {
     setSelectedDay(day);
     const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
     setSelectedDate(newDate);
+    saveSelectedDateToLocalStorage(newDate); 
     if (selectedBuilding) {
       fetchBuildingStats(selectedBuilding, newDate);
       updateAllBuildings(newDate);
@@ -553,6 +569,7 @@ const MapComponent = () => {
   
       // Update the state with new building data
       setBuildings(updatedBuildings);
+      saveBuildingsToLocalStorage(updatedBuildings); 
     } catch (error) {
       console.error('Error updating all buildings:', error);
       setError('Failed to update all buildings');
@@ -786,15 +803,6 @@ const MapComponent = () => {
           >
             {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
           </button>
-
-           {/* Add the Show/Hide Building Names button */}
-            <button 
-              className={`control-button toggle-names-button ${showBuildingNames ? 'active' : ''}`}
-              onClick={toggleBuildingNames}
-            >
-              {showBuildingNames ? 'Hide Names' : 'Show Names'}
-            </button>
-
             <div className="filter-buttons">
               <button 
                 className={`filter-button ${buildingFilter === 'all' ? 'active' : ''}`}
