@@ -8,7 +8,34 @@ const Calendar = ({ buildingStats }) => {
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [displayMode, setDisplayMode] = useState('consumption'); // 'consumption' or 'price'
   const [consumptionData, setConsumptionData] = useState({});
+  const [availableData, setAvailableData] = useState({});
+  const [buildingOptions, setBuildingOptions] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(selectedDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(selectedDate.getFullYear());
+  const [isLoading, setIsLoading] = useState(false);
   const [showStatsBox, setShowStatsBox] = useState(false);
+
+  // Fetch available data on component mount
+  useEffect(() => {
+    const fetchAvailableData = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/get-available-data');
+        const data = await response.json();
+        setAvailableData(data);
+
+        // Extract building names from available data
+        const buildings = Object.keys(data).map(building => decodeURIComponent(building));
+        setBuildingOptions(buildings);
+        if (buildings.length > 0) {
+          setSelectedBuilding(buildings[0]); // Set the first building as the default selected building
+        }
+      } catch (error) {
+        console.error('Error fetching available data:', error);
+      }
+    };
+
+    fetchAvailableData();
+  }, []);
 
   // Process building stats to get consumption data for dates
   useEffect(() => {
@@ -123,6 +150,7 @@ const Calendar = ({ buildingStats }) => {
     const newYear = date.getFullYear();
     
     setSelectedDate(date);
+    setShowStatsBox(true);
     
     // Only trigger month/year change if they actually changed
     if (newMonth !== selectedMonth || newYear !== selectedYear) {
@@ -143,6 +171,45 @@ const Calendar = ({ buildingStats }) => {
     
     setSelectedMonth(newMonth);
     setSelectedYear(newYear);
+  };
+
+  // Helper function to calculate price
+  const calculatePrice = (consumption) => {
+    return ((consumption || 0) * 0.12).toFixed(2);
+  };
+
+  // Helper function to get selected date stats
+  const getSelectedDateStats = () => {
+    const dateKey = selectedDate.toISOString().split('T')[0];
+    const dayData = consumptionData[dateKey] && consumptionData[dateKey][selectedBuilding];
+    
+    if (dayData) {
+      return {
+        consumption: dayData.consumption || 0,
+        buildings: dayData.buildings || []
+      };
+    }
+    
+    return { consumption: 0, buildings: [] };
+  };
+
+  // Helper function to get filtered buildings data
+  const getFilteredBuildingsData = () => {
+    const dateKey = selectedDate.toISOString().split('T')[0];
+    const dayData = consumptionData[dateKey] && consumptionData[dateKey][selectedBuilding];
+    
+    if (dayData && dayData.buildings) {
+      return dayData.buildings;
+    }
+    
+    return [];
+  };
+
+  // Helper function to determine comparison class
+  const getComparisonClass = (value) => {
+    if (value.startsWith('-')) return 'negative';
+    if (value.startsWith('+')) return 'positive';
+    return '';
   };
 
   // Custom day class names based on consumption
@@ -167,10 +234,13 @@ const Calendar = ({ buildingStats }) => {
     const consumptionValue = dayData?.consumption;
     const displayValue = displayMode === 'consumption' 
       ? `${Math.round(consumptionValue || 0)} kWh` 
-      : `$${((consumptionValue || 0) * 0.12).toFixed(2)}`;
+      : `$${calculatePrice(consumptionValue)}`;
 
     return (
-      <div className="day-content">
+      <div className="day-content" onClick={() => {
+        setSelectedDate(date);
+        setShowStatsBox(true);
+      }}>
         <span className="day-number">{day}</span>
         {dayData && (
           <div className="day-stats">
@@ -181,41 +251,6 @@ const Calendar = ({ buildingStats }) => {
         )}
       </div>
     );
-  };
-
-  // Handle date selection
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-    setShowStatsBox(true);
-  };
-
-  // Get statistics for the selected date
-  const getSelectedDateStats = () => {
-    const dateKey = selectedDate.toISOString().split('T')[0];
-    return consumptionData[dateKey] || { consumption: 0, buildings: [] };
-  };
-
-  // Calculate price (for demo purposes)
-  const calculatePrice = (consumption) => {
-    // Assuming a rate of $0.12 per kWh
-    return (consumption * 0.12).toFixed(2);
-  };
-
-  // Get buildings data filtered by selection
-  const getFilteredBuildingsData = () => {
-    const stats = getSelectedDateStats();
-    if (selectedBuilding === 'all') {
-      return stats.buildings;
-    }
-    return stats.buildings.filter(building => building.name === selectedBuilding);
-  };
-
-  // Get comparison class
-  const getComparisonClass = (value) => {
-    const numValue = parseFloat(value);
-    if (numValue > 0) return "positive";
-    if (numValue < 0) return "negative";
-    return "";
   };
 
   return (
@@ -252,103 +287,110 @@ const Calendar = ({ buildingStats }) => {
           </div>
         </div>
       </div>
-      <div className="calendar-content">
-        <div className="calendar-container">
-          <div className="calendar-legend">
-            <div className="legend-item">
-              <div className="legend-color low-consumption"></div>
-              <span>Low (&lt;5000 kWh)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color medium-consumption"></div>
-              <span>Medium (5000-10000 kWh)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color high-consumption"></div>
-              <span>High (&gt;10000 kWh)</span>
-            </div>
+      <div className="calendar-container">
+        <div className="calendar-legend">
+          <div className="legend-item">
+            <div className="legend-color low-consumption"></div>
+            <span>Low (&lt;5000 kWh)</span>
           </div>
-          <DatePicker
-            selected={selectedDate}
-            onChange={handleDateChange}
-            inline
-            calendarClassName="custom-calendar"
-            dayClassName={getDayClassName}
-            renderDayContents={renderDayContents}
-            showMonthYearPicker={false}
-          />
+          <div className="legend-item">
+            <div className="legend-color medium-consumption"></div>
+            <span>Medium (5000-10000 kWh)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color high-consumption"></div>
+            <span>High (&gt;10000 kWh)</span>
+          </div>
         </div>
         
-        {showStatsBox && (
-          <div className="stats-box">
-            <div className="stats-header">
-              <h2>Statistics for {selectedDate.toLocaleDateString()}</h2>
-              <button className="close-button" onClick={() => setShowStatsBox(false)}>×</button>
-            </div>
-            <div className="stats-content">
-              <div className="stats-overview">
-                <div className="stats-item">
-                  <span className="stats-label">Total Consumption:</span>
-                  <span className="stats-value">{Math.round(getSelectedDateStats().consumption)} kWh</span>
-                </div>
-                <div className="stats-item">
-                  <span className="stats-label">Estimated Price:</span>
-                  <span className="stats-value">${calculatePrice(getSelectedDateStats().consumption)}</span>
-                </div>
+        {isLoading && (
+          <div className="loading-indicator">
+            Loading consumption data...
+          </div>
+        )}
+        
+        <DatePicker
+          selected={selectedDate}
+          onChange={handleDateChange}
+          onMonthChange={handleMonthChange}
+          inline
+          calendarClassName="custom-calendar"
+          dayClassName={getDayClassName}
+          renderDayContents={renderDayContents}
+          showMonthYearPicker={false}
+        />
+      </div>
+      
+      {/* Stats Box */}
+      {showStatsBox && (
+        <div className="stats-box">
+          <div className="stats-header">
+            <h2>Statistics for {selectedDate.toLocaleDateString()}</h2>
+            <button className="close-button" onClick={() => setShowStatsBox(false)}>×</button>
+          </div>
+          <div className="stats-content">
+            <div className="stats-overview">
+              <div className="stats-item">
+                <span className="stats-label">Total Consumption:</span>
+                <span className="stats-value">{Math.round(getSelectedDateStats().consumption)} kWh</span>
               </div>
-              
-              <h3>Building Breakdown</h3>
-              {getFilteredBuildingsData().length > 0 ? (
-                <div className="building-breakdown">
-                  {getFilteredBuildingsData().map((building, index) => (
-                    <div key={index} className="building-stats">
-                      <div className="building-name">Building {building.name}</div>
-                      <div className="building-consumption">
-                        {displayMode === 'consumption' ? (
-                          <span>{Math.round(building.consumption)} kWh</span>
-                        ) : (
-                          <span>${calculatePrice(building.consumption)}</span>
-                        )}
-                      </div>
-                      <div className="consumption-bar-container">
-                        <div 
-                          className="consumption-bar" 
-                          style={{ 
-                            width: `${Math.min(100, (building.consumption / 10000) * 100)}%`,
-                            backgroundColor: building.consumption > 5000 
-                              ? (building.consumption > 10000 ? 'rgba(231, 76, 60, 0.8)' : 'rgba(241, 196, 15, 0.8)') 
-                              : 'rgba(46, 204, 113, 0.8)'
-                          }}
-                        ></div>
-                      </div>
+              <div className="stats-item">
+                <span className="stats-label">Estimated Price:</span>
+                <span className="stats-value">${calculatePrice(getSelectedDateStats().consumption)}</span>
+              </div>
+            </div>
+            
+            <h3>Building Breakdown</h3>
+            {getFilteredBuildingsData().length > 0 ? (
+              <div className="building-breakdown">
+                {getFilteredBuildingsData().map((building, index) => (
+                  <div key={index} className="building-stats">
+                    <div className="building-name">Building {building.name}</div>
+                    <div className="building-consumption">
+                      {displayMode === 'consumption' ? (
+                        <span>{Math.round(building.consumption)} kWh</span>
+                      ) : (
+                        <span>${calculatePrice(building.consumption)}</span>
+                      )}
                     </div>
-                  ))}
+                    <div className="consumption-bar-container">
+                      <div 
+                        className="consumption-bar" 
+                        style={{ 
+                          width: `${Math.min(100, (building.consumption / 10000) * 100)}%`,
+                          backgroundColor: building.consumption > 5000 
+                            ? (building.consumption > 10000 ? 'rgba(231, 76, 60, 0.8)' : 'rgba(241, 196, 15, 0.8)') 
+                            : 'rgba(46, 204, 113, 0.8)'
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-data-message">No data available for this date or building.</p>
+            )}
+            
+            <div className="additional-stats">
+              <h3>Usage Comparison</h3>
+              <div className="comparison-stats">
+                <div className="comparison-item">
+                  <span className="comparison-label">Compared to Previous Day:</span>
+                  <span className={`comparison-value ${getComparisonClass('+5%')}`}>+5%</span>
                 </div>
-              ) : (
-                <p className="no-data-message">No data available for this date or building.</p>
-              )}
-              
-              <div className="additional-stats">
-                <h3>Usage Comparison</h3>
-                <div className="comparison-stats">
-                  <div className="comparison-item">
-                    <span className="comparison-label">Compared to Previous Day:</span>
-                    <span className={`comparison-value ${getComparisonClass('+5%')}`}>+5%</span>
-                  </div>
-                  <div className="comparison-item">
-                    <span className="comparison-label">Compared to Weekly Average:</span>
-                    <span className={`comparison-value ${getComparisonClass('-3%')}`}>-3%</span>
-                  </div>
-                  <div className="comparison-item">
-                    <span className="comparison-label">Compared to Monthly Average:</span>
-                    <span className={`comparison-value ${getComparisonClass('+12%')}`}>+12%</span>
-                  </div>
+                <div className="comparison-item">
+                  <span className="comparison-label">Compared to Weekly Average:</span>
+                  <span className={`comparison-value ${getComparisonClass('-3%')}`}>-3%</span>
+                </div>
+                <div className="comparison-item">
+                  <span className="comparison-label">Compared to Monthly Average:</span>
+                  <span className={`comparison-value ${getComparisonClass('+12%')}`}>+12%</span>
                 </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
