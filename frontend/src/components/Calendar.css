@@ -38,23 +38,52 @@
 }
 
 .day-content {
-  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  height: 100%;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 50px;
 }
-
+.day-content:hover {
+  background-color: rgba(0, 0, 0, 0);
+  transform: scale(1.05);
+}
+.day-content.selected-day {
+  background-color: rgba(66, 139, 202, 0.2);
+  border: 2px solid #428bca;
+}
 .day-number {
   font-size: 14px;
   font-weight: 500;
 }
-
+.day-stats {
+  width: 100%;
+  text-align: center;
+}
 .consumption-indicator {
   font-size: 12px;
   margin-top: 4px;
 }
-
+.consumption-unit {
+  font-size: 0.65rem;
+  margin-left: 1px;
+  opacity: 0.8;
+}
+.consumption-value {
+  font-weight: 600;
+}
+.price-value {
+  font-weight: 600;
+}
+.no-data-indicator {
+  color: #bbb;
+  font-size: 0.8rem;
+}
 .low-consumption {
   background-color: rgba(46, 204, 113, 0.2) !important;
 }
@@ -361,4 +390,37 @@ h3 {
   text-align: center;
   padding: 25px 0;
   font-size: 14px;
+}
+.calendar-with-stats {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 20px;
+}
+.loading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  z-index: 10;
+}
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

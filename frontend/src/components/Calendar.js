@@ -13,7 +13,72 @@ const Calendar = ({ buildingStats }) => {
   const [selectedMonth, setSelectedMonth] = useState(selectedDate.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(selectedDate.getFullYear());
   const [isLoading, setIsLoading] = useState(false);
-  const [showStatsBox, setShowStatsBox] = useState(false);
+
+  // Function to save data to localStorage
+  const saveDataToLocalStorage = (data) => {
+    try {
+      localStorage.setItem('consumptionData', JSON.stringify(data));
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+  };
+  
+  // Function to load data from localStorage
+  const loadDataFromLocalStorage = () => {
+    try {
+      const savedData = localStorage.getItem('consumptionData');
+      return savedData ? JSON.parse(savedData) : {};
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+      return {};
+    }
+  };
+  const saveDateToLocalStorage = (date) => {
+    try {
+      localStorage.setItem('selectedDate', JSON.stringify(date));
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+  };
+  
+  // Function to load data from localStorage
+  const loadDateFromLocalStorage = () => {
+    try {
+      const savedDate = localStorage.getItem('selectedDate');
+      return savedDate ? JSON.parse(savedDate) : {};
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+      return {};
+    }
+  };
+  // Function to save selected building to localStorage
+  const saveSelectedBuildingToLocalStorage = (building) => {
+    try {
+      localStorage.setItem('selectedBuilding', building);
+    } catch (error) {
+      console.error('Error saving building to localStorage:', error);
+    }
+  };
+  
+  // Function to load selected building from localStorage
+  const loadSelectedBuildingFromLocalStorage = () => {
+    try {
+      return localStorage.getItem('selectedBuilding') || '';
+    } catch (error) {
+      console.error('Error loading building from localStorage:', error);
+      return '';
+    }
+  };
+
+  // Load saved data on component mount
+  useEffect(() => {
+    // Load data from localStorage first
+    const savedData = loadDataFromLocalStorage();
+    if (Object.keys(savedData).length > 0) {
+      setConsumptionData(savedData);
+    }
+  }, []);
+  
 
   // Fetch available data on component mount
   useEffect(() => {
@@ -26,8 +91,14 @@ const Calendar = ({ buildingStats }) => {
         // Extract building names from available data
         const buildings = Object.keys(data).map(building => decodeURIComponent(building));
         setBuildingOptions(buildings);
-        if (buildings.length > 0) {
-          setSelectedBuilding(buildings[0]); // Set the first building as the default selected building
+        
+        // Try to get selected building from localStorage first
+        const savedBuilding = loadSelectedBuildingFromLocalStorage();
+        if (savedBuilding && buildings.includes(savedBuilding)) {
+          setSelectedBuilding(savedBuilding);
+        } else if (buildings.length > 0) {
+          setSelectedBuilding(buildings[0]);
+          saveSelectedBuildingToLocalStorage(buildings[0]);
         }
       } catch (error) {
         console.error('Error fetching available data:', error);
@@ -41,7 +112,7 @@ const Calendar = ({ buildingStats }) => {
   useEffect(() => {
     if (!buildingStats || Object.keys(buildingStats).length === 0) return;
     
-    const data = {};
+    const data = { ...consumptionData };
     Object.entries(buildingStats).forEach(([building, stats]) => {
       if (stats.date) {
         const date = new Date(stats.date);
@@ -60,11 +131,23 @@ const Calendar = ({ buildingStats }) => {
         };
       }
     });
+    
     setConsumptionData(data);
+    
+    // Save to localStorage
+    saveDataToLocalStorage(data);
   }, [buildingStats]);
 
+  // Save selected building to localStorage when it changes
+  useEffect(() => {
+    if (selectedBuilding) {
+      saveSelectedBuildingToLocalStorage(selectedBuilding);
+    }
+  }, [selectedBuilding]);
+
+  // Improved fetch and cache function
   const fetchAndCacheData = async (date, building) => {
-    if (!building) return;
+    if (!building) return null;
     
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // JavaScript months are 0-based
@@ -72,8 +155,9 @@ const Calendar = ({ buildingStats }) => {
     const dateKey = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     const encodedBuilding = encodeURIComponent(building);
 
+    // Check if we already have this data cached
     if (consumptionData[dateKey] && consumptionData[dateKey][building]) {
-      return; // Data already cached
+      return consumptionData[dateKey][building];
     }
 
     try {
@@ -89,26 +173,39 @@ const Calendar = ({ buildingStats }) => {
       }
       const stat_data = await response2.json();
 
-      // Update the consumption data with the new data
-      setConsumptionData(prevData => ({
-        ...prevData,
-        [dateKey]: {
-          ...(prevData[dateKey] || {}),
-          [building]: {
-            consumption: data.consumption,
-            buildings: [{
-              name: building,
-              consumption: data.consumption,
-              average: stat_data.mean,
-              max: stat_data.highest,
-              min: stat_data.lowest,
-              median: stat_data.median
-            }]
+      // Create the new entry
+      const newEntry = {
+        consumption: data.consumption,
+        buildings: [{
+          name: building,
+          consumption: data.consumption,
+          average: stat_data.mean,
+          max: stat_data.highest,
+          min: stat_data.lowest,
+          median: stat_data.median
+        }]
+      };
+
+      // Update the consumptionData state with the new data
+      setConsumptionData(prevData => {
+        const updatedData = {
+          ...prevData,
+          [dateKey]: {
+            ...(prevData[dateKey] || {}),
+            [building]: newEntry
           }
-        }
-      }));
+        };
+        
+        // Save to localStorage
+        saveDataToLocalStorage(updatedData);
+        
+        return updatedData;
+      });
+
+      return newEntry;
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error(`Error fetching data for ${dateKey}:`, error);
+      return null;
     }
   };
 
@@ -121,17 +218,16 @@ const Calendar = ({ buildingStats }) => {
       
       try {
         const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+        const fetchResults = [];
         
-        // Create an array of promises for parallel fetching
-        const fetchPromises = [];
-        
+        // Create an array of dates for the current month
         for (let day = 1; day <= daysInMonth; day++) {
           const date = new Date(selectedYear, selectedMonth - 1, day);
-          fetchPromises.push(fetchAndCacheData(date, selectedBuilding));
+          fetchResults.push(fetchAndCacheData(date, selectedBuilding));
         }
         
         // Wait for all fetches to complete
-        await Promise.all(fetchPromises);
+        await Promise.all(fetchResults);
       } catch (error) {
         console.error('Error fetching month data:', error);
       } finally {
@@ -144,13 +240,12 @@ const Calendar = ({ buildingStats }) => {
     }
   }, [selectedBuilding, selectedMonth, selectedYear]);
 
-  // Handle date change, including month navigation
+  // Handle date change
   const handleDateChange = (date) => {
     const newMonth = date.getMonth() + 1;
     const newYear = date.getFullYear();
     
     setSelectedDate(date);
-    setShowStatsBox(true);
     
     // Only trigger month/year change if they actually changed
     if (newMonth !== selectedMonth || newYear !== selectedYear) {
@@ -159,18 +254,18 @@ const Calendar = ({ buildingStats }) => {
     }
   };
 
-  // Handle month navigation via DatePicker navigation buttons
+  // Handle month navigation
   const handleMonthChange = (date) => {
     const newMonth = date.getMonth() + 1;
     const newYear = date.getFullYear();
     
-    // Set the date to the 1st of the month
-    const newDate = new Date(date);
-    newDate.setDate(1);
-    setSelectedDate(newDate);
-    
     setSelectedMonth(newMonth);
     setSelectedYear(newYear);
+    
+    // Update the selected date to be within the new month
+    const newDate = new Date(date);
+    newDate.setDate(1); // Set to the first day of the month
+    setSelectedDate(newDate);
   };
 
   // Helper function to calculate price
@@ -212,6 +307,64 @@ const Calendar = ({ buildingStats }) => {
     return '';
   };
 
+  // Calculate usage comparisons
+  const calculateComparisons = () => {
+    const dateKey = selectedDate.toISOString().split('T')[0];
+    const currentDayData = consumptionData[dateKey]?.[selectedBuilding];
+    if (!currentDayData) return { previousDay: '+0%', weeklyAvg: '+0%', monthlyAvg: '+0%' };
+
+    const currentConsumption = currentDayData.consumption || 0;
+    
+    // Previous day comparison
+    const yesterday = new Date(selectedDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toISOString().split('T')[0];
+    const yesterdayData = consumptionData[yesterdayKey]?.[selectedBuilding];
+    const yesterdayConsumption = yesterdayData?.consumption || 0;
+    
+    const previousDayChange = yesterdayConsumption === 0 ? 0 : 
+      ((currentConsumption - yesterdayConsumption) / yesterdayConsumption) * 100;
+    
+    // Calculate weekly average (last 7 days)
+    let weeklyTotal = 0;
+    let weeklyCount = 0;
+    for (let i = 1; i <= 7; i++) {
+      const pastDate = new Date(selectedDate);
+      pastDate.setDate(pastDate.getDate() - i);
+      const pastDateKey = pastDate.toISOString().split('T')[0];
+      const pastDateData = consumptionData[pastDateKey]?.[selectedBuilding];
+      if (pastDateData) {
+        weeklyTotal += pastDateData.consumption || 0;
+        weeklyCount++;
+      }
+    }
+    const weeklyAvg = weeklyCount > 0 ? weeklyTotal / weeklyCount : 0;
+    const weeklyChange = weeklyAvg === 0 ? 0 : 
+      ((currentConsumption - weeklyAvg) / weeklyAvg) * 100;
+    
+    // Monthly average (current month)
+    const monthlyData = Object.entries(consumptionData)
+      .filter(([key, value]) => {
+        const keyDate = new Date(key);
+        return keyDate.getMonth() === selectedDate.getMonth() && 
+               keyDate.getFullYear() === selectedDate.getFullYear() &&
+               value[selectedBuilding];
+      })
+      .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+    
+    const monthlyAvg = monthlyData.length > 0 ? 
+      monthlyData.reduce((sum, val) => sum + val, 0) / monthlyData.length : 0;
+    
+    const monthlyChange = monthlyAvg === 0 ? 0 : 
+      ((currentConsumption - monthlyAvg) / monthlyAvg) * 100;
+    
+    return {
+      previousDay: `${previousDayChange >= 0 ? '+' : ''}${previousDayChange.toFixed(1)}%`,
+      weeklyAvg: `${weeklyChange >= 0 ? '+' : ''}${weeklyChange.toFixed(1)}%`,
+      monthlyAvg: `${monthlyChange >= 0 ? '+' : ''}${monthlyChange.toFixed(1)}%`
+    };
+  };
+
   // Custom day class names based on consumption
   const getDayClassName = (date) => {
     const dateKey = date.toISOString().split('T')[0];
@@ -225,33 +378,48 @@ const Calendar = ({ buildingStats }) => {
     return "calendar-day low-consumption";
   };
 
-  // Custom day content
+  // Custom day content with improved styling
   const renderDayContents = (day, date) => {
-    // Format the date to match the format used in consumptionData
     const dateKey = date.toISOString().split('T')[0];
     const dayData = consumptionData[dateKey] && consumptionData[dateKey][selectedBuilding];
     
     const consumptionValue = dayData?.consumption;
     const displayValue = displayMode === 'consumption' 
-      ? `${Math.round(consumptionValue || 0)} kWh` 
+      ? `${Math.round(consumptionValue || 0)}` 
       : `$${calculatePrice(consumptionValue)}`;
 
+    const isCurrentDate = date.toDateString() === selectedDate.toDateString();
+    const hasData = !!dayData;
+
     return (
-      <div className="day-content" onClick={() => {
+      <div className={`day-content ${isCurrentDate ? 'selected-day' : ''}`} onClick={() => {
         setSelectedDate(date);
-        setShowStatsBox(true);
       }}>
         <span className="day-number">{day}</span>
-        {dayData && (
+        {hasData ? (
           <div className="day-stats">
             <span className="consumption-indicator">
-              {displayValue}
+              {displayMode === 'consumption' ? (
+                <>
+                  <span className="price-value">{displayValue}</span>
+                  <span className="consumption-unit">kWh</span>
+                </>
+              ) : (
+                <span className="price-value">{displayValue}</span>
+              )}
             </span>
+          </div>
+        ) : (
+          <div className="day-stats">
+            <span className="no-data-indicator">-</span>
           </div>
         )}
       </div>
     );
   };
+
+  // Get the actual comparisons
+  const comparisons = calculateComparisons();
 
   return (
     <div className="calendar-page">
@@ -287,46 +455,47 @@ const Calendar = ({ buildingStats }) => {
           </div>
         </div>
       </div>
-      <div className="calendar-container">
-        <div className="calendar-legend">
-          <div className="legend-item">
-            <div className="legend-color low-consumption"></div>
-            <span>Low (&lt;5000 kWh)</span>
+      
+      <div className="calendar-with-stats">
+        <div className="calendar-container">
+          <div className="calendar-legend">
+            <div className="legend-item">
+              <div className="legend-color low-consumption"></div>
+              <span>Low (&lt;5000 kWh)</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color medium-consumption"></div>
+              <span>Medium (5000-10000 kWh)</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-color high-consumption"></div>
+              <span>High (&gt;10000 kWh)</span>
+            </div>
           </div>
-          <div className="legend-item">
-            <div className="legend-color medium-consumption"></div>
-            <span>Medium (5000-10000 kWh)</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color high-consumption"></div>
-            <span>High (&gt;10000 kWh)</span>
-          </div>
+          
+          {isLoading && (
+            <div className="loading-indicator">
+              <div className="spinner"></div>
+              <span>Loading consumption data...</span>
+            </div>
+          )}
+          
+          <DatePicker
+            selected={selectedDate}
+            onChange={handleDateChange}
+            onMonthChange={handleMonthChange}
+            inline
+            calendarClassName="custom-calendar"
+            dayClassName={getDayClassName}
+            renderDayContents={renderDayContents}
+            showMonthYearPicker={false}
+          />
         </div>
         
-        {isLoading && (
-          <div className="loading-indicator">
-            Loading consumption data...
-          </div>
-        )}
-        
-        <DatePicker
-          selected={selectedDate}
-          onChange={handleDateChange}
-          onMonthChange={handleMonthChange}
-          inline
-          calendarClassName="custom-calendar"
-          dayClassName={getDayClassName}
-          renderDayContents={renderDayContents}
-          showMonthYearPicker={false}
-        />
-      </div>
-      
-      {/* Stats Box */}
-      {showStatsBox && (
+        {/* Stats Box - Side panel */}
         <div className="stats-box">
           <div className="stats-header">
             <h2>Statistics for {selectedDate.toLocaleDateString()}</h2>
-            <button className="close-button" onClick={() => setShowStatsBox(false)}>×</button>
           </div>
           <div className="stats-content">
             <div className="stats-overview">
@@ -364,6 +533,18 @@ const Calendar = ({ buildingStats }) => {
                         }}
                       ></div>
                     </div>
+                    {building.average && (
+                      <div className="building-averages">
+                        <div className="average-item">
+                          <span>Monthly Avg:</span>
+                          <span>{Math.round(building.average)} kWh</span>
+                        </div>
+                        <div className="average-item">
+                          <span>Monthly Max:</span>
+                          <span>{Math.round(building.max)} kWh</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -376,21 +557,27 @@ const Calendar = ({ buildingStats }) => {
               <div className="comparison-stats">
                 <div className="comparison-item">
                   <span className="comparison-label">Compared to Previous Day:</span>
-                  <span className={`comparison-value ${getComparisonClass('+5%')}`}>+5%</span>
+                  <span className={`comparison-value ${getComparisonClass(comparisons.previousDay)}`}>
+                    {comparisons.previousDay}
+                  </span>
                 </div>
                 <div className="comparison-item">
                   <span className="comparison-label">Compared to Weekly Average:</span>
-                  <span className={`comparison-value ${getComparisonClass('-3%')}`}>-3%</span>
+                  <span className={`comparison-value ${getComparisonClass(comparisons.weeklyAvg)}`}>
+                    {comparisons.weeklyAvg}
+                  </span>
                 </div>
                 <div className="comparison-item">
                   <span className="comparison-label">Compared to Monthly Average:</span>
-                  <span className={`comparison-value ${getComparisonClass('+12%')}`}>+12%</span>
+                  <span className={`comparison-value ${getComparisonClass(comparisons.monthlyAvg)}`}>
+                    {comparisons.monthlyAvg}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
