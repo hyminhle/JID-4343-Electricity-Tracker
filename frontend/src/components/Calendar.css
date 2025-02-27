@@ -184,4 +184,181 @@
   min-width: 120px;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-} 
+}
+
+/* New Styles for Calendar Layout and Stats Box */
+.calendar-content {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.calendar-container {
+  flex: 1;
+  margin-top: 0;
+}
+
+.stats-box {
+  flex: 0 0 350px;
+  border-radius: 4px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  margin-top: 20px;
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f8f8;
+  border-radius: 4px 4px 0 0;
+}
+
+.stats-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: rgba(0,0,0,0.05);
+  color: #333;
+}
+
+.stats-content {
+  padding: 20px;
+}
+
+.stats-overview {
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stats-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.stats-item:last-child {
+  margin-bottom: 0;
+}
+
+.stats-label {
+  font-weight: 500;
+  color: #555;
+}
+
+.stats-value {
+  font-weight: 600;
+  color: #007bff;
+}
+
+.building-breakdown {
+  margin-top: 15px;
+  margin-bottom: 25px;
+}
+
+.building-stats {
+  margin-bottom: 18px;
+}
+
+.building-name {
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.building-consumption {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.consumption-bar-container {
+  height: 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.consumption-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.additional-stats {
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.comparison-stats {
+  margin-top: 15px;
+}
+
+.comparison-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.comparison-label {
+  color: #555;
+}
+
+.comparison-value {
+  font-weight: 500;
+}
+
+.comparison-value.positive {
+  color: #2ecc71;
+}
+
+.comparison-value.negative {
+  color: #e74c3c;
+}
+
+h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.no-data-message {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 25px 0;
+  font-size: 14px;
+}
