@@ -10,7 +10,7 @@ from flask_caching import Cache
 from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 from Predictor import Predictor
-
+from urllib.parse import unquote
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
@@ -325,6 +325,7 @@ def print_cache_keys():
     
 @app.route('/stats/<int:year>/<int:month>/<building>', methods=['GET'])
 def get_stats_by_params(year, month, building):
+    building = unquote(building)
     try:
         with app.app_context():
             # Create a cache key for the statistics
@@ -366,6 +367,7 @@ def get_stats_by_params(year, month, building):
 
 @app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
 def fetch_data_by_params(year, month, day, building):
+    building = unquote(building)
     with app.app_context(): 
 
         if day == 0:
