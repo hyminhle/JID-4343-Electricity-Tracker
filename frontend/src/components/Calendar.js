@@ -79,7 +79,7 @@ const Calendar = ({ buildingStats }) => {
     }
   }, []);
   
-
+  
   // Fetch available data on component mount
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -401,6 +401,42 @@ const Calendar = ({ buildingStats }) => {
     return "calendar-day high-consumption"; // Very above (more than 20% above average)
   };
 
+  // Get consumption class based on percentage difference from monthly average
+  const getConsumptionClass = (date) => {
+    const dateKey = date.toISOString().split('T')[0];
+    const dayData = consumptionData[dateKey] && consumptionData[dateKey][selectedBuilding];
+    
+    if (!dayData) return "";
+    
+    // Get the date's month and year
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    // Calculate monthly average for the current building
+    const monthlyData = Object.entries(consumptionData)
+      .filter(([key, value]) => {
+        const keyDate = new Date(key);
+        return keyDate.getMonth() === month && 
+              keyDate.getFullYear() === year &&
+              value[selectedBuilding];
+      })
+      .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+    
+    const monthlyAvg = monthlyData.length > 0 ? 
+      monthlyData.reduce((sum, val) => sum + val, 0) / monthlyData.length : 0;
+    
+    if (monthlyAvg === 0) return ""; // No average data available
+    
+    const consumption = dayData.consumption;
+    const percentageDiff = ((consumption - monthlyAvg) / monthlyAvg) * 100;
+    
+    // Classification based on percentage difference from monthly average
+    if (percentageDiff < -20) return "very-low-consumption-text"; // Very under (more than 20% below average)
+    if (percentageDiff < 0) return "low-consumption-text"; // Slightly under (0-20% below average)
+    if (percentageDiff < 20) return "medium-consumption-text"; // Slightly above (0-20% above average)
+    return "high-consumption-text"; // Very above (more than 20% above average)
+  };
+
   // Custom day content with improved styling
   const renderDayContents = (day, date) => {
     const dateKey = date.toISOString().split('T')[0];
@@ -413,6 +449,7 @@ const Calendar = ({ buildingStats }) => {
 
     const isCurrentDate = date.toDateString() === selectedDate.toDateString();
     const hasData = !!dayData;
+    const textColorClass = hasData ? getConsumptionClass(date) : "";
 
     return (
       <div className={`day-content ${isCurrentDate ? 'selected-day' : ''}`} onClick={() => {
@@ -421,7 +458,7 @@ const Calendar = ({ buildingStats }) => {
         <span className="day-number">{day}</span>
         {hasData ? (
           <div className="day-stats">
-            <span className="consumption-indicator">
+            <span className={`consumption-indicator ${textColorClass}`}>
               {displayMode === 'consumption' ? (
                 <>
                   <span className="price-value">{displayValue}</span>
@@ -550,16 +587,18 @@ const Calendar = ({ buildingStats }) => {
                       )}
                     </div>
                     <div className="consumption-bar-container">
-                      <div 
-                        className="consumption-bar" 
-                        style={{ 
-                          width: `${Math.min(100, (building.consumption / 10000) * 100)}%`,
-                          backgroundColor: building.consumption > 5000 
-                            ? (building.consumption > 10000 ? 'rgba(231, 76, 60, 0.8)' : 'rgba(241, 196, 15, 0.8)') 
-                            : 'rgba(46, 204, 113, 0.8)'
-                        }}
-                      ></div>
-                    </div>
+                    <div 
+                      className="consumption-bar" 
+                      style={{ 
+                        width: `${Math.min(100, (building.consumption / building.average) * 100)}%`,
+                        backgroundColor: building.consumption < building.average * 0.8 
+                          ? 'rgba(46, 204, 113, 0.8)' // Green if 20% below average
+                          : (building.consumption > building.average 
+                            ? 'rgba(231, 76, 60, 0.8)' // Red if above average
+                            : 'rgba(22, 203, 97, 0.25)') // Yellow if within ±20% of average
+                      }}
+                    ></div>
+                  </div>
                     {building.average && (
                       <div className="building-averages">
                         <div className="average-item">
