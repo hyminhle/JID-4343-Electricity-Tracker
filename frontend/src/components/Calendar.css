@@ -1,3 +1,18 @@
+/* Calendar.css */
+
+/* Adjust the header of the DatePicker */
+.react-datepicker__day-names {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px; /* Adjust padding as needed */
+}
+
+.react-datepicker__day-name {
+  flex: 1;
+  text-align: center;
+  margin: 0 5px; /* Adjust margin as needed */
+}
+
 .calendar-page {
   margin-left: 40px;
   margin-top: 40px;
@@ -60,6 +75,7 @@
 .day-number {
   font-size: 14px;
   font-weight: 500;
+  color: #000; /* Make day numbers black */
 }
 .day-stats {
   width: 100%;
@@ -77,6 +93,26 @@
 .consumption-value {
   font-weight: 600;
 }
+
+/* Keep these consumption color classes for the consumption values only */
+.very-low-consumption-text {
+  color: #10c944; /* Dark green for very low consumption */
+  font-weight: bold;
+}
+
+.low-consumption-text {
+  color: #e37900; /* Medium green for low consumption */
+}
+
+.medium-consumption-text {
+  color: #d03800; /* Orange for medium consumption */
+}
+
+.high-consumption-text {
+  color: #ff0000; /* Red for high consumption */
+  font-weight: bold;
+}
+
 .price-value {
   font-weight: 600;
 }
@@ -87,19 +123,19 @@
 
 /* Updated consumption level classes based on monthly average comparison */
 .calendar-day.very-low-consumption .day-content {
-  background-color: rgba(46, 204, 113, 0.8); /* Dark green for very under average (more than 20% below) */
+  background-color: rgba(22, 203, 97, 0.6); /* Dark green for very under average (more than 20% below) */
 }
 
 .calendar-day.low-consumption .day-content {
-  background-color: rgba(241, 196, 15, 0.8); /* Light orange for slightly under average (0-20% below) */
+  background-color: rgba(241, 196, 15, 0.60); /* Light orange for slightly under average (0-20% below) */
 }
 
 .calendar-day.medium-consumption .day-content {
-  background-color: rgba(231, 76, 60, 0.4); /* Light red for slightly above average (0-20% above) */
+  background-color: rgba(231, 76, 60, 0.25); /* Light red for slightly above average (0-20% above) */
 }
 
 .calendar-day.high-consumption .day-content {
-  background-color: rgba(231, 76, 60, 0.8); /* Dark red for very above average (more than 20% above) */
+  background-color: rgba(231, 76, 60, 0.60); /* Dark red for very above average (more than 20% above) */
 }
 
 .calendar-legend {
