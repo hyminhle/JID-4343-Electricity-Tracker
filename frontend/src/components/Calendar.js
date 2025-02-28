@@ -270,7 +270,7 @@ const Calendar = ({ buildingStats }) => {
 
   // Helper function to calculate price
   const calculatePrice = (consumption) => {
-    return ((consumption || 0) * 0.12).toFixed(2);
+    return ((consumption || 0) * 0.11).toFixed(2);
   };
 
   // Helper function to get selected date stats

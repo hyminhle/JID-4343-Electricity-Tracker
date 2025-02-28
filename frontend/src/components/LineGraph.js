@@ -86,7 +86,7 @@ const LineGraph = () => {
       const data = await response.json();
       
       // Generate a random color for the new dataset
-      const randomColor = `rgba(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, 0.22)`;
+      const randomColor = `rgba(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, 0.4)`;
 
 
 
@@ -158,7 +158,7 @@ const LineGraph = () => {
       borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
       borderWidth: ds.borderWidth || 1.5,
       pointBackgroundColor: ds.pointBackgroundColor || ds.color,
-      pointRadius: ds.pointRadius || 0.5,
+      pointRadius: ds.pointRadius || 1,
       pointStyle: ds.pointStyle || 'circle',
     }));
   
