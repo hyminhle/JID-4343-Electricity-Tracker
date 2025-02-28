@@ -372,10 +372,33 @@ const Calendar = ({ buildingStats }) => {
     
     if (!dayData) return "calendar-day";
     
+    // Get the date's month and year
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    // Calculate monthly average for the current building
+    const monthlyData = Object.entries(consumptionData)
+      .filter(([key, value]) => {
+        const keyDate = new Date(key);
+        return keyDate.getMonth() === month && 
+              keyDate.getFullYear() === year &&
+              value[selectedBuilding];
+      })
+      .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+    
+    const monthlyAvg = monthlyData.length > 0 ? 
+      monthlyData.reduce((sum, val) => sum + val, 0) / monthlyData.length : 0;
+    
+    if (monthlyAvg === 0) return "calendar-day"; // No average data available
+    
     const consumption = dayData.consumption;
-    if (consumption > 10000) return "calendar-day high-consumption";
-    if (consumption > 5000) return "calendar-day medium-consumption";
-    return "calendar-day low-consumption";
+    const percentageDiff = ((consumption - monthlyAvg) / monthlyAvg) * 100;
+    
+    // Classification based on percentage difference from monthly average
+    if (percentageDiff < -20) return "calendar-day very-low-consumption"; // Very under (more than 20% below average)
+    if (percentageDiff < 0) return "calendar-day low-consumption"; // Slightly under (0-20% below average)
+    if (percentageDiff < 20) return "calendar-day medium-consumption"; // Slightly above (0-20% above average)
+    return "calendar-day high-consumption"; // Very above (more than 20% above average)
   };
 
   // Custom day content with improved styling
@@ -458,20 +481,24 @@ const Calendar = ({ buildingStats }) => {
       
       <div className="calendar-with-stats">
         <div className="calendar-container">
-          <div className="calendar-legend">
-            <div className="legend-item">
-              <div className="legend-color low-consumption"></div>
-              <span>Low (&lt;5000 kWh)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color medium-consumption"></div>
-              <span>Medium (5000-10000 kWh)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-color high-consumption"></div>
-              <span>High (&gt;10000 kWh)</span>
-            </div>
+        <div className="calendar-legend">
+          <div className="legend-item">
+            <div className="legend-color very-low-consumption"></div>
+            <span> Below Average (&gt;20% under)</span>
           </div>
+          <div className="legend-item">
+            <div className="legend-color low-consumption"></div>
+            <span>Slightly Below Average (0-20% under)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color medium-consumption"></div>
+            <span>Slightly Above Average (0-20% over)</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color high-consumption"></div>
+            <span> Above Average (&gt;20% over)</span>
+          </div>
+        </div>
           
           {isLoading && (
             <div className="loading-indicator">
