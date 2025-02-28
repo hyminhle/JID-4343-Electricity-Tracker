@@ -96,21 +96,25 @@
 
 /* Keep these consumption color classes for the consumption values only */
 .very-low-consumption-text {
-  color: #10c944; /* Dark green for very low consumption */
+  color: #019a2c; /* Dark green for very low consumption */
+  font-size: 0.9rem;
   font-weight: bold;
 }
 
 .low-consumption-text {
-  color: #e37900; /* Medium green for low consumption */
+  color: #56c80a; /* Medium green for low consumption */
+  font-size: 0.9rem;
 }
 
 .medium-consumption-text {
   color: #d03800; /* Orange for medium consumption */
+  font-size: 0.9rem;
 }
 
 .high-consumption-text {
-  color: #ff0000; /* Red for high consumption */
+  color: #c70505; /* Red for high consumption */
   font-weight: bold;
+  font-size: 0.9rem;
 }
 
 .price-value {
@@ -127,7 +131,7 @@
 }
 
 .calendar-day.low-consumption .day-content {
-  background-color: rgba(241, 196, 15, 0.60); /* Light orange for slightly under average (0-20% below) */
+  background-color: rgba(22, 203, 97, 0.25); /* Light orange for slightly under average (0-20% below) */
 }
 
 .calendar-day.medium-consumption .day-content {
@@ -168,7 +172,7 @@
 }
 
 .legend-color.low-consumption {
-  background-color: rgba(241, 196, 15, 0.8); /* Light orange */
+  background-color: rgba(22, 203, 97, 0.25); /* Light orange */
 }
 
 .legend-color.medium-consumption {
