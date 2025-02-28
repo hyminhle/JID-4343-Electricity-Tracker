@@ -84,16 +84,22 @@
   color: #bbb;
   font-size: 0.8rem;
 }
-.low-consumption {
-  background-color: rgba(46, 204, 113, 0.2) !important;
+
+/* Updated consumption level classes based on monthly average comparison */
+.calendar-day.very-low-consumption .day-content {
+  background-color: rgba(46, 204, 113, 0.8); /* Dark green for very under average (more than 20% below) */
 }
 
-.medium-consumption {
-  background-color: rgba(241, 196, 15, 0.2) !important;
+.calendar-day.low-consumption .day-content {
+  background-color: rgba(46, 204, 113, 0.4); /* Light green for slightly under average (0-20% below) */
 }
 
-.high-consumption {
-  background-color: rgba(231, 76, 60, 0.2) !important;
+.calendar-day.medium-consumption .day-content {
+  background-color: rgba(231, 76, 60, 0.4); /* Light red for slightly above average (0-20% above) */
+}
+
+.calendar-day.high-consumption .day-content {
+  background-color: rgba(231, 76, 60, 0.8); /* Dark red for very above average (more than 20% above) */
 }
 
 .calendar-legend {
@@ -105,6 +111,7 @@
   background: white;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
 }
 
 .legend-item {
@@ -117,6 +124,23 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
+}
+
+/* Updated legend color classes */
+.legend-color.very-low-consumption {
+  background-color: rgba(46, 204, 113, 0.8); /* Dark green */
+}
+
+.legend-color.low-consumption {
+  background-color: rgba(46, 204, 113, 0.4); /* Light green */
+}
+
+.legend-color.medium-consumption {
+  background-color: rgba(231, 76, 60, 0.4); /* Light red */
+}
+
+.legend-color.high-consumption {
+  background-color: rgba(231, 76, 60, 0.8); /* Dark red */
 }
 
 .react-datepicker {
@@ -370,11 +394,11 @@
 }
 
 .comparison-value.positive {
-  color: #2ecc71;
+  color: #e74c3c;
 }
 
 .comparison-value.negative {
-  color: #e74c3c;
+  color: #2ecc71;
 }
 
 h3 {
