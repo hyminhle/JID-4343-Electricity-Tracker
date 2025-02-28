@@ -86,7 +86,8 @@ const LineGraph = () => {
       const data = await response.json();
       
       // Generate a random color for the new dataset
-      const randomColor = `rgb(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)})`;
+      const randomColor = `rgba(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, 0.22)`;
+
 
 
       const newDataset = {
@@ -127,26 +128,7 @@ const LineGraph = () => {
   };
 
 
-  const toggleTransparency = (index) => {
-    setSelectedDatasets((prev) => {
-      return prev.map((dataset, i) => {
-        if (i === index) {
-          const isTransparent = dataset.transparency ?? false;
-          return {
-            ...dataset,
-            transparency: !isTransparent,
-            borderColor: isTransparent
-              ? dataset.color // Restore original color
-              : dataset.color.replace('rgb', 'rgba').replace(')', ', 0.15)'), // Make it translucent
-            backgroundColor: isTransparent
-              ? 'transparent'
-              : dataset.color.replace('rgb', 'rgba').replace(')', ', 0.075)'), // Lighter background fill
-          };
-        }
-        return dataset;
-      });
-    });
-  };
+  
 
   // Modify the chart update effect
   useEffect(() => {
@@ -620,17 +602,7 @@ const LineGraph = () => {
             >
               Secondary
             </button>
-            <button onClick={() => toggleTransparency(index)} 
-            style={{
-              marginLeft: '10px',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              border: '1px solid #ddd',
-              backgroundColor: 'white'
-              }}
-            >
-              {dataset.transparency ? 'Restore' : 'Make Translucent'}
-            </button>
+            
             <button
               onClick={() => removeDataset(index)}
               style={{
