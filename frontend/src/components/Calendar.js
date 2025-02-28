@@ -79,7 +79,7 @@ const Calendar = ({ buildingStats }) => {
     }
   }, []);
   
-
+  
   // Fetch available data on component mount
   useEffect(() => {
     const fetchAvailableData = async () => {
@@ -550,16 +550,18 @@ const Calendar = ({ buildingStats }) => {
                       )}
                     </div>
                     <div className="consumption-bar-container">
-                      <div 
-                        className="consumption-bar" 
-                        style={{ 
-                          width: `${Math.min(100, (building.consumption / 10000) * 100)}%`,
-                          backgroundColor: building.consumption > 5000 
-                            ? (building.consumption > 10000 ? 'rgba(231, 76, 60, 0.8)' : 'rgba(241, 196, 15, 0.8)') 
-                            : 'rgba(46, 204, 113, 0.8)'
-                        }}
-                      ></div>
-                    </div>
+                    <div 
+                      className="consumption-bar" 
+                      style={{ 
+                        width: `${Math.min(100, (building.consumption / building.average) * 100)}%`,
+                        backgroundColor: building.consumption < building.average * 0.8 
+                          ? 'rgba(46, 204, 113, 0.8)' // Green if 20% below average
+                          : (building.consumption > building.average 
+                            ? 'rgba(231, 76, 60, 0.8)' // Red if above average
+                            : 'rgba(241, 196, 15, 0.8)') // Yellow if within ±20% of average
+                      }}
+                    ></div>
+                  </div>
                     {building.average && (
                       <div className="building-averages">
                         <div className="average-item">

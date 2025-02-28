@@ -91,7 +91,7 @@
 }
 
 .calendar-day.low-consumption .day-content {
-  background-color: rgba(46, 204, 113, 0.4); /* Light green for slightly under average (0-20% below) */
+  background-color: rgba(241, 196, 15, 0.8); /* Light orange for slightly under average (0-20% below) */
 }
 
 .calendar-day.medium-consumption .day-content {
@@ -132,7 +132,7 @@
 }
 
 .legend-color.low-consumption {
-  background-color: rgba(46, 204, 113, 0.4); /* Light green */
+  background-color: rgba(241, 196, 15, 0.8); /* Light orange */
 }
 
 .legend-color.medium-consumption {
