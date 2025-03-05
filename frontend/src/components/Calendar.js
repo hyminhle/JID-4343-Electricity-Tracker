@@ -13,6 +13,7 @@ const Calendar = ({ buildingStats }) => {
   const [selectedMonth, setSelectedMonth] = useState(selectedDate.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(selectedDate.getFullYear());
   const [isLoading, setIsLoading] = useState(false);
+  const [jumpToDate, setJumpToDate] = useState(new Date());
 
   // Function to save data to localStorage
   const saveDataToLocalStorage = (data) => {
@@ -268,6 +269,12 @@ const Calendar = ({ buildingStats }) => {
     setSelectedDate(newDate);
   };
 
+  const handleDateJump = (date) => {
+    setJumpToDate(date);
+    handleDateChange(date);
+  };
+
+
   // Helper function to calculate price
   const calculatePrice = (consumption) => {
     return ((consumption || 0) * 0.11).toFixed(2);
@@ -401,6 +408,55 @@ const Calendar = ({ buildingStats }) => {
     return "calendar-day high-consumption"; // Very above (more than 20% above average)
   };
 
+  const calculateMonthlyNetGain = () => {
+    // If no building is selected, return default values
+    if (!selectedBuilding) return { netGain: 0, percentageDiff: 0 };
+  
+    // Filter consumption data for the current month and year
+    const monthlyData = Object.entries(consumptionData)
+      .filter(([key, value]) => {
+        const keyDate = new Date(key);
+        return keyDate.getMonth() === selectedDate.getMonth() && 
+               keyDate.getFullYear() === selectedDate.getFullYear() &&
+               value[selectedBuilding];
+      })
+      .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+  
+    // If no data available for the month, return default values
+    if (monthlyData.length === 0) return { netGain: 0, percentageDiff: 0 };
+  
+    // Calculate current month's total consumption
+    const currentMonthTotal = monthlyData.reduce((sum, val) => sum + val, 0);
+  
+    // Get the previous month's data for comparison
+    const previousMonth = new Date(selectedDate);
+    previousMonth.setMonth(previousMonth.getMonth() - 1);
+  
+    const previousMonthData = Object.entries(consumptionData)
+      .filter(([key, value]) => {
+        const keyDate = new Date(key);
+        return keyDate.getMonth() === previousMonth.getMonth() && 
+               keyDate.getFullYear() === previousMonth.getFullYear() &&
+               value[selectedBuilding];
+      })
+      .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+  
+    // Calculate previous month's total consumption
+    const previousMonthTotal = previousMonthData.reduce((sum, val) => sum + val, 0);
+  
+    // Calculate net gain and percentage difference
+    const netGain = currentMonthTotal - previousMonthTotal;
+    const percentageDiff = previousMonthTotal === 0 
+      ? 0 
+      : ((netGain / previousMonthTotal) * 100).toFixed(1);
+  
+    return {
+      netGain: netGain,
+      percentageDiff: percentageDiff
+    };
+  };
+  
+
   // Get consumption class based on percentage difference from monthly average
   const getConsumptionClass = (date) => {
     const dateKey = date.toISOString().split('T')[0];
@@ -514,6 +570,36 @@ const Calendar = ({ buildingStats }) => {
             </button>
           </div>
         </div>
+        <div className="control-group date-jump-container">
+          <label className="date-jump-label">Jump to Date:</label>
+          <DatePicker
+            selected={jumpToDate}
+            onChange={handleDateJump}
+            className="date-jump-picker"
+            placeholderText="Select a date"
+            showMonthDropdown
+            showYearDropdown
+            dropdownMode="select"
+            dateFormat="MMMM d, yyyy"
+            popperClassName="custom-datepicker-popper"
+            popperPlacement="bottom-end"
+          />
+        </div>
+        <div className="control-group monthly-net-gain">
+          <label>Monthly Net:</label>
+          <div 
+            className={`net-gain-indicator ${
+              calculateMonthlyNetGain().netGain >= 0 
+                ? 'positive-gain' 
+                : 'negative-gain'
+            }`}
+          >
+            {`${calculateMonthlyNetGain().netGain >= 0 ? '+' : ''}${Math.round(calculateMonthlyNetGain().netGain)} kWh`}
+            <span className="percentage-diff">
+              ({`${calculateMonthlyNetGain().percentageDiff}%`})
+            </span>
+          </div>
+        </div>
       </div>
       
       <div className="calendar-with-stats">
@@ -590,7 +676,19 @@ const Calendar = ({ buildingStats }) => {
                     <div 
                       className="consumption-bar" 
                       style={{ 
-                        width: `${Math.min(100, (building.consumption / building.average) * 100)}%`,
+                        width: (() => {
+                          const percentageDiff = (building.consumption - building.average) / building.average * 100;
+                          
+                          // Map percentage difference from -20 to 20 range to 10-100% width
+                          if (percentageDiff <= -20) return '10%';
+                          if (percentageDiff >= 20) return '100%';
+                          
+                          // Linear interpolation between 10% and 100%
+                          const normalizedDiff = (percentageDiff + 20) / 40;
+                          const barWidth = 10 + (normalizedDiff * 90);
+                          
+                          return `${barWidth}%`;
+                        })(),
                         backgroundColor: building.consumption < building.average * 0.8 
                           ? 'rgba(46, 204, 113, 0.8)' // Green if 20% below average
                           : (building.consumption > building.average 
@@ -608,6 +706,10 @@ const Calendar = ({ buildingStats }) => {
                         <div className="average-item">
                           <span>Monthly Max:</span>
                           <span>{Math.round(building.max)} kWh</span>
+                        </div>
+                        <div className="average-item">
+                          <span>Monthly Min:</span>
+                          <span>{Math.round(building.min)} kWh</span>
                         </div>
                       </div>
                     )}
