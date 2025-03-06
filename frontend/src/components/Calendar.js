@@ -410,12 +410,12 @@ const Calendar = ({ buildingStats }) => {
 
   const calculateMonthlyNetGain = () => {
     // If no building is selected, return default values
-    if (!selectedBuilding) return { netGain: 0, percentageDiff: 0 };
+    if (!selectedBuilding) return { netGain: 0, percentageDiff: 0, priceNetGain: 0, pricePercentageDiff: 0 };
   
     // Get current month and year
     const currentMonth = selectedDate.getMonth();
     const currentYear = selectedDate.getFullYear();
-    
+  
     // Calculate days in the current month
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   
@@ -423,59 +423,53 @@ const Calendar = ({ buildingStats }) => {
     const monthlyData = Object.entries(consumptionData)
       .filter(([key, value]) => {
         const keyDate = new Date(key);
-        return keyDate.getMonth() === currentMonth && 
-               keyDate.getFullYear() === currentYear &&
-               value[selectedBuilding];
+        return keyDate.getMonth() === currentMonth && keyDate.getFullYear() === currentYear && value[selectedBuilding];
       })
       .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
   
     // If no data available for the month, return default values
-    if (monthlyData.length === 0) return { netGain: 0, percentageDiff: 0 };
+    if (monthlyData.length === 0) return { netGain: 0, percentageDiff: 0, priceNetGain: 0, pricePercentageDiff: 0 };
   
-    // Calculate current month's total consumption
+    // Calculate current month's total consumption and price
     const currentMonthTotal = monthlyData.reduce((sum, val) => sum + val, 0);
+    const currentMonthPrice = currentMonthTotal * 0.11; // Assuming $0.11 per kWh
   
-    // Calculate yearly average (excluding current month)
-    const yearlyData = Object.entries(consumptionData)
+    // Calculate previous month's total consumption and price
+    const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+    const previousMonthData = Object.entries(consumptionData)
       .filter(([key, value]) => {
         const keyDate = new Date(key);
-        // Include all months except the current one from the past year
-        return (keyDate.getMonth() !== currentMonth || keyDate.getFullYear() !== currentYear) && 
-               value[selectedBuilding] &&
-               // Ensure we're only looking at the past year
-               (keyDate.getFullYear() === currentYear || 
-                (keyDate.getFullYear() === currentYear - 1 && keyDate.getMonth() > currentMonth));
+        return keyDate.getMonth() === previousMonth && keyDate.getFullYear() === previousYear && value[selectedBuilding];
       })
       .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
-    
-    // If no yearly data available for comparison, return with just the month total
-    if (yearlyData.length === 0) return { 
-      netGain: currentMonthTotal, 
-      percentageDiff: 0,
-      hasYearlyAverage: false
-    };
   
-    // Calculate yearly daily average
-    const yearlyAverage = yearlyData.reduce((sum, val) => sum + val, 0) / yearlyData.length;
-    
-    // Expected consumption based on yearly average * days in month
-    const expectedMonthlyConsumption = yearlyAverage * daysInMonth;
-    
-    // Calculate net gain compared to yearly average
-    const netGain = currentMonthTotal - expectedMonthlyConsumption;
-    
-    // Calculate percentage difference
-    const percentageDiff = expectedMonthlyConsumption === 0 
+    const previousMonthTotal = previousMonthData.reduce((sum, val) => sum + val, 0);
+    const previousMonthPrice = previousMonthTotal * 0.11; // Assuming $0.11 per kWh
+  
+    // Calculate net gain and percentage difference for consumption
+    const netGain = currentMonthTotal - previousMonthTotal;
+    const percentageDiff = previousMonthTotal === 0 
       ? 0 
-      : ((netGain / expectedMonthlyConsumption) * 100).toFixed(1);
+      : ((netGain / previousMonthTotal) * 100).toFixed(1);
+  
+    // Calculate net gain and percentage difference for price
+    const priceNetGain = currentMonthPrice - previousMonthPrice;
+    const pricePercentageDiff = previousMonthPrice === 0 
+      ? 0 
+      : ((priceNetGain / previousMonthPrice) * 100).toFixed(1);
   
     return {
       netGain: netGain,
       percentageDiff: percentageDiff,
-      hasYearlyAverage: true,
-      yearlyAverage: yearlyAverage,
+      priceNetGain: priceNetGain,
+      pricePercentageDiff: pricePercentageDiff,
+      hasYearlyAverage: previousMonthData.length > 0,
       currentMonthTotal: currentMonthTotal,
-      expectedMonthlyConsumption: expectedMonthlyConsumption
+      currentMonthPrice: currentMonthPrice,
+      previousMonthTotal: previousMonthTotal,
+      previousMonthPrice: previousMonthPrice
     };
   };
   
@@ -599,11 +593,12 @@ const Calendar = ({ buildingStats }) => {
             selected={jumpToDate}
             onChange={handleDateJump}
             className="date-jump-picker"
-            placeholderText="Select a date"
+            placeholderText="Select a month and year"
             showMonthDropdown
             showYearDropdown
             dropdownMode="select"
-            dateFormat="MMMM d, yyyy"
+            dateFormat="MMMM yyyy" // Only show month and year
+            showMonthYearPicker // Enable month/year picker mode
             popperClassName="custom-datepicker-popper"
             popperPlacement="bottom-end"
           />
@@ -618,14 +613,27 @@ const Calendar = ({ buildingStats }) => {
             }`}
           >
             {calculateMonthlyNetGain().hasYearlyAverage ? (
-              <>
-                {`${calculateMonthlyNetGain().netGain >= 0 ? '+' : ''}${Math.round(calculateMonthlyNetGain().netGain)} kWh`}
-                <span className="percentage-diff">
-                  ({`${calculateMonthlyNetGain().percentageDiff}%`})
-                </span>
-              </>
+              displayMode === 'consumption' ? (
+                <>
+                  {`${calculateMonthlyNetGain().netGain >= 0 ? '+' : ''}${Math.round(calculateMonthlyNetGain().netGain)} kWh`}
+                  <span className="percentage-diff">
+                    ({`${calculateMonthlyNetGain().percentageDiff}%`})
+                  </span>
+                </>
+              ) : (
+                <>
+                  {`${calculateMonthlyNetGain().priceNetGain >= 0 ? '+' : ''}$${Math.abs(calculateMonthlyNetGain().priceNetGain).toFixed(2)}`}
+                  <span className="percentage-diff">
+                    ({`${calculateMonthlyNetGain().pricePercentageDiff}%`})
+                  </span>
+                </>
+              )
             ) : (
-              `${Math.round(calculateMonthlyNetGain().currentMonthTotal)} kWh (no data available)`
+              displayMode === 'consumption' ? (
+                `${Math.round(calculateMonthlyNetGain().currentMonthTotal)} kWh (no data available)`
+              ) : (
+                `$${calculateMonthlyNetGain().currentMonthPrice.toFixed(2)} (no data available)`
+              )
             )}
           </div>
         </div>
