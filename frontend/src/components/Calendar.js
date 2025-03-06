@@ -593,11 +593,12 @@ const Calendar = ({ buildingStats }) => {
             selected={jumpToDate}
             onChange={handleDateJump}
             className="date-jump-picker"
-            placeholderText="Select a date"
+            placeholderText="Select a month and year"
             showMonthDropdown
             showYearDropdown
             dropdownMode="select"
-            dateFormat="MMMM d, yyyy"
+            dateFormat="MMMM yyyy" // Only show month and year
+            showMonthYearPicker // Enable month/year picker mode
             popperClassName="custom-datepicker-popper"
             popperPlacement="bottom-end"
           />
