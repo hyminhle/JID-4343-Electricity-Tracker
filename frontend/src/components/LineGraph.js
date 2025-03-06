@@ -36,9 +36,16 @@ const LineGraph = () => {
         setAvailableData(data);
         setSelectedBuilding(Object.keys(data)[0] || '');
 
+        // Load saved datasets from localStorage
         const savedDatasets = localStorage.getItem('selectedDatasets');
         if (savedDatasets) {
           setSelectedDatasets(JSON.parse(savedDatasets));
+        }
+        
+        // Load saved stats from localStorage
+        const savedStats = localStorage.getItem('stats');
+        if (savedStats) {
+          setStats(JSON.parse(savedStats));
         }
 
       } catch (error) {
@@ -54,6 +61,11 @@ const LineGraph = () => {
 
   const saveDatasetsToLocalStorage = (datasets) => {
     localStorage.setItem('selectedDatasets', JSON.stringify(datasets));
+  };
+  
+  // Add function to save stats to localStorage
+  const saveStatsToLocalStorage = (statsData) => {
+    localStorage.setItem('stats', JSON.stringify(statsData));
   };
   
   // Add this function to handle adding new datasets
@@ -88,8 +100,6 @@ const LineGraph = () => {
       // Generate a random color for the new dataset
       const randomColor = `rgba(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, 0.4)`;
 
-
-
       const newDataset = {
         building: selectedBuilding,
         year: selectedYear,
@@ -102,22 +112,26 @@ const LineGraph = () => {
 
       // Calculate and set statistics for the new dataset
       const datasetStats = calculateDatasetStatistics(newDataset);
-        setStats(prev => ({
-      ...prev,
-      [`${selectedBuilding}-${selectedYear}-${selectedMonth}`]: {
-        label: `${selectedBuilding} - ${selectedMonth}/${selectedYear}`,
-        ...datasetStats
-      }
-    }));
-    console.log("Data Set Stats:", datasetStats);
+      const updatedStats = {
+        ...stats,
+        [`${selectedBuilding}-${selectedYear}-${selectedMonth}`]: {
+          label: `${selectedBuilding} - ${selectedMonth}/${selectedYear}`,
+          ...datasetStats
+        }
+      };
       
-    setAddError(null);
+      setStats(updatedStats);
+      saveStatsToLocalStorage(updatedStats); // Save updated stats to localStorage
+      
+      console.log("Data Set Stats:", datasetStats);
+      
+      setAddError(null);
 
-    setSelectedDatasets(prev => {
-      const updatedDatasets = [...prev, newDataset];
-      saveDatasetsToLocalStorage(updatedDatasets);
-      return updatedDatasets;
-    });
+      setSelectedDatasets(prev => {
+        const updatedDatasets = [...prev, newDataset];
+        saveDatasetsToLocalStorage(updatedDatasets);
+        return updatedDatasets;
+      });
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -126,9 +140,6 @@ const LineGraph = () => {
       setLoading(false);
     }
   };
-
-
-  
 
   // Modify the chart update effect
   useEffect(() => {
@@ -215,25 +226,26 @@ const LineGraph = () => {
       const updatedDatasets = prev.filter((_, i) => i !== index);
       const removedDataset = prev[index];
 
-        // Remove statistics for the removed dataset
-        setStats((prevStats) => {
-            const newStats = { ...prevStats };
-            // If the dataset is the prediction dataset
-            if (removedDataset.building === 'Prediction') {
-              delete newStats['Prediction-Future'];
-            } else if (removedDataset.label === 'Average Aggregate') {
-              delete newStats['Average-Aggregate'];
-            } else {
-              delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
-            }
-            return newStats;
-        });
+      // Remove statistics for the removed dataset
+      setStats((prevStats) => {
+        const newStats = { ...prevStats };
+        // If the dataset is the prediction dataset
+        if (removedDataset.building === 'Prediction') {
+          delete newStats['Prediction-Future'];
+        } else if (removedDataset.label === 'Average Aggregate') {
+          delete newStats['Average-Aggregate'];
+        } else {
+          delete newStats[`${removedDataset.building}-${removedDataset.year}-${removedDataset.month}`];
+        }
+        saveStatsToLocalStorage(newStats); // Save updated stats to localStorage
+        return newStats;
+      });
+      
       saveDatasetsToLocalStorage(updatedDatasets);
       return updatedDatasets;
     });
   };
   
-
   const calculateAverageAggregate = () => {
     if (selectedDatasets.length === 0) {
       setError('No datasets available to calculate an average aggregate.');
@@ -267,7 +279,6 @@ const LineGraph = () => {
     console.log('Average Data:', averageData);
   
     // Create the average dataset
-    
     const averageDataset = {
       label: 'Average Aggregate',
       data: averageData.map((y, i) => ({ day: i + 1, consumption: y })), // Ensure proper format
@@ -289,17 +300,23 @@ const LineGraph = () => {
       return newDatasets;
     });
 
-    setStats((prev) => ({
-      ...prev,
-      'Average-Aggregate': {
-        label: 'Average Aggregate',
-        ...averageStats
-      }
-    }));
+    // Update stats with average aggregate data
+    setStats((prev) => {
+      const updatedStats = {
+        ...prev,
+        'Average-Aggregate': {
+          label: 'Average Aggregate',
+          ...averageStats
+        }
+      };
+      saveStatsToLocalStorage(updatedStats); // Save updated stats to localStorage
+      return updatedStats;
+    });
 
     setIsAverageDisplayed(true); // Indicate that the average is displayed
     setError(null);
   };
+  
   const fetchPrediction = async () => {
     if (!selectedDatasets.length) {
       setError('No data available for prediction.');
@@ -336,8 +353,7 @@ const LineGraph = () => {
       }));
       console.log('Formatted Predictions:', formattedPredictions);
 
-       // Append prediction results to the graph
-      
+      // Append prediction results to the graph
       const predictionDataset = {
         building: 'Prediction',
         year: 'Future',
@@ -354,17 +370,21 @@ const LineGraph = () => {
         return newDatasets;
       });
 
-        // Calculate and set statistics for the prediction dataset
-        const predictionStats = calculateDatasetStatistics(predictionDataset);
-        setStats(prev => ({
-            ...prev,
-            'Prediction-Future': {
+      // Calculate and set statistics for the prediction dataset
+      const predictionStats = calculateDatasetStatistics(predictionDataset);
+      setStats(prev => {
+        const updatedStats = {
+          ...prev,
+          'Prediction-Future': {
             label: 'Prediction - Future',
             ...predictionStats
-            }
-        }));
+          }
+        };
+        saveStatsToLocalStorage(updatedStats); // Save updated stats to localStorage
+        return updatedStats;
+      });
       
-        setError(null);
+      setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
       setError(`Prediction failed: ${error.message}`);
@@ -376,29 +396,28 @@ const LineGraph = () => {
   //Calculate statistics for the statistics box
   const calculateDatasetStatistics = (dataset) => {
     // Check if the dataset is the prediction dataset
-  if (dataset.building === 'Prediction') {
-        const consumptionValues = dataset.data.slice(0,30).map(entry => entry.consumption);
-        const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-        const max = Math.max(...consumptionValues);
-        const min = Math.min(...consumptionValues);
-        const total = consumptionValues.reduce((a, b) => a + b, 0);
-        const meanAbsoluteError = dataset.evaluation?.mean_absolute_error || 0;
-        const rootMeanSquaredError = dataset.evaluation?.root_mean_squared_error || 0;
-        const percentageMAE = dataset.evaluation?.percentage_mae || 0;
-        const percentageRMSE = dataset.evaluation?.percentage_rmse || 0;
+    if (dataset.building === 'Prediction') {
+      const consumptionValues = dataset.data.slice(0,30).map(entry => entry.consumption);
+      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+      const max = Math.max(...consumptionValues);
+      const min = Math.min(...consumptionValues);
+      const total = consumptionValues.reduce((a, b) => a + b, 0);
+      const meanAbsoluteError = dataset.evaluation?.mean_absolute_error || 0;
+      const rootMeanSquaredError = dataset.evaluation?.root_mean_squared_error || 0;
+      const percentageMAE = dataset.evaluation?.percentage_mae || 0;
+      const percentageRMSE = dataset.evaluation?.percentage_rmse || 0;
 
-        return {
-            label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
-            average: average.toFixed(2),
-            max: max.toFixed(2),
-            min: min.toFixed(2),
-            total: total.toFixed(2),
-            meanAbsoluteError: meanAbsoluteError.toFixed(2),
-            rootMeanSquaredError: rootMeanSquaredError.toFixed(2),
-            percentageMAE: percentageMAE.toFixed(2),
-            percentageRMSE: percentageRMSE.toFixed(2),
-        };
-
+      return {
+        label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+        average: average.toFixed(2),
+        max: max.toFixed(2),
+        min: min.toFixed(2),
+        total: total.toFixed(2),
+        meanAbsoluteError: meanAbsoluteError.toFixed(2),
+        rootMeanSquaredError: rootMeanSquaredError.toFixed(2),
+        percentageMAE: percentageMAE.toFixed(2),
+        percentageRMSE: percentageRMSE.toFixed(2),
+      };
     } else if (dataset.label === 'Average Aggregate') {
       // For Average Aggregate, take only the first 30 values
       const consumptionValues = dataset.data.slice(0, 30).map(entry => entry.consumption);
@@ -414,25 +433,23 @@ const LineGraph = () => {
         min: min.toFixed(2),
         total: total.toFixed(2)
       };
-      
     } else {
-        const consumptionValues = dataset.data.map(entry => entry.consumption);
-        const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-        const max = Math.max(...consumptionValues);
-        const min = Math.min(...consumptionValues);
-        const total = consumptionValues.reduce((a, b) => a + b, 0);
-    
-        return {
-            label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
-            average: average.toFixed(2),
-            max: max.toFixed(2),
-            min: min.toFixed(2),
-            total: total.toFixed(2)
-        };
+      const consumptionValues = dataset.data.map(entry => entry.consumption);
+      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
+      const max = Math.max(...consumptionValues);
+      const min = Math.min(...consumptionValues);
+      const total = consumptionValues.reduce((a, b) => a + b, 0);
+  
+      return {
+        label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+        average: average.toFixed(2),
+        max: max.toFixed(2),
+        min: min.toFixed(2),
+        total: total.toFixed(2)
+      };
     }
-    };
+  };
  
-
   const compareDatasets = () => {
     if (primaryDataset === null || secondaryDataset === null) {
       setError('Please select both primary and secondary datasets for comparison.');
@@ -455,9 +472,6 @@ const LineGraph = () => {
     // Update the chart to reflect the changes
     chartInstance.update();
   };
-
-
-  // Creates the statistic box for the graph
 
   const togglePrimaryDataset = (index) => {
     setPrimaryDataset(prev => prev === index ? null : index);
@@ -700,7 +714,10 @@ const LineGraph = () => {
                     <div style={{
                         width: '15px',
                         height: '15px',
-                        backgroundColor: selectedDatasets[index]?.color || 'transparent',
+                        backgroundColor: selectedDatasets.find(ds => 
+                          (ds.building === 'Prediction' && key === 'Prediction-Future') ||
+                          (ds.label === 'Average Aggregate' && key === 'Average-Aggregate') ||
+                          (`${ds.building}-${ds.year}-${ds.month}` === key))?.color || 'transparent',
                         borderRadius: '3px',
                         marginRight: '10px'
                     }} />
@@ -725,7 +742,7 @@ const LineGraph = () => {
             </div>
             ))}
         </div>
-    )}
+        )}
       </div>
     </div>
   );
