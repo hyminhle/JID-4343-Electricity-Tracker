@@ -412,12 +412,19 @@ const Calendar = ({ buildingStats }) => {
     // If no building is selected, return default values
     if (!selectedBuilding) return { netGain: 0, percentageDiff: 0 };
   
+    // Get current month and year
+    const currentMonth = selectedDate.getMonth();
+    const currentYear = selectedDate.getFullYear();
+    
+    // Calculate days in the current month
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
     // Filter consumption data for the current month and year
     const monthlyData = Object.entries(consumptionData)
       .filter(([key, value]) => {
         const keyDate = new Date(key);
-        return keyDate.getMonth() === selectedDate.getMonth() && 
-               keyDate.getFullYear() === selectedDate.getFullYear() &&
+        return keyDate.getMonth() === currentMonth && 
+               keyDate.getFullYear() === currentYear &&
                value[selectedBuilding];
       })
       .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
@@ -428,31 +435,47 @@ const Calendar = ({ buildingStats }) => {
     // Calculate current month's total consumption
     const currentMonthTotal = monthlyData.reduce((sum, val) => sum + val, 0);
   
-    // Get the previous month's data for comparison
-    const previousMonth = new Date(selectedDate);
-    previousMonth.setMonth(previousMonth.getMonth() - 1);
-  
-    const previousMonthData = Object.entries(consumptionData)
+    // Calculate yearly average (excluding current month)
+    const yearlyData = Object.entries(consumptionData)
       .filter(([key, value]) => {
         const keyDate = new Date(key);
-        return keyDate.getMonth() === previousMonth.getMonth() && 
-               keyDate.getFullYear() === previousMonth.getFullYear() &&
-               value[selectedBuilding];
+        // Include all months except the current one from the past year
+        return (keyDate.getMonth() !== currentMonth || keyDate.getFullYear() !== currentYear) && 
+               value[selectedBuilding] &&
+               // Ensure we're only looking at the past year
+               (keyDate.getFullYear() === currentYear || 
+                (keyDate.getFullYear() === currentYear - 1 && keyDate.getMonth() > currentMonth));
       })
       .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+    
+    // If no yearly data available for comparison, return with just the month total
+    if (yearlyData.length === 0) return { 
+      netGain: currentMonthTotal, 
+      percentageDiff: 0,
+      hasYearlyAverage: false
+    };
   
-    // Calculate previous month's total consumption
-    const previousMonthTotal = previousMonthData.reduce((sum, val) => sum + val, 0);
-  
-    // Calculate net gain and percentage difference
-    const netGain = currentMonthTotal - previousMonthTotal;
-    const percentageDiff = previousMonthTotal === 0 
+    // Calculate yearly daily average
+    const yearlyAverage = yearlyData.reduce((sum, val) => sum + val, 0) / yearlyData.length;
+    
+    // Expected consumption based on yearly average * days in month
+    const expectedMonthlyConsumption = yearlyAverage * daysInMonth;
+    
+    // Calculate net gain compared to yearly average
+    const netGain = currentMonthTotal - expectedMonthlyConsumption;
+    
+    // Calculate percentage difference
+    const percentageDiff = expectedMonthlyConsumption === 0 
       ? 0 
-      : ((netGain / previousMonthTotal) * 100).toFixed(1);
+      : ((netGain / expectedMonthlyConsumption) * 100).toFixed(1);
   
     return {
       netGain: netGain,
-      percentageDiff: percentageDiff
+      percentageDiff: percentageDiff,
+      hasYearlyAverage: true,
+      yearlyAverage: yearlyAverage,
+      currentMonthTotal: currentMonthTotal,
+      expectedMonthlyConsumption: expectedMonthlyConsumption
     };
   };
   
@@ -590,14 +613,20 @@ const Calendar = ({ buildingStats }) => {
           <div 
             className={`net-gain-indicator ${
               calculateMonthlyNetGain().netGain >= 0 
-                ? 'positive-gain' 
-                : 'negative-gain'
+                ? 'negative-gain' 
+                : 'positive-gain'
             }`}
           >
-            {`${calculateMonthlyNetGain().netGain >= 0 ? '+' : ''}${Math.round(calculateMonthlyNetGain().netGain)} kWh`}
-            <span className="percentage-diff">
-              ({`${calculateMonthlyNetGain().percentageDiff}%`})
-            </span>
+            {calculateMonthlyNetGain().hasYearlyAverage ? (
+              <>
+                {`${calculateMonthlyNetGain().netGain >= 0 ? '+' : ''}${Math.round(calculateMonthlyNetGain().netGain)} kWh`}
+                <span className="percentage-diff">
+                  ({`${calculateMonthlyNetGain().percentageDiff}%`})
+                </span>
+              </>
+            ) : (
+              `${Math.round(calculateMonthlyNetGain().currentMonthTotal)} kWh (no data available)`
+            )}
           </div>
         </div>
       </div>
@@ -650,12 +679,39 @@ const Calendar = ({ buildingStats }) => {
           <div className="stats-content">
             <div className="stats-overview">
               <div className="stats-item">
-                <span className="stats-label">Total Consumption:</span>
+                <span className="stats-label">Daily Consumption:</span>
                 <span className="stats-value">{Math.round(getSelectedDateStats().consumption)} kWh</span>
               </div>
               <div className="stats-item">
                 <span className="stats-label">Estimated Price:</span>
                 <span className="stats-value">${calculatePrice(getSelectedDateStats().consumption)}</span>
+              </div>
+              
+              {/* New section for monthly total */}
+              <div className="stats-item monthly-total">
+                <span className="stats-label">Monthly Total:</span>
+                <span className="stats-value">
+                  {(() => {
+                    // Get current month and year
+                    const currentMonth = selectedDate.getMonth();
+                    const currentYear = selectedDate.getFullYear();
+                    
+                    // Filter consumption data for the current month and year
+                    const monthlyData = Object.entries(consumptionData)
+                      .filter(([key, value]) => {
+                        const keyDate = new Date(key);
+                        return keyDate.getMonth() === currentMonth && 
+                              keyDate.getFullYear() === currentYear &&
+                              value[selectedBuilding];
+                      })
+                      .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
+                    
+                    // Calculate monthly total
+                    const monthlyTotal = monthlyData.reduce((sum, val) => sum + val, 0);
+                    
+                    return `${Math.round(monthlyTotal)} kWh`;
+                  })()}
+                </span>
               </div>
             </div>
             
@@ -673,30 +729,30 @@ const Calendar = ({ buildingStats }) => {
                       )}
                     </div>
                     <div className="consumption-bar-container">
-                    <div 
-                      className="consumption-bar" 
-                      style={{ 
-                        width: (() => {
-                          const percentageDiff = (building.consumption - building.average) / building.average * 100;
-                          
-                          // Map percentage difference from -20 to 20 range to 10-100% width
-                          if (percentageDiff <= -20) return '10%';
-                          if (percentageDiff >= 20) return '100%';
-                          
-                          // Linear interpolation between 10% and 100%
-                          const normalizedDiff = (percentageDiff + 20) / 40;
-                          const barWidth = 10 + (normalizedDiff * 90);
-                          
-                          return `${barWidth}%`;
-                        })(),
-                        backgroundColor: building.consumption < building.average * 0.8 
-                          ? 'rgba(46, 204, 113, 0.8)' // Green if 20% below average
-                          : (building.consumption > building.average 
-                            ? 'rgba(231, 76, 60, 0.8)' // Red if above average
-                            : 'rgba(22, 203, 97, 0.25)') // Yellow if within ±20% of average
-                      }}
-                    ></div>
-                  </div>
+                      <div 
+                        className="consumption-bar" 
+                        style={{ 
+                          width: (() => {
+                            const percentageDiff = (building.consumption - building.average) / building.average * 100;
+                            
+                            // Map percentage difference from -20 to 20 range to 10-100% width
+                            if (percentageDiff <= -20) return '10%';
+                            if (percentageDiff >= 20) return '100%';
+                            
+                            // Linear interpolation between 10% and 100%
+                            const normalizedDiff = (percentageDiff + 20) / 40;
+                            const barWidth = 10 + (normalizedDiff * 90);
+                            
+                            return `${barWidth}%`;
+                          })(),
+                          backgroundColor: building.consumption < building.average * 0.8 
+                            ? 'rgba(46, 204, 113, 0.8)' // Green if 20% below average
+                            : (building.consumption > building.average 
+                              ? 'rgba(231, 76, 60, 0.8)' // Red if above average
+                              : 'rgba(22, 203, 97, 0.25)') // Yellow if within ±20% of average
+                        }}
+                      ></div>
+                    </div>
                     {building.average && (
                       <div className="building-averages">
                         <div className="average-item">
