@@ -271,9 +271,9 @@ const CalendarWidget = ({ buildingStats, simplified = true }) => {
           <span className="day-number">{day}</span>
           {hasData && (
             <>
-              <span className={`consumption-dot ${consumptionLevelClass}`}></span>
               <span className={`consumption-value ${textColorClass}`}>
                 {displayValue}
+                <span className="consumption-unit"> kWh</span>
               </span>
             </>
           )}
@@ -292,8 +292,8 @@ const CalendarWidget = ({ buildingStats, simplified = true }) => {
             <span className={`consumption-indicator ${textColorClass}`}>
               {displayMode === 'consumption' ? (
                 <>
-                  <span className="price-value">{displayValue}</span>
-                  <span className="consumption-unit">kWh</span>
+                  <span className="consumption-value">{displayValue}</span>
+                  <span className="consumption-unit"> kWh</span>
                 </>
               ) : (
                 <span className="price-value">{displayValue}</span>

@@ -617,7 +617,6 @@ h3 {
 
 
 
-/* Add these styles to your Calendar.css file */
 
 /* Calendar widget styling */
 .calendar-widget {
@@ -642,8 +641,9 @@ h3 {
   margin: 0.166em;
 }
 
+
 /* Day content styling for simplified view */
-.day-content-simple {
+.calendar-widget .day-content-simple {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -653,39 +653,23 @@ h3 {
   cursor: pointer;
 }
 
-.day-content-simple .day-number {
+.calendar-widget .day-content-simple .day-number {
   font-weight: 500;
-  margin-bottom: 2px;
+  margin-bottom: -6px;
 }
 
-.day-content-simple .consumption-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-top: 1px;
+.calendar-widget .day-content-simple .consumption-value {
+  font-size: 0.8em;
+  font-weight: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.day-content-simple .consumption-value {
-  font-size: 0.65em;
-  margin-top: 1px;
-  font-weight: 500;
-}
-
-/* Consumption level styling */
-.consumption-dot.very-low-consumption {
-  background-color: #27ae60; /* Light green */
-}
-
-.consumption-dot.low-consumption {
-  background-color: #2ecc71; /* Green */
-}
-
-.consumption-dot.medium-consumption {
-  background-color: #f33f12; /* Yellow-orange */
-}
-
-.consumption-dot.high-consumption {
-  background-color: #e74c3c; /* Red */
+.calendar-widget .day-content-simple .consumption-unit {
+  font-size: 0.9em;
+  font-weight: normal;
+  margin-left: 2px;
 }
 
 /* Text color classes */
@@ -727,10 +711,25 @@ h3 {
 }
 
 /* Calendar day base styles */
-.calendar-day {
+.calendar-widget .calendar-day {
   border-radius: 4px;
+  margin: 2px;
+  height: 50px !important; /* Adjust the height as needed */
+  padding: 5px !important;
 }
 
+.calendar-widget .day-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 40px; /* Adjust the min-height as needed */
+}
 
 /* Day consumption level styling within the calendar widget */
 .calendar-widget .calendar-day.very-low-consumption {
