@@ -62,7 +62,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="card-content">
-              <Map />
+              {/* <Map /> */}
             </div>
           </div>
           
@@ -78,7 +78,8 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="card-content">
-              <CalendarWidget simplified={true} />
+              <CalendarWidget simplified={true} 
+              />
             </div>
           </div>
           

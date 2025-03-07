@@ -72,7 +72,8 @@
 .dashboard-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  grid-auto-rows: minmax(300px, auto);
   gap: 1.5rem;
 }
 
@@ -142,8 +143,17 @@
 .card-content {
   padding: 1.5rem;
   flex: 1;
-  overflow: auto;
-  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+  /* Remove or increase the max-height, or use height: 100% */
+  height: 100%;
+  overflow: hidden; /* Change from auto to hidden */
+}
+
+/* Add these styles */
+.card-content > div {
+  width: 100%;
+  height: 100%;
 }
 
 /* Energy Usage Card */
@@ -156,6 +166,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
+  height: 100%;
 }
 
 .highlight-item {
@@ -164,6 +175,7 @@
   padding: 1rem;
   background-color: var(--background-color);
   border-radius: var(--border-radius);
+  height: 100%;
 }
 
 .highlight-label {
@@ -432,3 +444,5 @@
     grid-template-columns: 1fr;
   }
 } 
+
+

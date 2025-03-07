@@ -690,24 +690,43 @@ h3 {
 }
 
 /* Widget legend */
+/* Legend styling with color boxes */
 .widget-legend {
   display: flex;
-  justify-content: space-around;
-  margin-top: 10px;
-  font-size: 0.65rem;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.85rem;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  margin-right: 5px;
+  gap: 8px;
 }
 
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 3px;
+.legend-color-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* Color boxes for consumption levels */
+.legend-color-box.very-low-consumption {
+  background-color: rgba(0, 255, 106, 0.50); /* Green */
+}
+
+.legend-color-box.low-consumption {
+  background-color: rgba(0, 255, 106, 0.25); /* Light green */
+}
+
+.legend-color-box.medium-consumption {
+  background-color: rgba(231, 76, 60, 0.25); /* Light red */
+}
+
+.legend-color-box.high-consumption {
+  background-color: rgba(231, 76, 60, 0.50); /* Red */
 }
 
 /* Calendar day base styles */
@@ -733,17 +752,18 @@ h3 {
 
 /* Day consumption level styling within the calendar widget */
 .calendar-widget .calendar-day.very-low-consumption {
-  background-color: rgba(0, 255, 106, 0.35);
+  background-color: rgba(0, 255, 106, 0.50);
 }
 
 .calendar-widget .calendar-day.low-consumption {
-  background-color: rgba(0, 255, 106, 0.15);
+  background-color: rgba(0, 255, 106, 0.25);
 }
 
 .calendar-widget .calendar-day.medium-consumption {
-  background-color: rgba(231, 76, 60, 0.15);
+  background-color: rgba(231, 76, 60, 0.25);
 }
 
 .calendar-widget .calendar-day.high-consumption {
-  background-color: rgba(231, 76, 60, 0.35);
+  background-color: rgba(231, 76, 60, 0.50);
 }
+

@@ -331,20 +331,20 @@ const CalendarWidget = ({ buildingStats, simplified = true }) => {
       {simplified && (
         <div className="widget-legend">
           <div className="legend-item">
-            <div className="legend-dot very-low-consumption"></div>
-            <span>&gt;20% below avg</span>
+            <div className="legend-color-box very-low-consumption"></div>
+            <span>Below Average (&gt;20% under)</span>
           </div>
           <div className="legend-item">
-            <div className="legend-dot low-consumption"></div>
-            <span>0-20% below avg</span>
+            <div className="legend-color-box low-consumption"></div>
+            <span>Slightly Below Average (0-20% under)</span>
           </div>
           <div className="legend-item">
-            <div className="legend-dot medium-consumption"></div>
-            <span>0-20% above avg</span>
+            <div className="legend-color-box medium-consumption"></div>
+            <span>Slightly Above Average (0-20% over)</span>
           </div>
           <div className="legend-item">
-            <div className="legend-dot high-consumption"></div>
-            <span>&gt;20% above avg</span>
+            <div className="legend-color-box high-consumption"></div>
+            <span>Above Average (&gt;20% over)</span>
           </div>
         </div>
       )}
