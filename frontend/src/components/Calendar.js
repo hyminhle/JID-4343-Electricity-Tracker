@@ -4,16 +4,28 @@ import "react-datepicker/dist/react-datepicker.css";
 import './Calendar.css';
 
 const Calendar = ({ buildingStats }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const loadDateFromLocalStorage = () => {
+    try {
+      const savedDate = localStorage.getItem('selectedDate');
+      return savedDate ? new Date(savedDate) : new Date();
+    } catch (error) {
+      console.error('Error loading date from localStorage:', error);
+      return new Date();
+    }
+  };
+
+  const initialDate = loadDateFromLocalStorage();
+
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [displayMode, setDisplayMode] = useState('consumption'); // 'consumption' or 'price'
   const [consumptionData, setConsumptionData] = useState({});
   const [availableData, setAvailableData] = useState({});
   const [buildingOptions, setBuildingOptions] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(selectedDate.getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(selectedDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(initialDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(initialDate.getFullYear());
   const [isLoading, setIsLoading] = useState(false);
-  const [jumpToDate, setJumpToDate] = useState(new Date());
+  const [jumpToDate, setJumpToDate] = useState(initialDate);
 
   // Function to save data to localStorage
   const saveDataToLocalStorage = (data) => {
@@ -34,24 +46,17 @@ const Calendar = ({ buildingStats }) => {
       return {};
     }
   };
+
+  // Function to save selected date to localStorage
   const saveDateToLocalStorage = (date) => {
     try {
-      localStorage.setItem('selectedDate', JSON.stringify(date));
+      localStorage.setItem('selectedDate', date.toISOString());
     } catch (error) {
-      console.error('Error saving to localStorage:', error);
+      console.error('Error saving date to localStorage:', error);
     }
   };
   
-  // Function to load data from localStorage
-  const loadDateFromLocalStorage = () => {
-    try {
-      const savedDate = localStorage.getItem('selectedDate');
-      return savedDate ? JSON.parse(savedDate) : {};
-    } catch (error) {
-      console.error('Error loading from localStorage:', error);
-      return {};
-    }
-  };
+
   // Function to save selected building to localStorage
   const saveSelectedBuildingToLocalStorage = (building) => {
     try {
@@ -71,15 +76,21 @@ const Calendar = ({ buildingStats }) => {
     }
   };
 
-  // Load saved data on component mount
+  // Load saved data and date on component mount
   useEffect(() => {
     // Load data from localStorage first
     const savedData = loadDataFromLocalStorage();
     if (Object.keys(savedData).length > 0) {
       setConsumptionData(savedData);
     }
+    
+    // Load saved date from localStorage
+    const savedDate = loadDateFromLocalStorage();
+    setSelectedDate(savedDate);
+    setSelectedMonth(savedDate.getMonth() + 1);
+    setSelectedYear(savedDate.getFullYear());
+    setJumpToDate(savedDate);
   }, []);
-  
   
   // Fetch available data on component mount
   useEffect(() => {
@@ -145,6 +156,11 @@ const Calendar = ({ buildingStats }) => {
       saveSelectedBuildingToLocalStorage(selectedBuilding);
     }
   }, [selectedBuilding]);
+
+  // Save selected date to localStorage when it changes
+  useEffect(() => {
+    saveDateToLocalStorage(selectedDate);
+  }, [selectedDate]);
 
   // Improved fetch and cache function
   const fetchAndCacheData = async (date, building) => {
@@ -247,6 +263,7 @@ const Calendar = ({ buildingStats }) => {
     const newYear = date.getFullYear();
     
     setSelectedDate(date);
+    saveDateToLocalStorage(date);
     
     // Only trigger month/year change if they actually changed
     if (newMonth !== selectedMonth || newYear !== selectedYear) {
@@ -267,6 +284,7 @@ const Calendar = ({ buildingStats }) => {
     const newDate = new Date(date);
     newDate.setDate(1); // Set to the first day of the month
     setSelectedDate(newDate);
+    saveDateToLocalStorage(newDate);
   };
 
   const handleDateJump = (date) => {
