@@ -91,3 +91,32 @@ This is the initial release of the Electricity Consumption Tracker application.
 ### Known Issues
 - **Heatmap Performance**: The heatmap view may experience performance issues with a large number of data points. Optimization will be addressed in future releases.
 - **Shape of Building Object**: Buildings in Heat Map feature all have rectangle shape. Improvements can be made to make the overall map looks more realistic by making the buildings into different shapes and positions.  
+
+
+
+
+## Release 0.3.0
+
+### Features
+
+#### Calendar
+- **Calendar Integration**: Added a calendar feature to visualize electricity consumption on a daily basis.
+- **Date Selection**: Users can select specific dates to view detailed consumption data.
+- **Color Visuals**: Under/Over consumption compared to the month average days are highlighted with green/red color on the calendar.
+- **Consumption/Cost View**: Users can switch between Consumption(kWh) and Cost ($) views to get a broader perspective of their energy usage.
+- **Interactive UI**: Improved the user interface for better interaction with the calendar feature.
+- **Monthly Net** Display the net output/ of the month in comparision to the average of the year. 
+
+### Bug Fixes
+
+- **Calendar Rendering**: Fixed an issue where the calendar would not render correctly when switching between views.
+- **Date Selection Sync**: Ensured that the selected date on the calendar syncs correctly with the detailed consumption data view.
+- **Event Highlighting**: Improved the accuracy of event highlighting on the calendar.
+- **Graph Rendering**: Fixed an issue where the graph would not render correctly when new data was added.
+- **Data Syncing**: Ensured that uploaded data syncs correctly with the line graph and statistics box.
+- **Date Availability Check**: Added a function to check if a date has data available before fetching statistics.
+- **Error Handling**: Improved error handling for data fetching and building statistics retrieval.
+
+### Known Issues
+- **Heatmap Performance**: The heatmap view may experience performance issues with a large number of data points. Optimization will be addressed in future releases.
+- **Shape of Building Object**: Buildings in Heat Map feature all have rectangle shape. Improvements can be made to make the overall map looks more realistic by making the buildings into different shapes and positions.
