@@ -372,8 +372,8 @@ const Calendar = ({ buildingStats }) => {
       .filter(([key, value]) => {
         const keyDate = new Date(key);
         return keyDate.getMonth() === selectedDate.getMonth() && 
-               keyDate.getFullYear() === selectedDate.getFullYear() &&
-               value[selectedBuilding];
+              keyDate.getFullYear() === selectedDate.getFullYear() &&
+              value[selectedBuilding];
       })
       .map(([_, value]) => value[selectedBuilding]?.consumption || 0);
     
@@ -650,7 +650,7 @@ const Calendar = ({ buildingStats }) => {
               displayMode === 'consumption' ? (
                 `${Math.round(calculateMonthlyNetGain().currentMonthTotal)} kWh (no data available)`
               ) : (
-                `$${calculateMonthlyNetGain().currentMonthPrice.toFixed(2)} (no data available)`
+                `$${calculateMonthlyNetGain().currentMonthPrice?.toFixed(2)} (no data available)`
               )
             )}
           </div>
