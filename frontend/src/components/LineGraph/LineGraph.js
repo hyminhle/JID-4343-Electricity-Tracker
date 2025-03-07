@@ -248,7 +248,7 @@ const LineGraph = () => {
   
   const calculateAverageAggregate = () => {
     if (selectedDatasets.length === 0) {
-      setError('No datasets available to calculate an average aggregate.');
+      setAddError('No datasets available to calculate an average aggregate.');
       return;
     }
   
@@ -256,7 +256,7 @@ const LineGraph = () => {
     const numDays = Math.max(...selectedDatasets.map((dataset) => dataset?.data?.length || 0));
   
     if (numDays === 0) {
-      setError('Selected datasets do not have valid data.');
+      setAddError('Selected datasets do not have valid data.');
       return;
     }
   
@@ -319,7 +319,7 @@ const LineGraph = () => {
   
   const fetchPrediction = async () => {
     if (!selectedDatasets.length) {
-      setError('No data available for prediction.');
+      setAddError('No data available for prediction.');
       return;
     }
     setLoading(true);
@@ -387,7 +387,7 @@ const LineGraph = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching prediction:', error);
-      setError(`Prediction failed: ${error.message}`);
+      setAddError(`Prediction failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -452,7 +452,7 @@ const LineGraph = () => {
  
   const compareDatasets = () => {
     if (primaryDataset === null || secondaryDataset === null) {
-      setError('Please select both primary and secondary datasets for comparison.');
+      setAddError('Please select both primary and secondary datasets for comparison.');
       return;
     }
   

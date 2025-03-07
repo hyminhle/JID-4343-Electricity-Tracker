@@ -617,7 +617,6 @@ h3 {
 
 
 
-
 /* Calendar widget styling */
 .calendar-widget {
   padding: 10px;
@@ -640,7 +639,6 @@ h3 {
   line-height: 1.9em;
   margin: 0.166em;
 }
-
 
 /* Day content styling for simplified view */
 .calendar-widget .day-content-simple {
@@ -735,6 +733,11 @@ h3 {
   margin: 2px;
   height: 50px !important; /* Adjust the height as needed */
   padding: 5px !important;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 30px; /* Adjust the min-height as needed */
+  border: 2px solid white; /* Add border to separate boxes */
+  background-color: white;
 }
 
 .calendar-widget .day-content {
@@ -747,7 +750,7 @@ h3 {
   border-radius: 4px;
   transition: all 0.2s ease;
   cursor: pointer;
-  min-height: 40px; /* Adjust the min-height as needed */
+  min-height: 30px; /* Adjust the min-height as needed */
 }
 
 /* Day consumption level styling within the calendar widget */
@@ -766,4 +769,3 @@ h3 {
 .calendar-widget .calendar-day.high-consumption {
   background-color: rgba(231, 76, 60, 0.50);
 }
-
