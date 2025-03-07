@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import './Dashboard.css';
 import FileUpload from './FileUpload';
-import LineGraph from './LineGraph';
+import ChartContainer from './LineGraph/ChartContainer';
 import Map from './MapVisual';
-import Calendar from './Calendar';
+import CalendarWidget from './CalendarWidget'; // Updated import
 
 const Dashboard = () => {
   const [activeAlert, setActiveAlert] = useState(true);
@@ -46,7 +46,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="card-content">
-              <LineGraph />
+              <ChartContainer />
             </div>
           </div>
           
@@ -78,7 +78,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="card-content">
-              <Calendar />
+              <CalendarWidget simplified={true} />
             </div>
           </div>
           
@@ -198,4 +198,4 @@ const Dashboard = () => {
   );
 }
 
-export default Dashboard; 
+export default Dashboard;

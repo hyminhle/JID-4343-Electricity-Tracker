@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import Submit from './components/Submit';
-import Graph from './components/Graph';
+import Graph from './components/LineGraph/Graph';
 import Sidebar from './components/Sidebar';
 import Calendar from './components/Calendar';
 
