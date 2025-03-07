@@ -673,15 +673,15 @@ h3 {
 
 /* Consumption level styling */
 .consumption-dot.very-low-consumption {
-  background-color: #2ecc71; /* Green */
-}
-
-.consumption-dot.low-consumption {
   background-color: #27ae60; /* Light green */
 }
 
+.consumption-dot.low-consumption {
+  background-color: #2ecc71; /* Green */
+}
+
 .consumption-dot.medium-consumption {
-  background-color: #f39c12; /* Yellow-orange */
+  background-color: #f33f12; /* Yellow-orange */
 }
 
 .consumption-dot.high-consumption {
@@ -690,15 +690,15 @@ h3 {
 
 /* Text color classes */
 .very-low-consumption-text {
-  color: #2ecc71;
-}
-
-.low-consumption-text {
   color: #27ae60;
 }
 
+.low-consumption-text {
+  color: #2ecc71;
+}
+
 .medium-consumption-text {
-  color: #f39c12;
+  color: #f33f12;
 }
 
 .high-consumption-text {
@@ -731,20 +731,20 @@ h3 {
   border-radius: 4px;
 }
 
-/* Day consumption level styling */
-.calendar-day.very-low-consumption {
-  background-color: rgba(46, 204, 113, 0.15);
+
+/* Day consumption level styling within the calendar widget */
+.calendar-widget .calendar-day.very-low-consumption {
+  background-color: rgba(0, 255, 106, 0.35);
 }
 
-.calendar-day.low-consumption {
-  background-color: rgba(39, 174, 96, 0.15);
+.calendar-widget .calendar-day.low-consumption {
+  background-color: rgba(0, 255, 106, 0.15);
 }
 
-.calendar-day.medium-consumption {
-  background-color: rgba(243, 156, 18, 0.15);
-}
-
-.calendar-day.high-consumption {
+.calendar-widget .calendar-day.medium-consumption {
   background-color: rgba(231, 76, 60, 0.15);
 }
 
+.calendar-widget .calendar-day.high-consumption {
+  background-color: rgba(231, 76, 60, 0.35);
+}
