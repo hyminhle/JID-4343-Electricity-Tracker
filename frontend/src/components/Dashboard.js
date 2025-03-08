@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import './Dashboard.css';
-import FileUpload from './FileUpload';
+import FileUploadWidget from './FileUploadWidget';
 import ChartContainer from './LineGraph/ChartContainer';
-import Map from './MapVisual';
+import MapWidget from './MapWidget';
 import CalendarWidget from './CalendarWidget'; // Updated import
 
 const Dashboard = () => {
@@ -62,7 +62,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="card-content">
-              {/* <Map /> */}
+              <MapWidget showBuildingNames={false} />
             </div>
           </div>
           
@@ -191,7 +191,7 @@ const Dashboard = () => {
           
           <div className="quick-upload">
             <h3>Quick Upload</h3>
-            <FileUpload />
+            <FileUploadWidget />
           </div>
         </div>
       </div>

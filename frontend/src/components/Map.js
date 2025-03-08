@@ -45,15 +45,50 @@ const MapComponent = () => {
     return savedBuildings ? JSON.parse(savedBuildings) : {};
   };
 
-  const saveSelectedBuildingToLocalStorage = (buildingName) => {
+ // Function to save selected building to localStorage
+const saveSelectedBuildingToLocalStorage = (buildingName) => {
+  try {
     localStorage.setItem('selectedBuilding', JSON.stringify(buildingName));
-  };
-  
-  // Function to load buildings from localStorage
-  const loadSelectedBuildingFromLocalStorage = () => {
-    const selectedBuilding = localStorage.getItem('selectedBuilding');
-    return selectedBuilding ? JSON.parse(selectedBuilding) : {};
-  };
+    console.log('Successfully saved building to localStorage:', buildingName);
+  } catch (error) {
+    console.error('Error saving to localStorage:', error);
+  }
+};
+
+// Function to load selected building from localStorage with robust error handling
+const loadSelectedBuildingFromLocalStorage = () => {
+  try {
+    const storedValue = localStorage.getItem('selectedBuilding');
+    
+    // If nothing is stored, return null
+    if (storedValue === null) return null;
+    
+    // Check if it's already a valid building name string (not properly JSON formatted)
+    if (storedValue.startsWith('Building ')) {
+      console.log('Found raw building string in localStorage:', storedValue);
+      return storedValue; // Return it as is
+    }
+    
+    // Try to parse as JSON
+    try {
+      const parsed = JSON.parse(storedValue);
+      console.log('Successfully parsed building from localStorage:', parsed);
+      return parsed;
+    } catch (parseError) {
+      console.warn('Parse error, returning raw string:', storedValue);
+      return storedValue; // Return the raw string as fallback
+    }
+  } catch (error) {
+    console.warn('Error accessing localStorage:', error);
+    // Clean up
+    try {
+      localStorage.removeItem('selectedBuilding');
+    } catch (e) {
+      // Ignore errors while cleaning up
+    }
+    return null;
+  }
+};
 
 
   const saveSelectedDateToLocalStorage = (date) => {
