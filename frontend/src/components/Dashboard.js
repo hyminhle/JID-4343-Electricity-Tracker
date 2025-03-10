@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Dashboard.css';
 import FileUploadWidget from './FileUploadWidget';
 import ChartContainer from './LineGraph/ChartContainer';
-import MapWidget from './MapWidget';
+import MapWidget from './Heatmap/MapWidget';
 import CalendarWidget from './CalendarWidget'; // Updated import
 
 const Dashboard = () => {
