@@ -5,7 +5,7 @@ import ChartContainer from './LineGraph/ChartContainer';
 import MapWidget from './Heatmap/MapWidget';
 import CalendarWidget from './CalendarWidget';
 
-// Widget configuration types
+
 const WIDGET_TYPES = {
   ENERGY_USAGE: 'Energy-Usage-Linegraph',
   LOCATION_MAP: 'Heatmap',
@@ -381,41 +381,7 @@ const Dashboard = () => {
       {isCustomizing && (
         <div className="customization-panel">
           <div className="customization-section">
-            <h3>Theme</h3>
-            <div className="theme-selector">
-              <button 
-                className={`theme-option ${dashboardTheme === 'light' ? 'active' : ''}`}
-                onClick={() => setDashboardTheme('light')}
-              >
-                Light
-              </button>
-              <button 
-                className={`theme-option ${dashboardTheme === 'dark' ? 'active' : ''}`}
-                onClick={() => setDashboardTheme('dark')}
-              >
-                Dark
-              </button>
-              <button 
-                className={`theme-option ${dashboardTheme === 'blue' ? 'active' : ''}`}
-                onClick={() => setDashboardTheme('blue')}
-              >
-                Blue
-              </button>
-            </div>
-          </div>
-          
-          <div className="customization-section">
             <h3>Display Settings</h3>
-            <div className="preference-item">
-              <label>
-                <input 
-                  type="checkbox" 
-                  checked={userPreferences.showMetricIcons} 
-                  onChange={(e) => updateUserPreference('showMetricIcons', e.target.checked)}
-                />
-                Show Metric Icons
-              </label>
-            </div>
             <div className="preference-item">
               <label>
                 <input 
@@ -425,17 +391,6 @@ const Dashboard = () => {
                 />
                 Enable Alerts
               </label>
-            </div>
-            <div className="preference-item">
-              <label>Chart Type:</label>
-              <select 
-                value={userPreferences.chartType} 
-                onChange={(e) => updateUserPreference('chartType', e.target.value)}
-              >
-                <option value="line">Line</option>
-                <option value="bar">Bar</option>
-                <option value="area">Area</option>
-              </select>
             </div>
           </div>
           
@@ -453,15 +408,6 @@ const Dashboard = () => {
                 ))}
               </ul>
             )}
-          </div>
-          
-          <div className="customization-instructions">
-            <h3>How to Customize:</h3>
-            <ul>
-              <li>Drag and drop widgets to reorder them</li>
-              <li>Click the ✕ button to hide a widget</li>
-              <li>Restore hidden widgets from the panel above</li>
-            </ul>
           </div>
         </div>
       )}

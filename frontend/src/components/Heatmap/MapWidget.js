@@ -13,13 +13,33 @@ L.Icon.Default.mergeOptions({
 });
 
 const MapWidget = () => {
+  const loadDateFromLocalStorage = () => {
+    try {
+      const savedDate = localStorage.getItem('selectedDate');
+      return savedDate ? new Date(savedDate) : new Date();
+    } catch (error) {
+      console.error('Error loading date from localStorage:', error);
+      return new Date();
+    }
+  };
+
+  const initialDate = loadDateFromLocalStorage();
+
   const [buildings, setBuildings] = useState({});
   const [selectedBuilding, setSelectedBuilding] = useState(null);
-  const [selectedDay, setSelectedDay] = useState(1);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(initialDate.getDate());
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [buildingStats, setBuildingStats] = useState({});
   const [showBuildingNames, setShowBuildingNames] = useState(true);
   const [error, setError] = useState(null);
+
+  // Function to format date as MM/DD/YYYY
+  const formatDate = (date) => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
 
   // Function to get color based on consumption value
   const getHeatmapColor = (consumption, average) => {
@@ -40,10 +60,14 @@ const MapWidget = () => {
     }
   };
 
-  useEffect(() => {
-    // Load buildings data
-    const loadBuildings = () => {
-      // Initialize with hardcoded building data
+  // Fetch building data from API
+  const fetchBuildings = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/get-available-data');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
       const buildingLocations = {
         'Building 110': [29.628014, -95.610553],
         'Building 121': [29.629014, -95.611553],
@@ -74,22 +98,6 @@ const MapWidget = () => {
         'Building 155': 0.00024,
       };
 
-      const buildingColors = {
-        'Building 110': '#ff3300',
-        'Building 121': '#ff6600',
-        'Building 200': '#ff9900',
-        'Building 210': '#ffcc00',
-        'Building 300': '#cccc00',
-        'Building 525': '#99cc00',
-        'Building 545': '#66cc00',
-        'Building 555': '#33cc00',
-        'Building 125': '#00cc00',
-        'Building 145': '#ff8000',
-        'Building 150': '#99ff00',
-        'Building 155': '#66ff00',
-      };
-
-      // Add all buildings to the map
       const newBuildings = {};
       for (const [buildingName, coordinates] of Object.entries(buildingLocations)) {
         const buildingSize = buildingSizes[buildingName];
@@ -101,29 +109,83 @@ const MapWidget = () => {
             [coordinates[0] + buildingSize, coordinates[1] + buildingSize],
             [coordinates[0] + buildingSize, coordinates[1]]
           ],
-          color: buildingColors[buildingName],
+          color: '#cccccc', // Default color
           data: {} // Empty data object for stats
         };
       }
       setBuildings(newBuildings);
       
-      // Set mock building stats for visualization
-      const mockStats = {};
-      Object.keys(newBuildings).forEach(building => {
-        mockStats[building] = {
-          consumption: Math.random() * 1000 + 500,
-          average: 750,
-        };
-      });
-      setBuildingStats(mockStats);
-    };
+      // Fetch stats for all buildings with the initial date
+      fetchAllBuildingStats(newBuildings, initialDate);
+    } catch (error) {
+      console.error('Error fetching buildings:', error);
+      setError('Failed to fetch buildings');
+    }
+  };
 
-    loadBuildings();
+  // Fetch stats for all buildings
+  const fetchAllBuildingStats = async (buildingList, date) => {
+    try {
+      // Save date to localStorage
+      localStorage.setItem('selectedDate', date.toString());
+      
+      const buildingNames = Object.keys(buildingList || buildings);
+      const statsPromises = buildingNames.map(buildingName => 
+        fetchBuildingStats(buildingName, date)
+      );
+      
+      await Promise.all(statsPromises);
+    } catch (error) {
+      console.error('Error fetching all building stats:', error);
+      setError('Failed to fetch all building statistics');
+    }
+  };
+
+  // Fetch building stats from API
+  const fetchBuildingStats = async (buildingName, date) => {
+    try {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const API_URL = `http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${buildingName}`;
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+
+      const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${buildingName}`;
+      const response2 = await fetch(API_URL2);
+      if (!response2.ok) {
+        throw new Error(`HTTP error! status: ${response2.status}`);
+      }
+      const stat_data = await response2.json();
+
+      const statsData = {
+        consumption: data.consumption,
+        average: stat_data.mean,
+        max: stat_data.highest,
+        min: stat_data.lowest,
+        median: stat_data.median,
+        color: getHeatmapColor(parseFloat(data.consumption), parseFloat(stat_data.mean))
+      };
+
+      setBuildingStats(prev => ({
+        ...prev,
+        [buildingName]: statsData
+      }));
+    } catch (error) {
+      console.error(`Error fetching stats for ${buildingName}:`, error);
+      // Don't set global error to prevent error messages for individual building failures
+    }
+  };
+
+  useEffect(() => {
+    fetchBuildings();
   }, []);
 
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
-    // In a real implementation, you would fetch stats here
   };
 
   const handleDayChange = (event) => {
@@ -132,15 +194,8 @@ const MapWidget = () => {
     const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
     setSelectedDate(newDate);
     
-    // Mock update of building stats based on day change
-    const updatedStats = {};
-    Object.keys(buildings).forEach(building => {
-      updatedStats[building] = {
-        consumption: Math.random() * 1000 + 500,
-        average: 750,
-      };
-    });
-    setBuildingStats(updatedStats);
+    // Fetch stats for all buildings when date changes
+    fetchAllBuildingStats(buildings, newDate);
   };
 
   return (
@@ -209,7 +264,7 @@ const MapWidget = () => {
 
       <div className="widget-controls">
         <div className="slider-container">
-          <label>Day: {selectedDay}</label>
+          <label>Date: {formatDate(selectedDate)}</label>
           <input
             type="range"
             min="1"
