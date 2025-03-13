@@ -98,7 +98,7 @@ const LineGraph = () => {
       const data = await response.json();
       
       // Generate a random color for the new dataset
-      const randomColor = `rgba(${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, ${Math.floor(Math.random() * 200)}, 0.4)`;
+      const randomColor = `rgba(${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, 0.4)`;
 
       const newDataset = {
         building: selectedBuilding,
@@ -160,7 +160,8 @@ const LineGraph = () => {
   
     // Create datasets array for the chart
     const datasets = selectedDatasets.map((ds) => ({
-      label: ds.label || `${ds.building} - ${ds.month}/${ds.year}`,
+      label: ds.building === 'Prediction' ? 'Future Prediction' : 
+             (ds.label || `${ds.building} - ${ds.month}/${ds.year}`),
       data: ds.data.map((entry) => entry.consumption),
       borderColor: ds.borderColor || ds.color,
       backgroundColor: ds.backgroundColor || 'transparent',
@@ -358,6 +359,7 @@ const LineGraph = () => {
         building: 'Prediction',
         year: 'Future',
         month: '',
+        label: 'Future Prediction', // Set custom label here
         data: formattedPredictions,
         color: 'rgba(29, 67, 205, 0.82)',
         evaluation: predictionData.evaluation,
@@ -376,7 +378,7 @@ const LineGraph = () => {
         const updatedStats = {
           ...prev,
           'Prediction-Future': {
-            label: 'Prediction - Future',
+            label: 'Future Prediction', // Update label here too
             ...predictionStats
           }
         };
@@ -408,7 +410,7 @@ const LineGraph = () => {
       const percentageRMSE = dataset.evaluation?.percentage_rmse || 0;
 
       return {
-        label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,
+        label: dataset.label || 'Future Prediction', // Changed label here
         average: average.toFixed(2),
         max: max.toFixed(2),
         min: min.toFixed(2),
@@ -589,7 +591,10 @@ const LineGraph = () => {
                 borderRadius: '50%',
               }}
             />
-            <span>{dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`}</span>
+            <span>
+              {dataset.building === 'Prediction' ? 'Future Prediction' : 
+               (dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`)}
+            </span>
             <button
               onClick={() => togglePrimaryDataset(index)}
               style={{
