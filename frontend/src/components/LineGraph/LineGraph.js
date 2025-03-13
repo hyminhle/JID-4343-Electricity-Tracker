@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 import Chart from 'chart.js/auto';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import './LineGraph.css';
@@ -64,12 +63,10 @@ const LineGraph = () => {
     localStorage.setItem('selectedDatasets', JSON.stringify(datasets));
   };
   
-  // Add function to save stats to localStorage
   const saveStatsToLocalStorage = (statsData) => {
     localStorage.setItem('stats', JSON.stringify(statsData));
   };
   
-  // Add this function to handle adding new datasets
   const addDataset = async () => {
     if (!selectedBuilding || !selectedYear || !selectedMonth) {
       setAddError('Please select building, year, and month before adding to graph.');
@@ -484,11 +481,11 @@ const LineGraph = () => {
     setSecondaryDataset(prev => prev === index ? null : index);
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="loading-indicator">Loading data</div>;
+  if (error) return <div className="error-message">{error}</div>;
 
   return (
-    <div>
+    <div className="LineGraph">
       <div className="controls-container">
         <select
           className="data-select"
@@ -561,8 +558,9 @@ const LineGraph = () => {
         >
           Add to Graph
         </button>
-        {addError && <p className="error-message">{addError}</p>}
       </div>
+      
+      {addError && <div className="error-message">{addError}</div>}
       
       {/* Display active datasets */}
       <div className="datasets-container">
@@ -579,25 +577,26 @@ const LineGraph = () => {
               {dataset.building === 'Prediction' ? 'Future Prediction' : 
                (dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`)}
             </span>
-            <button
-              onClick={() => togglePrimaryDataset(index)}
-              className={`dataset-button primary ${primaryDataset === index ? 'active' : ''}`}
-            >
-              Primary
-            </button>
-            <button
-              onClick={() => toggleSecondaryDataset(index)}
-              className={`dataset-button ${secondaryDataset === index ? 'active' : ''}`}
-            >
-              Secondary
-            </button>
-            
-            <button
-              onClick={() => removeDataset(index)}
-              className="dataset-button"
-            >
-              Remove
-            </button>
+            <div className="dataset-button-group">
+              <button
+                onClick={() => togglePrimaryDataset(index)}
+                className={`dataset-button primary ${primaryDataset === index ? 'active' : ''}`}
+              >
+                Primary
+              </button>
+              <button
+                onClick={() => toggleSecondaryDataset(index)}
+                className={`dataset-button ${secondaryDataset === index ? 'active' : ''}`}
+              >
+                Secondary
+              </button>
+              <button
+                onClick={() => removeDataset(index)}
+                className="dataset-button remove"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -605,10 +604,10 @@ const LineGraph = () => {
       <div className="controls-container">
         <button  
           onClick={fetchPrediction} 
-          disabled={loading}
+          disabled={loading || selectedDatasets.length === 0}
           className="button"
         >
-          {loading ? 'Predicting...' : 'Predict'}
+          {loading ? 'Predicting...' : 'Generate Prediction'}
         </button>
         
         <button
@@ -616,14 +615,15 @@ const LineGraph = () => {
           disabled={selectedDatasets.length === 0}
           className="button"
         >
-          Display Average Aggregate
+          Display Average
         </button>
 
         <button 
           onClick={compareDatasets}
+          disabled={primaryDataset === null || secondaryDataset === null}
           className="button"
         >
-          Compare
+          Compare Datasets
         </button>
       </div>
       
@@ -649,21 +649,21 @@ const LineGraph = () => {
                   />
                   <h4>{statData.label}</h4>
                 </div>
-                <p><strong>Average:</strong> {statData.average} kWh</p>
-                <p><strong>Max:</strong> {statData.max} kWh</p>
-                <p><strong>Min:</strong> {statData.min} kWh</p>
-                <p><strong>Total:</strong> {statData.total} kWh</p>
+                <p><strong>Average:</strong> <span>{statData.average} kWh</span></p>
+                <p><strong>Max:</strong> <span>{statData.max} kWh</span></p>
+                <p><strong>Min:</strong> <span>{statData.min} kWh</span></p>
+                <p><strong>Total:</strong> <span>{statData.total} kWh</span></p>
                 {statData.meanAbsoluteError && (
-                  <p><strong>Mean Absolute Error:</strong> {statData.meanAbsoluteError}</p>
+                  <p><strong>Mean Absolute Error:</strong> <span>{statData.meanAbsoluteError}</span></p>
                 )}
                 {statData.percentageMAE && (
-                  <p><strong>MAE percentage:</strong> {statData.percentageMAE}%</p>
+                  <p><strong>MAE percentage:</strong> <span>{statData.percentageMAE}%</span></p>
                 )}
                 {statData.rootMeanSquaredError && (
-                  <p><strong>Root Mean Squared Error:</strong> {statData.rootMeanSquaredError}</p>
+                  <p><strong>Root Mean Squared Error:</strong> <span>{statData.rootMeanSquaredError}</span></p>
                 )}
                 {statData.percentageRMSE && (
-                  <p><strong>RMSE percentage:</strong> {statData.percentageRMSE}%</p>
+                  <p><strong>RMSE percentage:</strong> <span>{statData.percentageRMSE}%</span></p>
                 )}
               </div>
             ))}
