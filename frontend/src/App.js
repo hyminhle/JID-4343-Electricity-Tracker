@@ -10,7 +10,7 @@ import Calendar from './components/Calendar';
 
 
 // Lazy load the Map component
-const Map = React.lazy(() => import('./components/MapVisual'));
+const Map = React.lazy(() => import('./components/Heatmap/MapVisual'));
 
 function App() {
   return (
