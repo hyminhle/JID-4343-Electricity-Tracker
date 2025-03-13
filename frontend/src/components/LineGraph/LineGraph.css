@@ -1,0 +1,119 @@
+/* Main container styling */
+.graph-container {
+    margin-bottom: 20px;
+  }
+  
+  /* Form controls styling */
+  .data-select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+  
+  .controls-container {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  .button {
+    margin-bottom: 5px;
+    padding: 8px 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .error-message {
+    color: red;
+  }
+  
+  /* Dataset list styling */
+  .datasets-container {
+    margin-bottom: 20px;
+  }
+  
+  .dataset-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+    padding: 5px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  .color-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+  
+  .dataset-button {
+    margin-left: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    color: #000;
+  }
+  
+  .dataset-button.active {
+    background-color: #007bff;
+    color: #fff;
+  }
+  
+  .dataset-button.primary {
+    margin-left: auto;
+  }
+  
+  /* Graph and stats layout */
+  .flex-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .chart-container {
+    flex: 1;
+    min-width: 0;
+    height: 600px;
+  }
+  
+  .stats-container {
+    width: 320px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  
+  .stat-card {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .stat-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .stat-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    margin-right: 10px;
+  }
