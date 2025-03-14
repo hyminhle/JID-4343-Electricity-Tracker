@@ -1,27 +1,61 @@
+/* Add these styles to your CSS file that contains the graph styles */
+
+/* Graph page container - already using padding, just needs to inherit background */
 .graph-page {
   padding: 2rem;
+  background-color: var(--background-color);
+  transition: background-color 0.3s ease;
 }
 
+/* Data select dropdown with dark mode support */
 .data-select {
   width: 15%;
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   font-size: 1rem;
-  background-color: #fff;
+  background-color: var(--input-bg-color);
+  color: var(--text-primary);
   cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
+/* Graph container with dark mode support */
 .graph-container {
-  background-color: white;
+  background-color: var(--card-background);
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--box-shadow);
   margin-top: 2rem;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Heading styles with dark mode support */
 h1 {
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
-} 
+  transition: color 0.3s ease;
+}
+
+/* Specific styles for charts and graphs in dark mode */
+[data-theme="dark"] .recharts-cartesian-grid line,
+[data-theme="dark"] .recharts-cartesian-grid-horizontal line,
+[data-theme="dark"] .recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .recharts-text,
+[data-theme="dark"] .recharts-cartesian-axis-tick-value {
+  fill: var(--text-secondary);
+}
+
+[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: var(--card-background) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-label,
+[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-item {
+  color: var(--text-primary) !important;
+}
