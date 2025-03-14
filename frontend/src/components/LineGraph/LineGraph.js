@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 import Chart from 'chart.js/auto';
 import annotationPlugin from 'chartjs-plugin-annotation';
+import './LineGraph.css';
 
 Chart.register(annotationPlugin);
 
@@ -63,12 +63,10 @@ const LineGraph = () => {
     localStorage.setItem('selectedDatasets', JSON.stringify(datasets));
   };
   
-  // Add function to save stats to localStorage
   const saveStatsToLocalStorage = (statsData) => {
     localStorage.setItem('stats', JSON.stringify(statsData));
   };
   
-  // Add this function to handle adding new datasets
   const addDataset = async () => {
     if (!selectedBuilding || !selectedYear || !selectedMonth) {
       setAddError('Please select building, year, and month before adding to graph.');
@@ -483,12 +481,12 @@ const LineGraph = () => {
     setSecondaryDataset(prev => prev === index ? null : index);
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="loading-indicator">Loading data</div>;
+  if (error) return <div className="error-message">{error}</div>;
 
   return (
-    <div>
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+    <div className="LineGraph">
+      <div className="controls-container">
         <select
           className="data-select"
           value={selectedBuilding}
@@ -553,200 +551,123 @@ const LineGraph = () => {
               );
             })}
         </select>
-        <button onClick={addDataset} disabled={loading}
-          style={{
-            marginBottom: '5px',
-            padding: '8px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+        <button 
+          onClick={addDataset} 
+          disabled={loading}
+          className="button"
         >
           Add to Graph
         </button>
-        {addError && <p style={{ color: 'red' }}>{addError}</p>}
       </div>
+      
+      {addError && <div className="error-message">{addError}</div>}
+      
       {/* Display active datasets */}
-      <div style={{ marginBottom: '20px' }}>
+      <div className="datasets-container">
         {selectedDatasets.map((dataset, index) => (
           <div
             key={index}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '5px',
-              padding: '5px',
-              backgroundColor: '#f5f5f5',
-              borderRadius: '4px',
-            }}
+            className="dataset-item"
           >
             <div
-              style={{
-                width: '20px',
-                height: '20px',
-                backgroundColor: dataset.color,
-                borderRadius: '50%',
-              }}
+              className="color-indicator"
+              style={{ backgroundColor: dataset.color }}
             />
             <span>
               {dataset.building === 'Prediction' ? 'Future Prediction' : 
                (dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`)}
             </span>
-            <button
-              onClick={() => togglePrimaryDataset(index)}
-              style={{
-                marginLeft: 'auto',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd',
-                backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
-                color: primaryDataset === index ? '#fff' : '#000',
-              }}
-            >
-              Primary
-            </button>
-            <button
-              onClick={() => toggleSecondaryDataset(index)}
-              style={{
-                marginLeft: '10px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd',
-                backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
-                color: secondaryDataset === index ? '#fff' : '#000',
-              }}
-            >
-              Secondary
-            </button>
-            
-            <button
-              onClick={() => removeDataset(index)}
-              style={{
-                marginLeft: '10px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ddd',
-              }}
-            >
-              Remove
-            </button>
+            <div className="dataset-button-group">
+              <button
+                onClick={() => togglePrimaryDataset(index)}
+                className={`dataset-button primary ${primaryDataset === index ? 'active' : ''}`}
+              >
+                Primary
+              </button>
+              <button
+                onClick={() => toggleSecondaryDataset(index)}
+                className={`dataset-button ${secondaryDataset === index ? 'active' : ''}`}
+              >
+                Secondary
+              </button>
+              <button
+                onClick={() => removeDataset(index)}
+                className="dataset-button remove"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ))}
       </div>
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+      
+      <div className="controls-container">
         <button  
           onClick={fetchPrediction} 
-          disabled={loading}
-          style={{
-            marginBottom: '5px',
-            padding: '8px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          disabled={loading || selectedDatasets.length === 0}
+          className="button"
         >
-          {loading ? 'Predicting...' : 'Predict'}
+          {loading ? 'Predicting...' : 'Generate Prediction'}
         </button>
         
         <button
           onClick={() => calculateAverageAggregate()}
           disabled={selectedDatasets.length === 0}
-          style={{
-            marginBottom: '5px',
-            padding: '8px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          className="button"
         >
-          Display Average Aggregate
+          Display Average
         </button>
 
         <button 
           onClick={compareDatasets}
-          style={{
-            marginBottom: '5px',
-            padding: '8px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
+          disabled={primaryDataset === null || secondaryDataset === null}
+          className="button"
         >
-          Compare
+          Compare Datasets
         </button>
       </div>
-      <div style={{
-        display: 'flex',
-        gap: '20px',
-        alignItems: 'flex-start'
-      }}>
-        <div style={{
-          flex: '1',
-          minWidth: '0',
-          height: '600px'  
-        }}>
+      
+      <div className="flex-container">
+        <div className="chart-container">
           <canvas ref={chartRef}></canvas>
         </div>
-        {Object.keys(stats).length >  0 && (
-        <div style={{
-            width: '320px',  
-            padding: '20px',  
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            maxHeight: '600px',
-            overflowY: 'auto'
-        }}>
+        
+        {Object.keys(stats).length > 0 && (
+          <div className="stats-container">
             <h3>Statistics</h3>
             {Object.entries(stats).map(([key, statData], index) => (
-            <div key={index} style={{ 
-                marginBottom: '15px', 
-                padding: '10px', 
-                backgroundColor: 'white', 
-                borderRadius: '4px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                    <div style={{
-                        width: '15px',
-                        height: '15px',
-                        backgroundColor: selectedDatasets.find(ds => 
-                          (ds.building === 'Prediction' && key === 'Prediction-Future') ||
-                          (ds.label === 'Average Aggregate' && key === 'Average-Aggregate') ||
-                          (`${ds.building}-${ds.year}-${ds.month}` === key))?.color || 'transparent',
-                        borderRadius: '3px',
-                        marginRight: '10px'
-                    }} />
-                    <h4>{statData.label}</h4>
+              <div key={index} className="stat-card">
+                <div className="stat-header">
+                  <div 
+                    className="stat-color"
+                    style={{
+                      backgroundColor: selectedDatasets.find(ds => 
+                        (ds.building === 'Prediction' && key === 'Prediction-Future') ||
+                        (ds.label === 'Average Aggregate' && key === 'Average-Aggregate') ||
+                        (`${ds.building}-${ds.year}-${ds.month}` === key))?.color || 'transparent'
+                    }}
+                  />
+                  <h4>{statData.label}</h4>
                 </div>
-                <p><strong>Average:</strong> {statData.average} kWh</p>
-                <p><strong>Max:</strong> {statData.max} kWh</p>
-                <p><strong>Min:</strong> {statData.min} kWh</p>
-                <p><strong>Total:</strong> {statData.total} kWh</p>
+                <p><strong>Average:</strong> <span>{statData.average} kWh</span></p>
+                <p><strong>Max:</strong> <span>{statData.max} kWh</span></p>
+                <p><strong>Min:</strong> <span>{statData.min} kWh</span></p>
+                <p><strong>Total:</strong> <span>{statData.total} kWh</span></p>
                 {statData.meanAbsoluteError && (
-                    <p><strong>Mean Absolute Error:</strong> {statData.meanAbsoluteError}</p>
+                  <p><strong>Mean Absolute Error:</strong> <span>{statData.meanAbsoluteError}</span></p>
                 )}
                 {statData.percentageMAE && (
-                    <p><strong>MAE percentage:</strong> {statData.percentageMAE}%</p>
+                  <p><strong>MAE percentage:</strong> <span>{statData.percentageMAE}%</span></p>
                 )}
                 {statData.rootMeanSquaredError && (
-                    <p><strong>Root Mean Squared Error:</strong> {statData.rootMeanSquaredError}</p>
+                  <p><strong>Root Mean Squared Error:</strong> <span>{statData.rootMeanSquaredError}</span></p>
                 )}
                 {statData.percentageRMSE && (
-                    <p><strong>RMSE percentage:</strong> {statData.percentageRMSE}%</p>
+                  <p><strong>RMSE percentage:</strong> <span>{statData.percentageRMSE}%</span></p>
                 )}
-            </div>
+              </div>
             ))}
-        </div>
+          </div>
         )}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import './FileUploadWidget.css'; // Import the CSS file
 
 const FileUploadWidget = () => {
   const [files, setFiles] = useState([]);
@@ -58,60 +59,104 @@ const FileUploadWidget = () => {
     setUploadSuccess('');
   };
 
+  // Format file size for display
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-xl">
-      <div className="flex items-center justify-between mb-4">
+    <div className="file-upload-container">
+      <div className="file-upload-header">
         {files.length > 0 && (
-          <span className="text-sm font-medium text-blue-600">
+          <span className="file-count">
+            <svg className="file-count-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V9M13 2L20 9M13 2V9H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             {files.length} file{files.length !== 1 ? 's' : ''} selected
           </span>
         )}
       </div>
       
-      <div className="mb-6">
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition-colors">
-          <input
-            type="file"
-            onChange={handleFileChange}
-            ref={fileInputRef}
-            accept=".csv"
-            multiple
-            disabled={loading}
-            className="hidden"
-            id="fileInput"
-          />
-          <label 
-            htmlFor="fileInput"
-            className="cursor-pointer flex flex-col items-center justify-center py-3"
-          >
-            <span className="text-sm font-medium text-gray-700">
-              {files.length > 0 ? 'Change selection' : 'Drop CSV files here or click to browse'}
-            </span>
-            <span className="text-xs text-gray-500 mt-1">
-              Only CSV files are supported
-            </span>
-          </label>
-        </div>
+      <div className="upload-area">
+        <input
+          type="file"
+          onChange={handleFileChange}
+          ref={fileInputRef}
+          accept=".csv"
+          multiple
+          disabled={loading}
+          className="hidden"
+          id="fileInput"
+        />
+        <label 
+          htmlFor="fileInput"
+          className="upload-label"
+        >
+          <svg className="upload-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 10V9C7 6.23858 9.23858 4 12 4C14.7614 4 17 6.23858 17 9V10C19.2091 10 21 11.7909 21 14C21 16.2091 19.2091 18 17 18H7C4.79086 18 3 16.2091 3 14C3 11.7909 4.79086 10 7 10Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 12V15M12 15L14 13M12 15L10 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="upload-text">
+            {files.length > 0 ? 'Change selection' : 'Drop CSV files here or click to browse'}
+          </span>
+          <span className="upload-hint">
+            Only CSV files are supported
+          </span>
+        </label>
       </div>
 
+      {files.length === 0 && (
+        <div className="no-files-message">
+          No files chosen
+        </div>
+      )}
+
+      {files.length > 0 && (
+        <div className="file-preview">
+          {files.map((file, index) => (
+            <div key={index} className="file-item">
+              <svg className="file-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16 13H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16 17H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 9H9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="file-name">{file.name}</span>
+              <span className="file-size">{formatFileSize(file.size)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
-          <p>{error}</p>
+        <div className="error-message">
+          <svg className="error-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {error}
         </div>
       )}
 
       {uploadSuccess && (
-        <div className="mb-4 p-3 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm">
-          <p>{uploadSuccess}</p>
+        <div className="success-message">
+          <svg className="success-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {uploadSuccess}
         </div>
       )}
 
-      <div className="flex justify-between">
+      <div className="action-buttons">
         {files.length > 0 && (
           <button
             onClick={clearSelection}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            className="clear-button"
           >
             Clear
           </button>
@@ -120,20 +165,16 @@ const FileUploadWidget = () => {
         <button 
           onClick={handleFileUpload} 
           disabled={loading || files.length === 0}
-          className={`ml-auto px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
-            loading || files.length === 0 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-          }`}
+          className="upload-button"
         >
           {loading ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <>
+              <svg className="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               Uploading...
-            </span>
+            </>
           ) : 'Upload Files'}
         </button>
       </div>
