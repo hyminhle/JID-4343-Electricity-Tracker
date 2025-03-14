@@ -1,129 +1,84 @@
-/* Map Widget Styles - Updated to match map.css patterns */
 .map-widget {
-  width: 100%;
-  max-width: 500px;
-  height: 400px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: var(--box-shadow);
-  display: flex;
-  flex-direction: column;
-  background-color: var(--card-background);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.map-wrapper {
-  flex: 1;
-  position: relative;
-  height: 100%;
-  border-radius: 8px 8px 0 0;
-  overflow: hidden;
-}
-
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  min-height: 350px;
-  border-radius: 8px 8px 0 0;
-}
-
-.widget-controls {
-  background-color: var(--card-background);
-  padding: 10px 15px;
-  border-top: 1px solid var(--border-color);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.slider-container {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
-}
-
-.slider-container label {
-  font-size: 14px;
-  margin-bottom: 5px;
-  color: var(--text-secondary);
-  transition: color 0.3s ease;
-}
-
-.slider {
-  width: 100%;
-  height: 5px;
-  -webkit-appearance: none;
-  background: var(--accent-color);
-  outline: none;
-  opacity: 0.9;
-  transition: opacity .15s ease-in-out, background-color 0.3s ease;
-}
-
-.slider:hover {
-  opacity: 1;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  background: var(--card-background);
-  border: 2px solid var(--accent-color);
-  cursor: pointer;
-  border-radius: 50%;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.building-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-  transition: border-color 0.3s ease;
-}
-
-.building-info h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-}
-
-.energy-consumption {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.color-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.building-label {
-  background: transparent;
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  color: var(--text-primary);
-  transition: color 0.3s ease;
-}
-
-.building-label div {
-  background-color: rgba(255, 255, 255, 0);
-  border-radius: 4px;
-  padding: 2px 4px;
-  font-size: 12px;
-}
-
-/* Dark mode specific adjustments */
-[data-theme="dark"] .widget-controls {
-  background-color: var(--card-background);
-}
-
-[data-theme="dark"] .building-label {
-  color: var(--text-primary);
-}
+    width: 100%;
+    max-width: 500px;
+    height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .map-wrapper {
+    flex: 1;
+    position: relative;
+  }
+  
+  .leaflet-container {
+    width: 100%;
+    height: 100%;
+    min-height: 350px;
+  }
+  
+  .widget-controls {
+    background-color: #f5f5f5;
+    padding: 10px 15px;
+    border-top: 1px solid #ddd;
+  }
+  
+  .slider-container {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
+  
+  .slider-container label {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #555;
+  }
+  
+  .slider {
+    width: 100%;
+    height: 5px;
+  }
+  
+  .building-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .building-info h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .energy-consumption {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .building-label {
+    background: transparent;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+  }
+  
+  .building-label div {
+    background-color: rgba(255, 255, 255, 0);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
+  }

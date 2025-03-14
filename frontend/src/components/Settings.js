@@ -57,8 +57,32 @@ function Settings() {
           </div>
         </div>
         
-    
+        <div className="setting-item">
+          <div className="setting-info">
+            <h3>Font Size</h3>
+            <p>Adjust the text size throughout the application</p>
+          </div>
+          <div className="setting-control">
+            <select className="select-control">
+              <option value="small">Small</option>
+              <option value="medium" selected>Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+        </div>
         
+        <div className="setting-item">
+          <div className="setting-info">
+            <h3>Color Accent</h3>
+            <p>Choose the primary accent color for the application</p>
+          </div>
+          <div className="setting-control settings-color-options">
+            <button className="color-option blue active"></button>
+            <button className="color-option green"></button>
+            <button className="color-option purple"></button>
+            <button className="color-option orange"></button>
+          </div>
+        </div>
       </div>
       
       <div className="settings-section">

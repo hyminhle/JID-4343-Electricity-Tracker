@@ -2,39 +2,29 @@
 .map-container {
   height: 100vh;
   display: flex;
-  background-color: var(--background-color);
-  transition: background-color 0.3s ease;
 }
-
 .map-page {
   padding: 2rem;
-  background-color: var(--background-color);
-  transition: background-color 0.3s ease;
 }
-
 .map-section {
   flex: 1.4;
   position: relative;
   padding-right: 10px;
   max-width: 65%;
 }
-
 .map-visual-container {
-  background-color: var(--card-background);
+  background-color: white;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: var(--box-shadow);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-top: 2rem;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
-
 .map-wrapper {
   height: 90%;
   margin: 20px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--box-shadow);
-  transition: box-shadow 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .leaflet-container {
@@ -48,29 +38,26 @@
   flex: 1;
   padding: 20px;
   padding-left: 10px;
-  background-color: var(--background-color);
+  background-color: #f8f9fa;
   overflow-y: auto;
   min-width: 350px;
   max-width: 400px;
-  border-left: 1px solid var(--border-color);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  border-left: 1px solid #e0e0e0;
 }
 
 .controls-container {
-  background-color: var(--card-background);
+  background-color: #ffffff;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: var(--box-shadow);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .controls-header {
-  color: var(--text-primary);
+  color: #2c3e50;
   margin-bottom: 20px;
   font-size: 1.5rem;
-  border-bottom: 2px solid var(--border-color);
+  border-bottom: 2px solid #f0f0f0;
   padding-bottom: 10px;
-  transition: color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Building Name Label*/
@@ -80,12 +67,11 @@
   align-items: center;
   font-size: 10px;
   font-weight: bold;
-  color: var(--text-primary);
+  color: #000;
   border-radius: 50%;
   text-align: center;
   line-height: 1;
   padding: 5px;
-  transition: color 0.3s ease;
 }
 
 /* Building Selector */
@@ -94,19 +80,17 @@
   padding: 12px;
   margin-bottom: 15px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #ddd;
   font-size: 1rem;
-  background-color: var(--input-bg-color);
-  color: var(--text-primary);
+  background-color: #fff;
   cursor: pointer;
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 /* Buttons */
 .control-button {
   width: 100%;
   padding: 12px;
-  color: var(--button-text-color);
+  color: white;
   border: none;
   border-radius: 8px;
   font-size: 1rem;
@@ -116,6 +100,7 @@
   font-weight: 500;
 }
 
+
 .toggle-names-button {
   background-color: #28a745; /* Green color for the button */
   color: white;
@@ -123,8 +108,7 @@
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 10px;
-  transition: background-color 0.3s ease;
+  margin-top: 10px; /* Add some spacing */
 }
 
 .toggle-names-button.active {
@@ -132,17 +116,15 @@
 }
 
 .add-button {
-  background-color: var(--accent-color);
-  transition: background-color 0.3s ease;
+  background-color: #3498db;
 }
 
 .add-button:hover {
-  background-color: var(--button-hover-bg-color);
+  background-color: #2980b9;
 }
 
 .edit-button {
-  background-color: var(--accent-color);
-  transition: background-color 0.3s ease;
+  background-color: #3498db;
 }
 
 .edit-button.active {
@@ -151,13 +133,12 @@
 
 /* Stats Box */
 .stats-box {
-  background-color: var(--card-background);
+  background-color: #ffffff;
   border-radius: 10px;
   padding: 20px;
-  box-shadow: var(--box-shadow);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
-  border: 1px solid var(--border-color);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  border: 1px solid #e0e0e0;
 }
 
 .stats-header {
@@ -165,16 +146,14 @@
   align-items: center;
   margin-bottom: 15px;
   padding: 10px 0;
-  border-bottom: 2px solid var(--border-color);
-  transition: border-color 0.3s ease;
+  border-bottom: 2px solid #f0f0f0;
 }
 
 .building-name {
   font-size: 1.5rem;
   font-weight: bold;
-  color: var(--text-primary);
+  color: #2c3e50;
   margin: 0;
-  transition: color 0.3s ease;
 }
 
 .close-button {
@@ -182,10 +161,8 @@
   padding: 5px 10px;
   border: none;
   border-radius: 4px;
-  background-color: var(--input-bg-color);
-  color: var(--text-primary);
+  background-color: #f0f0f0;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .date-container {
@@ -194,28 +171,23 @@
 
 .date-label {
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: #666;
   margin-bottom: 5px;
-  transition: color 0.3s ease;
 }
 
 .date-picker input {
   width: 100%;
   padding: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 1rem;
-  background-color: var(--input-bg-color);
-  color: var(--text-primary);
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .stats-container {
-  background-color: var(--background-color);
+  background-color: #f8f9fa;
   border-radius: 8px;
   padding: 15px;
   margin-top: 10px;
-  transition: background-color 0.3s ease;
 }
 
 .stat-item {
@@ -223,21 +195,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid var(--border-color);
-  transition: border-color 0.3s ease;
+  border-bottom: 1px solid #eee;
 }
 
 .stat-label {
-  color: var(--text-secondary);
+  color: #666;
   font-size: 0.9rem;
-  transition: color 0.3s ease;
 }
 
 .stat-value {
-  color: var(--text-primary);
+  color: #2c3e50;
   font-size: 1.1rem;
   font-weight: 500;
-  transition: color 0.3s ease;
 }
 
 .consumption-value {
@@ -255,20 +224,18 @@
 
 .no-stats {
   text-align: center;
-  color: var(--text-secondary);
+  color: #666;
   padding: 20px 0;
-  transition: color 0.3s ease;
 }
 
 .toggle-view {
-  box-shadow: var(--box-shadow);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: background-color 0.3s ease;
 }
 
 .toggle-view:hover {
-  background-color: var(--button-hover-bg-color) !important;
+  background-color: #0056b3 !important;
 }
-
 .slider-container {
   display: flex;
   flex-direction: column;
@@ -280,10 +247,10 @@
   width: 100%;
   -webkit-appearance: none;
   height: 5px;
-  background: var(--accent-color);
+  background: #007bff;
   outline: none;
   opacity: 0.9;
-  transition: opacity .15s ease-in-out, background-color 0.3s ease;
+  transition: opacity .15s ease-in-out;
 }
 
 .slider:hover {
@@ -294,12 +261,12 @@
   -webkit-appearance: none;
   width: 15px;
   height: 15px;
-  background: var(--card-background);
-  border: 2px solid var(--accent-color);
+  background: #fff;
+  border: 2px solid #007bff;
   cursor: pointer;
   border-radius: 50%;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
+
 
 .filter-buttons {
   display: flex;
@@ -309,44 +276,16 @@
 }
 
 .filter-button {
-  background-color: var(--secondary-color);
-  color: var(--button-text-color);
+  background-color: #6c757d; /* Gray color for the button */
+  color: white;
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
   flex: 1;
   text-align: center;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .filter-button.active {
-  background-color: var(--accent-color);
-}
-
-/* Make popup content readable in dark mode */
-[data-theme="dark"] .leaflet-popup-content-wrapper {
-  background-color: var(--card-background);
-  color: var(--text-primary);
-}
-
-[data-theme="dark"] .leaflet-popup-tip {
-  background-color: var(--card-background);
-}
-
-[data-theme="dark"] .map-visual-container {
-  background-color: var(--card-background);
-}
-
-[data-theme="dark"] .controls-section {
-  background-color: var(--sidebar-bg);
-}
-
-/* Specific color overrides for dark mode */
-[data-theme="dark"] .consumption-value.good {
-  color: #4ade80; /* Brighter green for dark mode */
-}
-
-[data-theme="dark"] .consumption-value.bad {
-  color: #f87171; /* Brighter red for dark mode */
+  background-color: #007bff; /* Blue color when active */
 }

@@ -7,7 +7,6 @@ Chart.register(annotationPlugin);
 
 const LineGraph = () => {
   const chartRef = useRef(null);
-  const chartInstance = useRef(null);
   const [availableData, setAvailableData] = useState({});
   const [selectedBuilding, setSelectedBuilding] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
@@ -15,6 +14,7 @@ const LineGraph = () => {
   const [stats, setStats] = useState({});
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [chartInstance, setChartInstance] = useState(null);
   const [selectedDatasets, setSelectedDatasets] = useState([]);
   const [addError, setAddError] = useState(null); 
   const [primaryDataset, setPrimaryDataset] = useState(null);
@@ -22,22 +22,6 @@ const LineGraph = () => {
   const [isAverageDisplayed, setIsAverageDisplayed] = useState(false);
   const [averageDataset, setAverageDataset] = useState(null);
 
-  // Check if dark mode is enabled
-  const isDarkMode = () => document.documentElement.getAttribute('data-theme') === 'dark';
-  
-  // Generate appropriate color based on theme
-  const generateThemeAwareColor = () => {
-    if (isDarkMode()) {
-      // For dark mode: brighter, more saturated colors with higher opacity
-      const r = Math.floor(Math.random() * 155) + 100; // 100-255 range for brighter red
-      const g = Math.floor(Math.random() * 155) + 100; // 100-255 range for brighter green
-      const b = Math.floor(Math.random() * 155) + 100; // 100-255 range for brighter blue
-      return `rgba(${r}, ${g}, ${b}, 0.7)`; // Higher opacity for better visibility
-    } else {
-      // For light mode: standard colors
-      return `rgba(${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, 0.4)`;
-    }
-  };
   
   // Fetch available buildings, years, and months
   useEffect(() => {
@@ -73,119 +57,7 @@ const LineGraph = () => {
 
     fetchAvailableData();
 
-
-    // Theme change handler function
-  const handleThemeChange = () => {
-    if (!chartInstance.current) return;
-    
-    const darkMode = isDarkMode();
-    
-    // Update all datasets with theme-appropriate styling
-    chartInstance.current.data.datasets.forEach(dataset => {
-      // Determine if this is a special dataset
-      const isAverageDataset = dataset.label === 'Average Aggregate';
-      const isPredictionDataset = dataset.label === 'Future Prediction';
-      
-      // Extract RGB values from current color to preserve dataset identity
-      const rgbaMatch = dataset.borderColor?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*(?:\.\d+)?))?\)/);
-      
-      if (rgbaMatch) {
-        const r = parseInt(rgbaMatch[1]);
-        const g = parseInt(rgbaMatch[2]);
-        const b = parseInt(rgbaMatch[3]);
-        let a = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1;
-        
-        // Adjust colors for dark mode
-        const adjustedR = darkMode ? Math.min(r + 50, 255) : r;
-        const adjustedG = darkMode ? Math.min(g + 50, 255) : g;
-        const adjustedB = darkMode ? Math.min(b + 50, 255) : b;
-        const adjustedA = darkMode ? Math.min(a + 0.2, 0.9) : a;
-        
-        const newColor = `rgba(${adjustedR}, ${adjustedG}, ${adjustedB}, ${adjustedA})`;
-        
-        // Apply updated styling
-        dataset.borderColor = newColor;
-        dataset.pointBackgroundColor = newColor;
-        dataset.borderWidth = darkMode ? 2 : 1.5;
-        dataset.pointRadius = darkMode ? 2 : 1;
-        
-        // Special handling for comparison fills
-        if (dataset.fill && typeof dataset.fill === 'object') {
-          dataset.fill = {
-            ...dataset.fill,
-            above: darkMode ? 'rgba(20, 255, 0, 0.5)' : 'rgba(20, 255, 0, 0.3)',
-            below: darkMode ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)',
-          };
-        }
-      }
-    });
-    
-    // Update global chart options
-    updateChartTheme();
-  };
-
-    // Setup theme change observer
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'data-theme' && chartInstance.current) {
-          updateChartTheme();
-        }
-      });
-    });
-    
-    observer.observe(document.documentElement, { attributes: true });
-    
-    return () => observer.disconnect();
   }, []);
-
-  // Function to update chart theme
-  const updateChartTheme = () => {
-    if (!chartInstance.current) return;
-    
-    const darkMode = isDarkMode();
-    
-    // Update chart theme settings
-    chartInstance.current.options.scales.x.grid.color = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    chartInstance.current.options.scales.x.ticks.color = darkMode ? 'var(--text-primary)' : 'var(--text-primary)';
-    chartInstance.current.options.scales.y.grid.color = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    chartInstance.current.options.scales.y.ticks.color = darkMode ? 'var(--text-primary)' : 'var(--text-primary)';
-    chartInstance.current.options.plugins.legend.labels.color = darkMode ? 'var(--text-primary)' : 'var(--text-primary)';
-    chartInstance.current.options.plugins.title.color = darkMode ? 'var(--text-primary)' : 'var(--text-primary)';
-    
-    // Update dataset colors if in dark mode to make them more visible
-    if (darkMode) {
-      chartInstance.current.data.datasets.forEach(dataset => {
-        // Extract RGB values from current color
-        const rgbaMatch = dataset.borderColor?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*(?:\.\d+)?))?\)/);
-        if (rgbaMatch) {
-          const r = parseInt(rgbaMatch[1]);
-          const g = parseInt(rgbaMatch[2]);
-          const b = parseInt(rgbaMatch[3]);
-          let a = rgbaMatch[4] ? parseFloat(rgbaMatch[4]) : 1;
-          
-          // Make colors brighter for dark mode
-          const brightR = Math.min(r + 50, 255);
-          const brightG = Math.min(g + 50, 255);
-          const brightB = Math.min(b + 50, 255);
-          a = Math.min(a + 0.2, 0.9); // Increase opacity for better visibility
-          
-          dataset.borderColor = `rgba(${brightR}, ${brightG}, ${brightB}, ${a})`;
-          dataset.pointBackgroundColor = `rgba(${brightR}, ${brightG}, ${brightB}, ${a})`;
-          
-          // If dataset has fill property as an object (for comparison)
-          if (typeof dataset.fill === 'object' && dataset.fill !== null) {
-            dataset.fill = {
-              ...dataset.fill,
-              above: darkMode ? 'rgba(20, 255, 0, 0.5)' : 'rgba(20, 255, 0, 0.3)', // Brighter green in dark mode
-              below: darkMode ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)', // Brighter red in dark mode
-            };
-          }
-        }
-      });
-    }
-    
-    chartInstance.current.update();
-  };
 
   const saveDatasetsToLocalStorage = (datasets) => {
     localStorage.setItem('selectedDatasets', JSON.stringify(datasets));
@@ -225,8 +97,8 @@ const LineGraph = () => {
       }
       const data = await response.json();
       
-      // Generate a theme-aware color for the new dataset
-      const randomColor = generateThemeAwareColor();
+      // Generate a random color for the new dataset
+      const randomColor = `rgba(${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, 0.4)`;
 
       const newDataset = {
         building: selectedBuilding,
@@ -273,19 +145,18 @@ const LineGraph = () => {
   useEffect(() => {
     if (loading || error || selectedDatasets.length === 0) {
       // If no datasets are available, destroy the chart instance
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-        chartInstance.current = null;
+      if (chartInstance) {
+        chartInstance.destroy();
+        setChartInstance(null);
       }
       return;
     }
   
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (chartInstance) {
+      chartInstance.destroy();
     }
   
     const ctx = chartRef.current.getContext('2d');
-    const darkMode = isDarkMode();
   
     // Create datasets array for the chart
     const datasets = selectedDatasets.map((ds) => ({
@@ -297,13 +168,13 @@ const LineGraph = () => {
       tension: 0.1,
       fill: ds.fill || false,
       borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
-      borderWidth: darkMode ? 2 : 1.5, // Slightly thicker lines in dark mode
+      borderWidth: ds.borderWidth || 1.5,
       pointBackgroundColor: ds.pointBackgroundColor || ds.color,
-      pointRadius: darkMode ? 2 : 1, // Larger points in dark mode
+      pointRadius: ds.pointRadius || 1,
       pointStyle: ds.pointStyle || 'circle',
     }));
   
-    chartInstance.current = new Chart(ctx, {
+    const newChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: selectedDatasets[0].data.map((entry) => new Date(entry.date).getDate()),
@@ -320,24 +191,10 @@ const LineGraph = () => {
               size: 16,
               weight: 'bold',
             },
-            color: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
           },
           legend: {
             display: true,
             position: 'top',
-            labels: {
-              color: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
-              font: {
-                size: darkMode ? 13 : 12, // Slightly larger in dark mode
-              }
-            },
-          },
-          tooltip: {
-            backgroundColor: darkMode ? 'rgba(45, 55, 72, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-            titleColor: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
-            bodyColor: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
-            borderColor: darkMode ? 'var(--border-color)' : 'var(--border-color)',
-            borderWidth: 1,
           },
         },
         scales: {
@@ -346,40 +203,23 @@ const LineGraph = () => {
             title: {
               display: true,
               text: 'Consumption (kWh)',
-              color: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
-              font: {
-                size: 14,
-                weight: 'bold',
-              },
             },
-            grid: {
-              color: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-            },
-            ticks: {
-              color: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
-            }
           },
           x: {
             title: {
               display: true,
               text: 'Days',
-              color: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
               font: {
                 size: 14,
                 weight: 'bold',
               },
             },
-            grid: {
-              color: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-            },
-            ticks: {
-              color: darkMode ? 'var(--text-primary)' : 'var(--text-primary)',
-            }
           },
         },
       },
     });
   
+    setChartInstance(newChart);
   }, [selectedDatasets, loading, error]);
 
   const removeDataset = (index) => {
@@ -423,9 +263,6 @@ const LineGraph = () => {
   
     const aggregateData = Array(numDays).fill(0);
     const counts = Array(numDays).fill(0);
-    
-    // Get dates from the first dataset to ensure consistent date format
-    const dateReferences = selectedDatasets[0].data.map(entry => entry.date);
   
     selectedDatasets.forEach((dataset) => {
       let lastDefinedValue = 0;
@@ -440,34 +277,21 @@ const LineGraph = () => {
     });
   
     const averageData = aggregateData.map((total, index) => total / counts[index]);
-    
-    // Create formatted data with consistent date structure
-    const formattedData = averageData.map((value, i) => ({
-      date: dateReferences[i] || new Date().toISOString(), // Use reference dates or fallback
-      consumption: value
-    }));
-  
-    console.log('Average Data:', formattedData);
-  
-    // Generate appropriate color for dark/light mode
-    const averageColor = isDarkMode() ? 'rgba(40, 250, 80, 0.8)' : 'rgba(8, 252, 57, 0.6)';
+    console.log('Average Data:', averageData);
   
     // Create the average dataset
     const averageDataset = {
       label: 'Average Aggregate',
-      data: formattedData,
+      data: averageData.map((y, i) => ({ day: i + 1, consumption: y })), // Ensure proper format
       building: 'Data',
       year: selectedDatasets.length + ' Months',
       month: 'Aggregate Average',
-      color: averageColor,
-      borderColor: averageColor,
-      pointBackgroundColor: averageColor,
+      color: 'rgba(8, 252, 57, 0.82)',
       tension: 0.1,
-      borderWidth: isDarkMode() ? 2 : 1.5,
-      pointRadius: isDarkMode() ? 2 : 1,
+      borderDash: [5, 5],
       fill: false,
     };
-  
+
     const averageStats = calculateDatasetStatistics(averageDataset);
   
     // Add the average dataset to the selectedDatasets array
@@ -476,7 +300,7 @@ const LineGraph = () => {
       saveDatasetsToLocalStorage(newDatasets);
       return newDatasets;
     });
-  
+
     // Update stats with average aggregate data
     setStats((prev) => {
       const updatedStats = {
@@ -486,12 +310,11 @@ const LineGraph = () => {
           ...averageStats
         }
       };
-      saveStatsToLocalStorage(updatedStats);
+      saveStatsToLocalStorage(updatedStats); // Save updated stats to localStorage
       return updatedStats;
     });
-  
-    setIsAverageDisplayed(true);
-    setAverageDataset(averageDataset);
+
+    setIsAverageDisplayed(true); // Indicate that the average is displayed
     setError(null);
   };
   
@@ -628,83 +451,36 @@ const LineGraph = () => {
       };
     }
   };
-
+ 
   const compareDatasets = () => {
     if (primaryDataset === null || secondaryDataset === null) {
       setAddError('Please select both primary and secondary datasets for comparison.');
       return;
     }
   
-    if (!chartInstance.current) {
-      setAddError('Chart is not initialized.');
-      return;
-    }
-  
-    // Generate appropriate colors based on theme
-    const darkMode = isDarkMode();
-    const aboveColor = darkMode ? 'rgba(20, 255, 0, 0.5)' : 'rgba(20, 255, 0, 0.3)'; // Brighter green in dark mode
-    const belowColor = darkMode ? 'rgba(255, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)'; // Brighter red in dark mode
-  
     // Update the datasets with fill properties
-    chartInstance.current.data.datasets.forEach((dataset, index) => {
+    chartInstance.data.datasets.forEach((dataset, index) => {
       if (index === primaryDataset) {
         dataset.fill = {
           target: secondaryDataset, // Fill relative to the secondary dataset
-          above: aboveColor, // Green for areas above the secondary dataset
-          below: belowColor, // Red for areas below the secondary dataset
+          above: 'rgba(20, 255, 0, 0.3)', // Green for areas above the secondary dataset
+          below: 'rgba(255, 0, 0, 0.3)', // Red for areas below the secondary dataset
         };
-        // Make the primary dataset line slightly thicker for emphasis
-        dataset.borderWidth = darkMode ? 2.5 : 2;
-        dataset.pointRadius = darkMode ? 3 : 2;
       } else if (index === secondaryDataset) {
-        dataset.fill = false; // Ensure the secondary dataset doesn't fill
-        // Make the secondary dataset line slightly thicker too
-        dataset.borderWidth = darkMode ? 2.5 : 2;
-        dataset.pointRadius = darkMode ? 3 : 2;
-      } else {
-        // Reset other datasets to default appearance
-        dataset.fill = false;
-        dataset.borderWidth = darkMode ? 2 : 1.5;
-        dataset.pointRadius = darkMode ? 2 : 1;
+        dataset.fill = false; // Ensure the secondary dataset does not fill
       }
     });
   
     // Update the chart to reflect the changes
-    chartInstance.current.update();
-  
-    // Show a visual indicator of the comparison
-    setAddError(null); // Clear any previous errors
+    chartInstance.update();
   };
-
-
 
   const togglePrimaryDataset = (index) => {
     setPrimaryDataset(prev => prev === index ? null : index);
   };
-  
 
   const toggleSecondaryDataset = (index) => {
     setSecondaryDataset(prev => prev === index ? null : index);
-  };
-
-  const resetComparison = () => {
-    if (!chartInstance.current) return;
-    
-    const darkMode = isDarkMode();
-    
-    // Reset all datasets to their default appearance
-    chartInstance.current.data.datasets.forEach((dataset) => {
-      dataset.fill = false;
-      dataset.borderWidth = darkMode ? 2 : 1.5;
-      dataset.pointRadius = darkMode ? 2 : 1;
-    });
-    
-    // Reset the selected datasets
-    setPrimaryDataset(null);
-    setSecondaryDataset(null);
-    
-    // Update the chart
-    chartInstance.current.update();
   };
 
   if (loading) return <div>Loading...</div>;
@@ -731,7 +507,7 @@ const LineGraph = () => {
             </option>
           ))}
         </select>
-  
+
         <select
           value={selectedYear}
           className="data-select"
@@ -751,7 +527,7 @@ const LineGraph = () => {
               </option>
             ))}
         </select>
-  
+
         <select
           value={selectedMonth}
           className="data-select"
@@ -769,7 +545,7 @@ const LineGraph = () => {
                 'January', 'February', 'March', 'April', 'May', 'June', 'July',
                 'August', 'September', 'October', 'November', 'December'
               ];
-  
+
               return (
                 <option key={month} value={monthNum}>
                   {monthNames[monthNum - 1]} {/* Display corresponding month name */}
@@ -777,31 +553,34 @@ const LineGraph = () => {
               );
             })}
         </select>
-        <button 
-          onClick={addDataset} 
-          disabled={loading}
-          className="action-button"
+        <button onClick={addDataset} disabled={loading}
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
         >
           Add to Graph
         </button>
-        {addError && <p style={{ color: 'var(--error-color, red)' }}>{addError}</p>}
+        {addError && <p style={{ color: 'red' }}>{addError}</p>}
       </div>
       {/* Display active datasets */}
       <div style={{ marginBottom: '20px' }}>
         {selectedDatasets.map((dataset, index) => (
           <div
             key={index}
-            className="dataset-card"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               marginBottom: '5px',
               padding: '5px',
-              backgroundColor: 'var(--card-background)',
+              backgroundColor: '#f5f5f5',
               borderRadius: '4px',
-              boxShadow: 'var(--box-shadow)',
-              color: 'var(--text-primary)'
             }}
           >
             <div
@@ -818,28 +597,26 @@ const LineGraph = () => {
             </span>
             <button
               onClick={() => togglePrimaryDataset(index)}
-              className="toggle-button"
               style={{
                 marginLeft: 'auto',
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: `1px solid var(--border-color)`,
-                backgroundColor: primaryDataset === index ? 'var(--button-bg-color)' : 'var(--card-background)',
-                color: primaryDataset === index ? 'var(--button-text-color)' : 'var(--text-primary)',
+                border: '1px solid #ddd',
+                backgroundColor: primaryDataset === index ? '#007bff' : '#fff',
+                color: primaryDataset === index ? '#fff' : '#000',
               }}
             >
               Primary
             </button>
             <button
               onClick={() => toggleSecondaryDataset(index)}
-              className="toggle-button"
               style={{
                 marginLeft: '10px',
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: `1px solid var(--border-color)`,
-                backgroundColor: secondaryDataset === index ? 'var(--button-bg-color)' : 'var(--card-background)',
-                color: secondaryDataset === index ? 'var(--button-text-color)' : 'var(--text-primary)',
+                border: '1px solid #ddd',
+                backgroundColor: secondaryDataset === index ? '#007bff' : '#fff',
+                color: secondaryDataset === index ? '#fff' : '#000',
               }}
             >
               Secondary
@@ -847,14 +624,11 @@ const LineGraph = () => {
             
             <button
               onClick={() => removeDataset(index)}
-              className="remove-button"
               style={{
                 marginLeft: '10px',
                 padding: '2px 8px',
                 borderRadius: '4px',
-                border: `1px solid var(--border-color)`,
-                backgroundColor: 'var(--card-background)',
-                color: 'var(--text-primary)',
+                border: '1px solid #ddd',
               }}
             >
               Remove
@@ -866,7 +640,15 @@ const LineGraph = () => {
         <button  
           onClick={fetchPrediction} 
           disabled={loading}
-          className="action-button"
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
         >
           {loading ? 'Predicting...' : 'Predict'}
         </button>
@@ -874,14 +656,30 @@ const LineGraph = () => {
         <button
           onClick={() => calculateAverageAggregate()}
           disabled={selectedDatasets.length === 0}
-          className="action-button"
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
         >
           Display Average Aggregate
         </button>
-  
+
         <button 
           onClick={compareDatasets}
-          className="action-button"
+          style={{
+            marginBottom: '5px',
+            padding: '8px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
         >
           Compare
         </button>
@@ -894,33 +692,28 @@ const LineGraph = () => {
         <div style={{
           flex: '1',
           minWidth: '0',
-          height: '600px',
-          backgroundColor: 'var(--card-background)',
-          borderRadius: '8px',
-          boxShadow: 'var(--box-shadow)',
-          padding: '16px'
+          height: '600px'  
         }}>
           <canvas ref={chartRef}></canvas>
         </div>
-        {Object.keys(stats).length > 0 && (
+        {Object.keys(stats).length >  0 && (
         <div style={{
             width: '320px',  
             padding: '20px',  
-            backgroundColor: 'var(--card-background)',
+            backgroundColor: '#f8f9fa',
             borderRadius: '8px',
-            boxShadow: 'var(--box-shadow)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             maxHeight: '600px',
-            overflowY: 'auto',
-            color: 'var(--text-primary)'
+            overflowY: 'auto'
         }}>
             <h3>Statistics</h3>
             {Object.entries(stats).map(([key, statData], index) => (
             <div key={index} style={{ 
                 marginBottom: '15px', 
                 padding: '10px', 
-                backgroundColor: 'var(--sidebar-bg)', 
+                backgroundColor: 'white', 
                 borderRadius: '4px',
-                boxShadow: 'var(--box-shadow)'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
                     <div style={{
@@ -958,50 +751,6 @@ const LineGraph = () => {
       </div>
     </div>
   );
-  };
-  
-  // Add CSS classes for buttons and inputs
-  const styles = document.createElement('style');
-  styles.textContent = `
-    .action-button {
-      margin-bottom: 5px;
-      padding: 8px 12px;
-      background-color: var(--button-bg-color);
-      color: var(--button-text-color);
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s ease, color 0.3s ease;
-    }
-  
-    .action-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  
-    .action-button:not(:disabled):hover {
-      background-color: var(--button-hover-bg-color);
-    }
-  
-    .data-select {
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border-color);
-      background-color: var(--input-bg-color);
-      color: var(--text-primary);
-    }
-  
-    .dataset-card {
-      transition: background-color 0.3s ease, box-shadow 0.3s ease;
-    }
-  
-    /* Ensure chart colors are appropriate for dark mode */
-    @media (prefers-color-scheme: dark) {
-      .chartjs-render-monitor {
-        filter: invert(1) hue-rotate(180deg);
-      }
-    }
-  `;
-  document.head.appendChild(styles);
-  
-  export default LineGraph;
+};
+
+export default LineGraph;

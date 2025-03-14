@@ -1,61 +1,27 @@
-/* Add these styles to your CSS file that contains the graph styles */
-
-/* Graph page container - already using padding, just needs to inherit background */
 .graph-page {
   padding: 2rem;
-  background-color: var(--background-color);
-  transition: background-color 0.3s ease;
 }
 
-/* Data select dropdown with dark mode support */
 .data-select {
   width: 15%;
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #ddd;
   font-size: 1rem;
-  background-color: var(--input-bg-color);
-  color: var(--text-primary);
+  background-color: #fff;
   cursor: pointer;
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
-/* Graph container with dark mode support */
 .graph-container {
-  background-color: var(--card-background);
+  background-color: white;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: var(--box-shadow);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-top: 2rem;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Heading styles with dark mode support */
 h1 {
-  color: var(--text-primary);
+  color: #2c3e50;
   margin-bottom: 1.5rem;
-  transition: color 0.3s ease;
-}
-
-/* Specific styles for charts and graphs in dark mode */
-[data-theme="dark"] .recharts-cartesian-grid line,
-[data-theme="dark"] .recharts-cartesian-grid-horizontal line,
-[data-theme="dark"] .recharts-cartesian-grid-vertical line {
-  stroke: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .recharts-text,
-[data-theme="dark"] .recharts-cartesian-axis-tick-value {
-  fill: var(--text-secondary);
-}
-
-[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background-color: var(--card-background) !important;
-  border-color: var(--border-color) !important;
-}
-
-[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-label,
-[data-theme="dark"] .recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-item {
-  color: var(--text-primary) !important;
-}
+} 
