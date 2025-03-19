@@ -635,14 +635,14 @@ const Calendar = ({ buildingStats }) => {
                 <>
                   {`${calculateMonthlyNetGain().netGain >= 0 ? '+' : ''}${Math.round(calculateMonthlyNetGain().netGain)} kWh`}
                   <span className="percentage-diff">
-                    ({`${calculateMonthlyNetGain().percentageDiff}%`})
+                  ({`${calculateMonthlyNetGain().percentageDiff >= 0 ? '+' : ''}${calculateMonthlyNetGain().percentageDiff}%`})
                   </span>
                 </>
               ) : (
                 <>
-                  {`${calculateMonthlyNetGain().priceNetGain >= 0 ? '+' : '-'}$${Math.abs(calculateMonthlyNetGain().priceNetGain).toFixed(2)}`}
+                  {`${calculateMonthlyNetGain().priceNetGain >= 0 ? '+' : '-'}${Math.abs(calculateMonthlyNetGain().priceNetGain).toFixed(2)}`}
                   <span className="percentage-diff">
-                    ({`${calculateMonthlyNetGain().pricePercentageDiff}%`})
+                  ({`${calculateMonthlyNetGain().pricePercentageDiff >= 0 ? '+' : ''}${calculateMonthlyNetGain().pricePercentageDiff}%`})
                   </span>
                 </>
               )
