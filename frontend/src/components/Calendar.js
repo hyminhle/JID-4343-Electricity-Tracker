@@ -640,9 +640,9 @@ const Calendar = ({ buildingStats }) => {
                 </>
               ) : (
                 <>
-                  {`${calculateMonthlyNetGain().priceNetGain >= 0 ? '+' : '-'}${Math.abs(calculateMonthlyNetGain().priceNetGain).toFixed(2)}`}
+                  {`${calculateMonthlyNetGain().priceNetGain >= 0 ? '-' : '+'}$${Math.abs(calculateMonthlyNetGain().priceNetGain).toFixed(2)}`}
                   <span className="percentage-diff">
-                  ({`${calculateMonthlyNetGain().pricePercentageDiff >= 0 ? '+' : ''}${calculateMonthlyNetGain().pricePercentageDiff}%`})
+                  ({`${calculateMonthlyNetGain().pricePercentageDiff >= 0 ? '-' : '+'}${Math.abs(calculateMonthlyNetGain().pricePercentageDiff)}%`})
                   </span>
                 </>
               )
