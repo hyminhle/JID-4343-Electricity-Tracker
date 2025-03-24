@@ -21,7 +21,7 @@ const LineGraph = () => {
   const [secondaryDataset, setSecondaryDataset] = useState(null);
   const [isAverageDisplayed, setIsAverageDisplayed] = useState(false);
   const [averageDataset, setAverageDataset] = useState(null);
-
+  const [showGrid, setShowGrid] = useState(true); // New state for grid visibility
   
   // Fetch available buildings, years, and months
   useEffect(() => {
@@ -48,6 +48,12 @@ const LineGraph = () => {
           setStats(JSON.parse(savedStats));
         }
 
+        // Load saved grid preference from localStorage
+        const savedGridPreference = localStorage.getItem('showGrid');
+        if (savedGridPreference !== null) {
+          setShowGrid(JSON.parse(savedGridPreference));
+        }
+
       } catch (error) {
         console.error('Error fetching available data:', error);
         setError('Failed to fetch available data');
@@ -65,6 +71,10 @@ const LineGraph = () => {
   
   const saveStatsToLocalStorage = (statsData) => {
     localStorage.setItem('stats', JSON.stringify(statsData));
+  };
+
+  const saveGridPreferenceToLocalStorage = (showGrid) => {
+    localStorage.setItem('showGrid', JSON.stringify(showGrid));
   };
   
   const addDataset = async () => {
@@ -139,6 +149,20 @@ const LineGraph = () => {
     }
   };
 
+  // Toggle grid visibility
+  const toggleGrid = () => {
+    const newGridState = !showGrid;
+    setShowGrid(newGridState);
+    saveGridPreferenceToLocalStorage(newGridState);
+    
+    // Update chart if it exists
+    if (chartInstance) {
+      chartInstance.options.scales.x.grid.display = newGridState;
+      chartInstance.options.scales.y.grid.display = newGridState;
+      chartInstance.update();
+    }
+  };
+
   // Modify the chart update effect
   useEffect(() => {
     if (loading || error || selectedDatasets.length === 0) {
@@ -202,6 +226,10 @@ const LineGraph = () => {
               display: true,
               text: 'Consumption (kWh)',
             },
+            grid: {
+              display: showGrid, // Use the grid visibility state
+              color: 'rgba(0, 0, 0, 0.1)',
+            },
           },
           x: {
             title: {
@@ -212,13 +240,17 @@ const LineGraph = () => {
                 weight: 'bold',
               },
             },
+            grid: {
+              display: showGrid, // Use the grid visibility state
+              color: 'rgba(0, 0, 0, 0.1)',
+            },
           },
         },
       },
     });
   
     setChartInstance(newChart);
-  }, [selectedDatasets, loading, error]);
+  }, [selectedDatasets, loading, error, showGrid]); // Added showGrid to the dependency array
 
   const removeDataset = (index) => {
     setSelectedDatasets((prev) => {
@@ -624,6 +656,14 @@ const LineGraph = () => {
           className="button"
         >
           Compare Datasets
+        </button>
+        
+        <button 
+          onClick={toggleGrid}
+          className="button"
+          title="Toggle grid lines on/off"
+        >
+          {showGrid ? "Hide Grid" : "Show Grid"}
         </button>
       </div>
       
