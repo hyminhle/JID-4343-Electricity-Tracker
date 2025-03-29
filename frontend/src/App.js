@@ -8,20 +8,14 @@ import Graph from './components/LineGraph/Graph';
 import Sidebar from './components/Sidebar';
 import Calendar from './components/Calendar';
 import Settings from './components/Settings';
+import Report from './components/Report'; // Import the new Report component
 import ThemeInitializer from './ThemeInitializer';
 import Chatbot from './components/Chatbot';
-import { AppDateProvider } from './components/DateContext'; // Import the provider
+import { AppDateProvider } from './components/DateContext';
+import Alert from './components/Alert'; // Import the new Alert component
 
 // Lazy load the Map component
 const Map = React.lazy(() => import('./components/Heatmap/MapVisual'));
-
-// Simple Reports component (placeholder)
-const Reports = () => (
-  <div className="reports-container">
-    <h1>Reports</h1>
-    <p>This is the reports page. Content will be added soon.</p>
-  </div>
-);
 
 function App() {
   return (
@@ -41,7 +35,8 @@ function App() {
                 <Route path="/map" element={<Map />} />
                 <Route path="/calendar" element={<Calendar />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/reports" element={<Reports />} />
+                <Route path="/reports" element={<Report />} />
+                <Route path="/alerts" element={<Alert />} /> {/* Add Alert route */}
               </Routes>
             </Suspense>
           </div>

@@ -328,24 +328,47 @@ def get_stats_by_params(year, month, building):
     building = unquote(building)
     try:
         with app.app_context():
-            # Create a cache key for the statistics
+            if month == 0:  # Fetch yearly stats
+                stats = ElectricityStatistics.query.filter(
+                    ElectricityStatistics.date.between(datetime(year, 1, 1), datetime(year, 12, 31)),
+                    ElectricityStatistics.building == building
+                ).all()
+
+                if not stats:
+                    return jsonify({'error': 'No yearly statistics found for the specified parameters'}), 404
+
+                # Calculate monthly totals
+                monthly_totals = {}
+                for stat in stats:
+                    monthly_totals[stat.month] = monthly_totals.get(stat.month, 0) + stat.mean
+
+                # Determine highest and lowest month
+                highest_month = max(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
+                lowest_month = min(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
+
+                return jsonify({
+                    'mean': float(np.mean([stat.mean for stat in stats])),
+                    'highest': highest_month[1],
+                    'lowest': lowest_month[1],
+                    'highestMonth': highest_month[0],
+                    'lowestMonth': lowest_month[0],
+                    'monthlyData': [{'month': month, 'consumption': total} for month, total in monthly_totals.items()]
+                })
+
+            # Fetch monthly stats
             stat_cache_key = f"electricity_stats_{year}_{month}_{building}"
-            
-            # Check if the statistics data is already in the cache
             cached_stats = cache.get(stat_cache_key)
             if cached_stats:
                 return jsonify(cached_stats)
-            
-            # If not in cache, query the database
+
             stats = ElectricityStatistics.query.filter_by(
                 date=datetime(year, month, 1).date(),
                 building=building
             ).first()
-            
+
             if not stats:
                 return jsonify({'error': 'No statistics found for the specified parameters'}), 404
-            
-            # Prepare the statistics data
+
             stat_data = {
                 'month': stats.month,
                 'date': stats.date,
@@ -353,14 +376,13 @@ def get_stats_by_params(year, month, building):
                 'highest': stats.highest,
                 'lowest': stats.lowest,
                 'median': stats.median,
-                'building': stats.building
+                'building': stats.building,
+                'highestMonth': stats.month,
+                'lowestMonth': stats.month,
             }
-            
-            # Store the statistics data in the cache
             cache.set(stat_cache_key, stat_data)
-            
             return jsonify(stat_data)
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     

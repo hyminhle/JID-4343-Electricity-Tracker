@@ -4,13 +4,14 @@ import FileUploadWidget from './FileUploadWidget';
 import ChartContainer from './LineGraph/ChartContainer';
 import MapWidget from './Heatmap/MapWidget';
 import CalendarWidget from './CalendarWidget';
-
+import ReportWidget from './ReportWidget';
 
 const WIDGET_TYPES = {
   ENERGY_USAGE: 'Energy-Usage-Linegraph',
   LOCATION_MAP: 'Heatmap',
   CALENDAR_VIEW: 'Calendar-View',
   REPORT_SUMMARY: 'Report-Summary',
+  DAILY_METRICS: 'Daily-Metrics',
 };
 
 const Dashboard = () => {
@@ -22,6 +23,7 @@ const Dashboard = () => {
     { id: 2, type: WIDGET_TYPES.LOCATION_MAP, visible: true, position: 1 },
     { id: 3, type: WIDGET_TYPES.CALENDAR_VIEW, visible: true, position: 2 },
     { id: 4, type: WIDGET_TYPES.REPORT_SUMMARY, visible: true, position: 3 },
+    // Removed Daily Metrics from main grid - we'll place it in sidebar
   ]);
   
   const [userPreferences, setUserPreferences] = useState({
@@ -167,7 +169,7 @@ const Dashboard = () => {
     const dropTargetClass = isDropTarget ? 'drop-target' : '';
     const customizingClass = isCustomizing ? 'customizing' : '';
   
-  // Add a fixed-size class to all widgets
+    // Add a fixed-size class to all widgets
     const fixedSizeClass = 'fixed-size-widget';
     
     switch (widget.type) {
@@ -380,7 +382,6 @@ const Dashboard = () => {
         </div>
       </div>
     
-
       {isCustomizing && (
         <div className="customization-panel">
           <div className="customization-section">
@@ -436,56 +437,12 @@ const Dashboard = () => {
             </div>
           )}
           
-          <div className="metrics-card">
-            <h3>Today's Metrics</h3>
-            <div className="metrics-summary">
-              <div className="metric-circle">
-                <svg viewBox="0 0 36 36">
-                  <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#4CAF50"
-                    strokeWidth="3"
-                    strokeDasharray="75, 100"
-                  />
-                  <text x="18" y="20.35" textAnchor="middle" className="percentage">75%</text>
-                </svg>
-                <span className="metric-label">Efficiency</span>
-              </div>
+          {/* Daily Metrics Widget - Now in sidebar */}
+          <div className="sidebar-widget daily-metrics-widget">
+            <h3>Daily Metrics</h3>
+            <div className="sidebar-widget-content">
+              <ReportWidget />
             </div>
-            <div className="metrics-data">
-              <div className="metric-item">
-                {userPreferences.showMetricIcons && <span className="metric-icon">⚡</span>}
-                <div className="metric-info">
-                  <span className="metric-label">Daily Avg</span>
-                  <span className="metric-value">30 kWh</span>
-                </div>
-              </div>
-              <div className="metric-item">
-                {userPreferences.showMetricIcons && <span className="metric-icon">📅</span>}
-                <div className="metric-info">
-                  <span className="metric-label">Monthly</span>
-                  <span className="metric-value">900 kWh</span>
-                </div>
-              </div>
-              <div className="metric-item">
-                {userPreferences.showMetricIcons && <span className="metric-icon">💰</span>}
-                <div className="metric-info">
-                  <span className="metric-label">Monthly Cost</span>
-                  <span className="metric-value">$243</span>
-                </div>
-              </div>
-              <div className="metric-item">
-                {userPreferences.showMetricIcons && <span className="metric-icon">🌱</span>}
-                <div className="metric-info">
-                  <span className="metric-label">CO2 Emission</span>
-                  <span className="metric-value">0.85 lbs</span>
-                </div>
-              </div>
-            </div>
-            <button className="view-details-button">View Full Report</button>
           </div>
           
           <div className="quick-upload">
