@@ -35,9 +35,94 @@ const MapComponent = () => {
   const [showBuildingNames, setShowBuildingNames] = useState(true);
 
 
-  const saveBuildingsToLocalStorage = (buildings) => {
-    localStorage.setItem('savedBuildings', JSON.stringify(buildings));
+
+  const LOCAL_STORAGE_LIMIT = 5 * 1024 * 1024; // 5MB limit
+
+// Function to get current localStorage usage
+  const getLocalStorageUsage = () => {
+    let total = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        total += (localStorage[key].length + key.length) * 2; // Unicode uses 2 bytes per character
+      }
+    }
+    return total;
   };
+
+  const updateBuildingAccessTime = (buildingName) => {
+    const accessTimes = JSON.parse(localStorage.getItem('buildingAccessTimes') || '{}');
+    accessTimes[buildingName] = Date.now();
+    localStorage.setItem('buildingAccessTimes', JSON.stringify(accessTimes));
+  };
+  
+  // Function to get least recently accessed buildings
+  const getLeastRecentlyAccessedBuildings = () => {
+    const accessTimes = JSON.parse(localStorage.getItem('buildingAccessTimes') || '{}');
+    return Object.entries(accessTimes)
+      .sort((a, b) => a[1] - b[1]) // Sort by access time (oldest first)
+      .map(entry => entry[0]);
+  };
+
+  const saveBuildingsToLocalStorage = (buildings) => {
+  try {
+    // Check current storage usage
+    const currentUsage = getLocalStorageUsage();
+    const buildingsStr = JSON.stringify(buildings);
+    const estimatedNewSize = currentUsage + buildingsStr.length * 2;
+    
+    // If adding these buildings would exceed our limit, remove old buildings
+    if (estimatedNewSize > LOCAL_STORAGE_LIMIT) {
+      const savedBuildings = loadBuildingsFromLocalStorage();
+      const leastRecentlyAccessed = getLeastRecentlyAccessedBuildings();
+      
+      // Remove least recently accessed buildings until we're under the limit
+      let updatedBuildings = { ...buildings };
+      for (const buildingName of leastRecentlyAccessed) {
+        if (estimatedNewSize <= LOCAL_STORAGE_LIMIT) break;
+        
+        if (updatedBuildings[buildingName]) {
+          delete updatedBuildings[buildingName];
+          console.log(`Removed least recently accessed building: ${buildingName}`);
+          
+          // Update estimated size
+          const newBuildingsStr = JSON.stringify(updatedBuildings);
+          const newEstimatedSize = currentUsage + newBuildingsStr.length * 2;
+          
+          if (newEstimatedSize <= LOCAL_STORAGE_LIMIT) {
+            break;
+          }
+        }
+      }
+      
+      // Save the pruned list of buildings
+      localStorage.setItem('savedBuildings', JSON.stringify(updatedBuildings));
+      return;
+    }
+    
+    // Otherwise, save all buildings as normal
+    localStorage.setItem('savedBuildings', buildingsStr);
+    console.log(`Saved buildings to localStorage. Usage: ${estimatedNewSize} bytes`);
+  } catch (error) {
+    console.error('Error saving buildings to localStorage:', error);
+    
+    // If the error is related to quota exceeded, try to clear space
+    if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      const leastRecentlyAccessed = getLeastRecentlyAccessedBuildings();
+      if (leastRecentlyAccessed.length > 0) {
+        const buildingToRemove = leastRecentlyAccessed[0];
+        const currentBuildings = loadBuildingsFromLocalStorage();
+        delete currentBuildings[buildingToRemove];
+        
+        try {
+          localStorage.setItem('savedBuildings', JSON.stringify(currentBuildings));
+          console.log(`Emergency removal of building: ${buildingToRemove}`);
+        } catch (innerError) {
+          console.error('Still unable to save after removing a building:', innerError);
+        }
+      }
+    }
+  }
+};
   
   // Function to load buildings from localStorage
   const loadBuildingsFromLocalStorage = () => {
@@ -363,6 +448,7 @@ const loadSelectedBuildingFromLocalStorage = () => {
   
   // Update the fetchBuildingStats function to use the new getHeatmapColor function
   const fetchBuildingStats = async (buildingName, date) => {
+    updateBuildingAccessTime(buildingName);
     try {
       // First check if we have data for this building and date
       if (!availableData[buildingName]) {
@@ -481,6 +567,7 @@ const loadSelectedBuildingFromLocalStorage = () => {
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
     saveSelectedBuildingToLocalStorage(buildingName); // Save to localStorage
+    updateBuildingAccessTime(buildingName);
     fetchBuildingStats(buildingName, selectedDate);
   };
 
