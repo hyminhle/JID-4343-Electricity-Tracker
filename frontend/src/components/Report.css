@@ -1,0 +1,387 @@
+/* Report.css */
+.report-container {
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    padding: 2rem;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .report-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .report-header h1 {
+    margin: 0;
+    color: var(--primary-color);
+    transition: color 0.3s ease;
+  }
+  
+  .report-date {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+  }
+  
+  .report-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  
+  .building-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .building-selector label {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  
+  .building-selector select {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    background-color: var(--card-background);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    font-size: 1rem;
+  }
+  
+  .building-selector select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+  }
+  
+  .export-button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  .export-button:hover {
+    background-color: var(--accent-color);
+    filter: brightness(90%);
+    transform: translateY(-2px);
+  }
+  
+  .export-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+  }
+  
+  .export-button:active {
+    transform: translateY(0);
+  }
+  
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .metric-card {
+    background-color: var(--card-background);
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  }
+  
+  .metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .metric-card h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+  }
+  
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    transition: color 0.3s ease;
+  }
+  
+  .metric-comparison, .metric-detail {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+  }
+  
+  .positive {
+    color: #2ecc71;
+  }
+  
+  .negative {
+    color: #e74c3c;
+  }
+  
+  .buildings-breakdown, .building-details {
+    background-color: var(--card-background);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--box-shadow);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .buildings-breakdown h2, .building-details h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    transition: color 0.3s ease;
+  }
+  
+  .breakdown-table-container {
+    overflow-x: auto;
+  }
+  
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  
+  .breakdown-table th {
+    padding: 1rem;
+    background-color: rgba(52, 152, 219, 0.1);
+    color: var(--primary-color);
+    font-weight: 600;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .breakdown-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: border-color 0.3s ease;
+  }
+  
+  .breakdown-table tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .breakdown-table tr:hover td {
+    background-color: rgba(52, 152, 219, 0.05);
+  }
+  
+  .detail-section {
+    margin-bottom: 2rem;
+  }
+  
+  .detail-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    transition: color 0.3s ease;
+  }
+  
+  .peak-hours-chart {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 200px;
+    padding: 1rem 0;
+  }
+  
+  .peak-hour-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100px;
+  }
+  
+  .peak-hour-label {
+    margin-top: 1rem;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+  }
+  
+  .peak-hour-value {
+    width: 60px;
+    background-color: var(--accent-color);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    min-height: 40px;
+  }
+  
+  .total-consumption {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-top: 1rem;
+    transition: color 0.3s ease;
+  }
+  
+  .report-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    transition: border-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    color: var(--text-secondary);
+  }
+  
+  .loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top: 4px solid var(--accent-color);
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .export-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    z-index: 9999;
+  }
+
+  .pie-chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--card-background);
+    border-radius: 5px;
+    box-shadow: var(--box-shadow);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+    max-width: 600px; /* Limit the width */
+    margin: 0 auto; /* Center the chart */
+  }
+  
+  .pie-chart-container canvas {
+    width: 100% !important; /* Ensure the chart scales with the container */
+    height: auto !important; /* Maintain aspect ratio */
+  }
+  
+  .toggle-pie-chart-button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  .toggle-pie-chart-button:hover {
+    background-color: var(--accent-color);
+    filter: brightness(90%);
+    transform: translateY(-2px);
+  }
+  
+  .toggle-pie-chart-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+  }
+  
+  .toggle-pie-chart-button:active {
+    transform: translateY(0);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .report-container {
+      padding: 1rem;
+    }
+    
+    .metrics-grid {
+      grid-template-columns: 1fr; 
+    }
+    
+    .report-controls {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    
+    .metric-value {
+      font-size: 2rem;
+    }
+    
+    .peak-hours-chart {
+      height: 150px;
+    }
+    
+    .peak-hour-bar {
+      width: 80px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .report-header h1 {
+      font-size: 1.5rem;
+    }
+    
+    .metric-card {
+      padding: 1rem;
+    }
+    
+    .metric-value {
+      font-size: 1.5rem;
+    }
+    
+    .report-date {
+      font-size: 1rem;
+    }
+  }
