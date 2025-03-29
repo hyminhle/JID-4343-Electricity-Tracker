@@ -2,234 +2,221 @@ import React, { useState, useRef, useEffect } from 'react';
 import './ChatbotDialog.css';
 
 const ChatbotDialog = ({ onClose, theme = 'light' }) => {
-  const [step, setStep] = useState('intro');
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    // Load saved conversation from localStorage
+    const saved = localStorage.getItem('chatHistory');
+    return saved ? JSON.parse(saved) : [
+      { 
+        sender: 'bot', 
+        text: "I'll help analyze your electricity consumption. Try:\n• 'Show Building 110 usage for yesterday'\n• 'Compare Building 210 with HQ'\n• 'List available buildings'" 
+      }
+    ];
+  });
+  
   const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [conversationContext, setConversationContext] = useState({
+    lastBuilding: null,
+    lastDate: null
+  });
   const messagesEndRef = useRef(null);
+
+  // Save conversation to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatHistory', JSON.stringify(messages));
+  }, [messages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    
-    // Update theme in localStorage
-    localStorage.setItem('theme', newTheme);
-    
-    // Apply theme to document
-    document.documentElement.setAttribute('data-theme', newTheme);
-    document.body.setAttribute('data-theme', newTheme);
-    
-    // Apply class-based approach as well
-    if (newTheme === 'dark') {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
+
+  const fetchBuildingInsights = async (building, date) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/chatbot/consumption?building=${encodeURIComponent(building)}&date=${date}`
+      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch data');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw new Error(error.message || 'Failed to process your request');
     }
   };
-
-  const handleOptionSelect = (option) => {
-    setSelectedOption(option);
-    setStep('chat');
-    
-    // Add the selected option as a user message
-    addMessage('user', `I need help with ${option}`);
-    
-    // Add a bot response
-    setTimeout(() => {
-      addMessage('bot', `I'll help you with your ${option} inquiry. What specific information do you need?`);
-    }, 500);
+  const fetchLlamaResponse = async (prompt) => {
+    try {
+      const response = await fetch('http://localhost:8080/completion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          temperature: 0.3,
+          max_tokens: 150,
+          stop: ['\n', '}'] // Ensure response ends with complete JSON
+        })
+      });
+      
+      const text = await response.text();
+      
+      // Clean the response to ensure valid JSON
+      let cleanedText = text.trim();
+      
+      // Sometimes Llama adds extra text after JSON
+      const jsonStart = cleanedText.indexOf('{');
+      const jsonEnd = cleanedText.lastIndexOf('}') + 1;
+      
+      if (jsonStart >= 0 && jsonEnd > 0) {
+        cleanedText = cleanedText.substring(jsonStart, jsonEnd);
+      }
+      
+      // Handle cases where Llama adds extra characters
+      cleanedText = cleanedText.replace(/^[^{]*/, ''); // Remove anything before {
+      cleanedText = cleanedText.replace(/[^}]*$/, ''); // Remove anything after }
+      
+      // Parse the cleaned JSON
+      return JSON.parse(cleanedText);
+    } catch (error) {
+      console.error('LLAMA Parsing Error:', error);
+      throw new Error('Failed to process the response. Please try again.');
+    }
   };
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || isLoading) return;
 
-  const addMessage = (sender, text) => {
-    setMessages(prev => [...prev, { sender, text }]);
-  };
-
-  const handleSendMessage = () => {
-    if (inputText.trim() === '') return;
-    
-    // Add user message
-    addMessage('user', inputText);
+    const userMessage = inputText;
     setInputText('');
-    
-    // Placeholder for when LLM integration is added
-    setTimeout(() => {
-      addMessage('bot', 'Thanks for your message. Our team is working on integrating the LLM chatbot. This is a placeholder response.');
-    }, 800);
-  };
+    setMessages(prev => [...prev, { sender: 'user', text: userMessage }]);
+    setIsLoading(true);
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+    try {
+      // Handle special commands
+      if (userMessage.toLowerCase().includes('list buildings')) {
+        const response = await fetch('http://localhost:5000/api/buildings');
+        const buildings = await response.json();
+        const buildingList = buildings.map(b => `• ${b.name} (${b.data_start} to ${b.data_end})`).join('\n');
+        addBotMessage(`🏢 Available Buildings:\n${buildingList}`);
+        return;
+      }
+
+      // Extract entities using LLM with conversation context
+      const extractionPrompt = `Current context: ${JSON.stringify(conversationContext)}\n` +
+        `Extract from: "${userMessage}":\n` +
+        `- building (must be: Building 110, Building 210, HQ)\n` +
+        `- date (as YYYY-MM-DD, or relative like "yesterday")\n` +
+        `Respond ONLY with JSON like: {"building": "...", "date": "...", "action": "compare/forecast/etc"}`;
+
+      const extraction = await fetchLlamaResponse(extractionPrompt);
+      const { building, date, action } = JSON.parse(extraction.content);
+      
+      if (!building || !date) {
+        addBotMessage("Please specify a building and date. Try: 'Show HQ usage for yesterday'");
+        return;
+      }
+
+      // Update context
+      setConversationContext(prev => ({
+        ...prev,
+        lastBuilding: building,
+        lastDate: date
+      }));
+
+      // Add loading message
+      const loadingId = Date.now();
+      setMessages(prev => [...prev, { 
+        sender: 'bot', 
+        text: `⏳ Fetching ${building} data for ${date}...`,
+        tempId: loadingId 
+      }]);
+
+      // Get data from backend
+      const data = await fetchBuildingInsights(building, date);
+      
+      // Format response based on action
+      let response;
+      if (action === 'compare') {
+        response = formatComparison(data, userMessage);
+      } else {
+        response = formatInsights(data);
+      }
+
+      // Replace loading message
+      setMessages(prev => prev.map(msg => 
+        msg.tempId === loadingId ? { sender: 'bot', text: response } : msg
+      ));
+
+    } catch (error) {
+      console.error('Error:', error);
+      addBotMessage(`Sorry, I encountered an error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const renderContent = () => {
-    switch (step) {
-      case 'intro':
-        return (
-          <>
-            <div className="chatbot-header">
-              <div className="chatbot-avatar">
-                <span>⚡</span>
-              </div>
-              <div className="chatbot-title">
-                <h3>Electricity Tracker</h3>
-              </div>
-              <button 
-                className="theme-toggle" 
-                onClick={toggleTheme} 
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              >
-                {theme === 'light' ? '🌙' : '☀️'}
-              </button>
-              <button className="close-button" onClick={onClose}>×</button>
-            </div>
-            <div className="chatbot-message">
-              <p>Click the green button below to begin.</p>
-            </div>
-            <div className="chatbot-actions">
-              <button className="start-button" onClick={() => setStep('options')}>
-                Get Started
-              </button>
-            </div>
-          </>
-        );
-      
-      case 'options':
-        return (
-          <>
-            <div className="chatbot-header">
-              <div className="chatbot-avatar">
-                <span>⚡</span>
-              </div>
-              <div className="chatbot-title">
-                <h3>Electricity Tracker</h3>
-              </div>
-              <button 
-                className="theme-toggle" 
-                onClick={toggleTheme} 
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              >
-                {theme === 'light' ? '🌙' : '☀️'}
-              </button>
-              <button className="close-button" onClick={onClose}>×</button>
-            </div>
-            <div className="chatbot-message">
-              <p>Choose from the options below to help us understand your issue better.</p>
-              <p>
-                You will be provided with detailed information about your electricity consumption
-                after you select the option that best describes your situation.
-              </p>
-              <p>Please note, this chat will automatically close if you are unresponsive for 10 minutes.</p>
-            </div>
-            <div className="option-buttons">
-              <button 
-                className="option-button" 
-                onClick={() => handleOptionSelect('consumption')}
-              >
-                <span className="option-icon">📊</span> Consumption Analysis
-              </button>
-              <button 
-                className="option-button" 
-                onClick={() => handleOptionSelect('billing')}
-              >
-                <span className="option-icon">💰</span> Billing Issues
-              </button>
-              <button 
-                className="option-button" 
-                onClick={() => handleOptionSelect('tips')}
-              >
-                <span className="option-icon">💡</span> Energy Saving Tips
-              </button>
-              <button 
-                className="option-button" 
-                onClick={() => handleOptionSelect('forecast')}
-              >
-                <span className="option-icon">📈</span> Usage Forecast
-              </button>
-              <button 
-                className="option-button" 
-                onClick={() => handleOptionSelect('settings')}
-              >
-                <span className="option-icon">⚙️</span> Account Settings
-              </button>
-            </div>
-          </>
-        );
-      
-      case 'chat':
-        return (
-          <>
-            <div className="chatbot-header">
-              <div className="chatbot-avatar">
-                <span>⚡</span>
-              </div>
-              <div className="chatbot-title">
-                <h3>Electricity Tracker</h3>
-              </div>
-              <button 
-                className="theme-toggle" 
-                onClick={toggleTheme} 
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              >
-                {theme === 'light' ? '🌙' : '☀️'}
-              </button>
-              <button className="close-button" onClick={onClose}>×</button>
-            </div>
-            <div className="chatbot-messages">
-              {messages.map((msg, index) => (
-                <div key={index} className={`message ${msg.sender}`}>
-                  {msg.sender === 'bot' && (
-                    <div className="message-avatar">⚡</div>
-                  )}
-                  <div className="message-bubble">
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-            <div className="chatbot-input">
-              <textarea 
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message here..."
-                rows="1"
-              />
-              <button 
-                className="send-button"
-                onClick={handleSendMessage}
-                disabled={inputText.trim() === ''}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24px" height="24px">
-                  <path d="M0 0h24v24H0V0z" fill="none"/>
-                  <path d="M3.4 20.4l17.45-7.48c.81-.35.81-1.49 0-1.84L3.4 3.6c-.66-.29-1.39.2-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/>
-                </svg>
-              </button>
-            </div>
-          </>
-        );
-      
-      default:
-        return null;
-    }
+  const addBotMessage = (text) => {
+    setMessages(prev => [...prev, { sender: 'bot', text }]);
+  };
+
+  const formatInsights = (data) => {
+    return `🏢 ${data.building} on ${data.date}:
+🔋 Usage: ${data.consumption?.toLocaleString() || 'N/A'} kWh
+💵 Cost: $${data.cost || 'N/A'}
+📊 Compared to monthly average: ${data.comparison || 'N/A'}
+
+💡 ${data.insights?.join('\n') || 'No insights available'}
+
+🛠️ Try:
+• "Compare with Building 210"
+• "Show last week's data"
+• "Explain this usage pattern"`;
+  };
+
+  const formatComparison = (data, userMessage) => {
+    // Implement your comparison logic here
+    return `📊 Comparison:
+${data.building}: ${data.consumption} kWh
+VS
+${userMessage.includes('210') ? 'Building 210' : 'HQ'}: [comparison data] kWh`;
   };
 
   return (
-    <div className="chatbot-dialog">
+    <div className={`chatbot-dialog ${theme}`}>
       <div className="chatbot-container">
-        {renderContent()}
+        <div className="chatbot-messages">
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.sender}`}>
+              {msg.sender === 'bot' && <div className="avatar">⚡</div>}
+              <div className="bubble">
+                {msg.text.split('\n').map((line, j) => (
+                  <React.Fragment key={j}>
+                    {line}
+                    <br />
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="chatbot-input">
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+            placeholder="Ask about electricity usage..."
+            disabled={isLoading}
+          />
+          <button onClick={handleSendMessage} disabled={!inputText.trim() || isLoading}>
+            {isLoading ? '...' : 'Send'}
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
-export default ChatbotDialog; 
+export default ChatbotDialog;

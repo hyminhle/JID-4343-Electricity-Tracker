@@ -460,9 +460,124 @@ def get_available_data():
                         available_data[building][year][month].append('all')
 
         return jsonify(available_data)
+    
+@app.route('/api/chatbot/consumption', methods=['GET'])
+def chatbot_consumption():
+    """Enhanced endpoint specifically for chatbot queries"""
+    building = request.args.get('building')
+    date_str = request.args.get('date')  # YYYY-MM-DD format
+    
+    try:
+        # Parse and validate date
+        query_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        year, month, day = query_date.year, query_date.month, query_date.day
+        
+        # Get daily consumption
+        daily_data = ElectricityData.query.filter_by(
+            building=building,
+            date=query_date
+        ).first()
+        
+        if not daily_data:
+            return jsonify({'error': f'No data found for {building} on {date_str}'}), 404
+        
+        # Get monthly stats
+        monthly_stats = ElectricityStatistics.query.filter_by(
+            building=building,
+            date=datetime(year, month, 1).date()
+        ).first()
+        
+        # Get 30-day comparison
+        thirty_days_ago = query_date - timedelta(days=30)
+        comparison_data = db.session.query(
+            func.avg(ElectricityData.consumption).label('avg'),
+            func.max(ElectricityData.consumption).label('max'),
+            func.min(ElectricityData.consumption).label('min')
+        ).filter(
+            ElectricityData.building == building,
+            ElectricityData.date.between(thirty_days_ago, query_date)
+        ).first()
+        
+        # Calculate cost (example rate)
+        cost = daily_data.consumption * 0.15
+        
+        # Prepare intelligent insights
+        insights = []
+        if monthly_stats:
+            if daily_data.consumption > monthly_stats.highest * 0.9:
+                insights.append("⚠️ Near monthly peak consumption")
+            elif daily_data.consumption < monthly_stats.lowest * 1.1:
+                insights.append("✅ Significantly lower than typical usage")
+                
+            if comparison_data:
+                percentage = ((daily_data.consumption - comparison_data.avg) / comparison_data.avg) * 100
+                if percentage > 15:
+                    insights.append(f"📈 {abs(percentage):.1f}% higher than 30-day average")
+                elif percentage < -15:
+                    insights.append(f"📉 {abs(percentage):.1f}% lower than 30-day average")
+        
+        return jsonify({
+            'building': building,
+            'date': date_str,
+            'consumption': daily_data.consumption,
+            'cost': round(cost, 2),
+            'monthly_stats': {
+                'average': monthly_stats.mean if monthly_stats else None,
+                'peak': monthly_stats.highest if monthly_stats else None,
+                'low': monthly_stats.lowest if monthly_stats else None
+            },
+            'comparison': {
+                '30_day_avg': comparison_data.avg if comparison_data else None,
+                '30_day_max': comparison_data.max if comparison_data else None,
+                '30_day_min': comparison_data.min if comparison_data else None
+            },
+            'insights': insights,
+            'suggestions': generate_suggestions(daily_data.consumption, monthly_stats)
+        })
+        
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+def generate_suggestions(current_usage, monthly_stats):
+    """Generate energy saving suggestions based on usage patterns"""
+    suggestions = []
+    
+    if not monthly_stats:
+        return suggestions
+    
+    # Peak usage suggestion
+    if current_usage > monthly_stats.mean * 1.2:
+        suggestions.append("Consider reducing HVAC usage during peak hours (10AM-4PM)")
+    
+    # Weekend detection
+    weekday = datetime.strptime(request.args.get('date'), '%Y-%m-%d').weekday()
+    if weekday >= 5 and current_usage > monthly_stats.mean * 0.8:
+        suggestions.append("Weekend usage seems high - check for equipment left running")
+    
+    # Comparative suggestion
+    if current_usage > monthly_stats.highest * 0.85:
+        suggestions.append("You're approaching monthly peak - consider energy audit")
+    elif current_usage < monthly_stats.lowest * 1.15:
+        suggestions.append("Great efficiency! Maintain these conservation practices")
+    
+    return suggestions
 
-
+@app.route('/api/buildings', methods=['GET'])
+def get_buildings():
+    """Get list of all available buildings with metadata"""
+    buildings = db.session.query(
+        ElectricityData.building,
+        func.min(ElectricityData.date).label('first_date'),
+        func.max(ElectricityData.date).label('last_date')
+    ).group_by(ElectricityData.building).all()
+    
+    return jsonify([{
+        'name': b.building,
+        'data_start': b.first_date.isoformat(),
+        'data_end': b.last_date.isoformat()
+    } for b in buildings])
 if __name__ == '__main__':
     
 # Run scheduler in a separate thread with app context
