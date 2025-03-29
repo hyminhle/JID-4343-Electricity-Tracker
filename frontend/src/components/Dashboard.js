@@ -148,7 +148,7 @@ const Dashboard = () => {
   // Function to render widget based on type
   const renderWidget = (widget) => {
     if (!widget.visible) return null;
-    
+  
     const isDragging = draggedWidgetId === widget.id;
     const isDropTarget = dropTargetId === widget.id;
     
@@ -166,6 +166,9 @@ const Dashboard = () => {
     const dragClass = isDragging ? 'dragging' : '';
     const dropTargetClass = isDropTarget ? 'drop-target' : '';
     const customizingClass = isCustomizing ? 'customizing' : '';
+  
+  // Add a fixed-size class to all widgets
+    const fixedSizeClass = 'fixed-size-widget';
     
     switch (widget.type) {
       case WIDGET_TYPES.ENERGY_USAGE:

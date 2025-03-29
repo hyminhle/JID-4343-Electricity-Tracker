@@ -231,3 +231,110 @@
   .hidden {
     display: none;
   }
+  
+
+/* Dark Mode Styles for FileUploadWidget */
+[data-theme="dark"] .file-upload-container {
+  background-color: var(--card-background);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .file-upload-header {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .file-count {
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .upload-area {
+  border-color: var(--border-color);
+  background-color: rgba(77, 171, 247, 0.05);
+}
+
+[data-theme="dark"] .upload-area:hover {
+  border-color: var(--primary-color);
+  background-color: rgba(77, 171, 247, 0.1);
+}
+
+[data-theme="dark"] .upload-icon {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .upload-text {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .upload-hint {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .no-files-message {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .error-message {
+  background-color: rgba(255, 107, 107, 0.1);
+  border-left: 4px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
+[data-theme="dark"] .success-message {
+  background-color: rgba(76, 217, 142, 0.1);
+  border-left: 4px solid var(--secondary-color);
+  color: var(--secondary-color);
+}
+
+[data-theme="dark"] .clear-button {
+  color: var(--text-secondary);
+  background-color: rgba(74, 85, 104, 0.3);
+}
+
+[data-theme="dark"] .clear-button:hover:not(:disabled) {
+  background-color: rgba(74, 85, 104, 0.5);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .upload-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .upload-button:hover:not(:disabled) {
+  background-color: var(--primary-dark);
+}
+
+[data-theme="dark"] .upload-button:focus {
+  box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.4);
+}
+
+[data-theme="dark"] .upload-button:disabled {
+  background-color: var(--text-secondary);
+}
+
+[data-theme="dark"] .file-preview {
+  border-top-color: var(--border-color);
+}
+
+[data-theme="dark"] .file-item {
+  background-color: rgba(74, 85, 104, 0.2);
+}
+
+[data-theme="dark"] .file-icon {
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .file-name {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .file-size {
+  color: var(--text-secondary);
+}
+
+/* Spinner animation for dark mode */
+[data-theme="dark"] .spinner {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top-color: var(--primary-color);
+}
