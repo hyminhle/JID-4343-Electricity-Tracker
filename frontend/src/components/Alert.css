@@ -1,0 +1,12 @@
+.alert-page {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.alert-page h1 {
+  color: #333;
+}
+
+.alert-page p {
+  color: #666;
+}
