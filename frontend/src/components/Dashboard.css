@@ -784,3 +784,92 @@
   outline: none;
   box-shadow: 0 0 0 2px rgba(77, 171, 247, 0.5);
 }
+
+
+/* File Upload Widget - Dark Mode Styles */
+[data-theme="dark"] .quick-upload {
+  background-color: var(--card-background);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .file-upload-container {
+  background-color: var(--background-color);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .file-upload-label {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .file-upload-label:hover {
+  background-color: rgba(77, 171, 247, 0.1);
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .upload-icon {
+  fill: var(--primary-color);
+}
+
+[data-theme="dark"] .file-upload-text {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .upload-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .upload-button:hover {
+  background-color: var(--primary-dark);
+}
+
+[data-theme="dark"] .file-name {
+  color: var(--text-primary);
+  background-color: var(--background-color);
+}
+
+[data-theme="dark"] .file-size {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .delete-file {
+  color: var(--danger-color);
+}
+
+
+/* Additional CSS for grid stability */
+
+/* Create grid placeholders that maintain their space even when empty */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  grid-template-rows: repeat(1, 0);
+  grid-gap: 1.2rem;
+}
+
+/* Fix the issue with empty grid cells not maintaining space */
+.dashboard-grid::before {
+  content: '';
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+
+/* Ensure widget height is maintained during transitions */
+.dashboard-card {
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, background-color 0.3s ease;
+  height: 550px;
+}
+
+/* Ensure content inside card doesn't force resize */
+.card-content {
+  overflow: auto;
+  max-height: calc(100% - 60px); /* Accounting for header height */
+}
+
+/* Additional responsive adjustments */
+@media (max-width: 1000px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
