@@ -20,8 +20,8 @@ db = SQLAlchemy(app)
 
 # Add cache
 app.config['CACHE_TYPE'] = 'SimpleCache'
-app.config['CACHE_THRESHOLD'] = 10000 
-app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache timeout in seconds (5 minutes)
+app.config['CACHE_THRESHOLD'] = 1000
+app.config['CACHE_DEFAULT_TIMEOUT'] = 3600  # Cache timeout in seconds (5 minutes)
 cache = Cache(app)
 
 # Create scheduler
@@ -190,118 +190,178 @@ def upload_files():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/stats', methods=['GET'])
-def get_stats():
+def generate_cache_key(year, month, day, building, data_type="data"):
+    """Generate a consistent cache key for given parameters"""
+    building_clean = building.replace(" ", "_")
+    if day == 0:
+        return f"electricity_{data_type}_{year}_{month}_all_{building_clean}"
+    return f"electricity_{data_type}_{year}_{month}_{day}_{building_clean}"
+
+def cache_data(key, data):
+    """Cache data with the given key, ensuring we don't exceed cache limits"""
+    cache.set(key, data)
+    
+def get_cached_data(key):
+    """Retrieve data from cache if it exists"""
+    return cache.get(key)
+
+def get_from_db_or_cache(year, month, day, building, data_type="data"):
+    """Helper function to implement cache-first pattern"""
+    cache_key = generate_cache_key(year, month, day, building, data_type)
+    
+    # Try to get from cache first
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
+    # If not in cache, fetch from database
+    if data_type == "data":
+        if day == 0:  # Monthly data
+            start_date = datetime(year, month, 1).date()
+            if month == 12:
+                end_date = datetime(year + 1, 1, 1).date()
+            else:
+                end_date = datetime(year, month + 1, 1).date()
+            
+            db_data = ElectricityData.query.filter(
+                ElectricityData.date >= start_date,
+                ElectricityData.date < end_date,
+                ElectricityData.building == building
+            ).all()
+            
+            if not db_data:
+                return None
+                
+            result = [{
+                'month': entry.month,
+                'date': entry.date.isoformat(),
+                'consumption': entry.consumption,
+                'building': entry.building
+            } for entry in db_data]
+            
+        else:  # Daily data
+            date = datetime(year, month, day).date()
+            db_data = ElectricityData.query.filter_by(
+                date=date,
+                building=building
+            ).first()
+            
+            if not db_data:
+                return None
+                
+            result = {
+                'month': db_data.month,
+                'date': db_data.date.isoformat(),
+                'consumption': db_data.consumption,
+                'building': db_data.building
+            }
+            
+    elif data_type == "stats":
+        if day == 0:  # Yearly stats
+            db_data = ElectricityStatistics.query.filter(
+                ElectricityStatistics.date.between(datetime(year, 1, 1), datetime(year, 12, 31)),
+                ElectricityStatistics.building == building
+            ).all()
+            
+            if not db_data:
+                return None
+                
+            # Calculate monthly totals
+            monthly_totals = {}
+            for stat in db_data:
+                monthly_totals[stat.month] = monthly_totals.get(stat.month, 0) + stat.mean
+
+            # Determine highest and lowest month
+            highest_month = max(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
+            lowest_month = min(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
+
+            result = {
+                'mean': float(np.mean([stat.mean for stat in db_data])),
+                'highest': highest_month[1],
+                'lowest': lowest_month[1],
+                'highestMonth': highest_month[0],
+                'lowestMonth': lowest_month[0],
+                'monthlyData': [{'month': month, 'consumption': total} for month, total in monthly_totals.items()]
+            }
+            
+        else:  # Monthly stats
+            db_data = ElectricityStatistics.query.filter_by(
+                date=datetime(year, month, 1).date(),
+                building=building
+            ).first()
+            
+            if not db_data:
+                return None
+                
+            result = {
+                'month': db_data.month,
+                'date': db_data.date.isoformat(),
+                'mean': db_data.mean,
+                'highest': db_data.highest,
+                'lowest': db_data.lowest,
+                'median': db_data.median,
+                'building': db_data.building,
+                'highestMonth': db_data.month,
+                'lowestMonth': db_data.month,
+            }
+    
+    # Cache the result before returning
+    if result is not None:
+        cache_data(cache_key, result)
+    
+    return result
+
+# Routes
+@app.route('/stats/<int:year>/<int:month>/<building>', methods=['GET'])
+def get_stats_by_params(year, month, building):
+    building = unquote(building)
     try:
-        if not monthly_data:
-            return jsonify({'error': 'No data available'}), 404
-
-        months = list(monthly_data.keys())
-        if len(months) == 0:
-            return jsonify({'error': 'No monthly data available'}), 404
-
-        # Get data for the latest two months
-        current_month = months[-1] if months else None
-        previous_month = months[-2] if len(months) > 1 else None
-
-        response_data = {
-            'currentMonth': current_month,
-            'previousMonth': previous_month,
-            'currentMonthData': monthly_data[current_month].tolist() if current_month else [],
-            'previousMonthData': monthly_data[previous_month].tolist() if previous_month else [],
-            'stats': {}
-        }
-
-        # Calculate statistics for current month
-        if current_month:
-            current_data = monthly_data[current_month]
-            response_data['stats']['currentMonth'] = {
-                'average': float(np.mean(current_data)),
-                'max': float(np.max(current_data)),
-                'min': float(np.min(current_data)),
-                'total': float(np.sum(current_data))
-            }
-
-        # Calculate statistics for previous month
-        if previous_month:
-            previous_data = monthly_data[previous_month]
-            response_data['stats']['previousMonth'] = {
-                'average': float(np.mean(previous_data)),
-                'max': float(np.max(previous_data)),
-                'min': float(np.min(previous_data)),
-                'total': float(np.sum(previous_data))
-            }
-
-        return jsonify(response_data)
-
+        data = get_from_db_or_cache(year, month, 0, building, "stats")
+        if data is None:
+            return jsonify({'error': 'No statistics found for the specified parameters'}), 404
+        return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
 
-# Function to refresh cache for a specific month, day, and building
-def refresh_cache():
+@app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
+def fetch_data_by_params(year, month, day, building):
+    building = unquote(building)
     try:
-        with app.app_context():  # Ensure the application context is set up
-            # Fetch all data from the database
-            data = ElectricityData.query.all()
-            stats = ElectricityStatistics.query.all()
-            # Group data by year, month, and building
-            grouped_data = {}
-            for entry in data:
-                formatted_date = entry.date
-                year = formatted_date.year
-                month = formatted_date.month
-                day = formatted_date.day
-                building = entry.building
+        data = get_from_db_or_cache(year, month, day, building, "data")
+        if data is None:
+            return jsonify({'error': 'No data found for the specified parameters'}), 404
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Other routes remain unchanged (upload, stats, predict, get-available-data)
+
+# Cache maintenance
+def refresh_cache():
+    """Periodically refresh popular cache items"""
+    try:
+        # Get most frequently accessed data and refresh those
+        popular_buildings = db.session.query(
+            ElectricityData.building,
+            db.func.count(ElectricityData.building)
+        ).group_by(ElectricityData.building).order_by(db.func.count(ElectricityData.building).desc()).limit(5).all()
+        
+        for building, _ in popular_buildings:
+            # Refresh last 3 months of data for popular buildings
+            current_date = datetime.now()
+            for i in range(3):
+                month = current_date.month - i
+                year = current_date.year
+                if month < 1:
+                    month += 12
+                    year -= 1
+                get_from_db_or_cache(year, month, 0, building, "data")
+                get_from_db_or_cache(year, month, 0, building, "stats")
                 
-                # Create a cache key for the specific day
-                cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
-                
-                if cache.get(cache_key) is None:
-                    formatted_data = {
-                        'month': entry.month,
-                        'date': entry.date,
-                        'consumption': entry.consumption,
-                        'building': entry.building
-                    }
-                    #print("cachekey:", cache_key)
-                    # Store the fetched data in the cache for the specific day
-                    cache.set(cache_key, formatted_data)
-
-
-                # Group data for all days in the month
-                month_key = (year, month, building)
-                if month_key not in grouped_data:
-                    grouped_data[month_key] = []
-                grouped_data[month_key].append(formatted_data)
-
-            # Cache the grouped data for each month
-            for (year, month, building), monthly_data in grouped_data.items():
-                monthly_cache_key = f"electricity_data_{year}_{month}_all_{building}"
-                cache.set(monthly_cache_key, monthly_data)
-
-            # Cache the statistics data
-            for stat in stats:
-                stat_cache_key = f"electricity_stats_{stat.date.year}_{stat.date.month}_{stat.building}"
-                if cache.get(stat_cache_key) is None:
-                    stat_data = {
-                        'month': stat.month,
-                        'date': stat.date,
-                        'mean': stat.mean,
-                        'highest': stat.highest,
-                        'lowest': stat.lowest,
-                        'median': stat.median,
-                        'building': stat.building
-                    }
-                    cache.set(stat_cache_key, stat_data)
-
-            print(f"Cache refreshed at {datetime.now()}")  # Log when cache is refreshed
-
+        print(f"Cache refreshed at {datetime.now()}")
     except Exception as e:
         print(f"Error refreshing cache: {e}")
 
-
-refresh_cache()  # Initial cache refresh
 
 # Function to start the scheduler in a separate thread
 def start_scheduler():
@@ -322,96 +382,6 @@ def print_cache_keys():
     except Exception as e:
         print(f"Error retrieving cache keys: {e}")
 
-    
-@app.route('/stats/<int:year>/<int:month>/<building>', methods=['GET'])
-def get_stats_by_params(year, month, building):
-    building = unquote(building)
-    try:
-        with app.app_context():
-            if month == 0:  # Fetch yearly stats
-                stats = ElectricityStatistics.query.filter(
-                    ElectricityStatistics.date.between(datetime(year, 1, 1), datetime(year, 12, 31)),
-                    ElectricityStatistics.building == building
-                ).all()
-
-                if not stats:
-                    return jsonify({'error': 'No yearly statistics found for the specified parameters'}), 404
-
-                # Calculate monthly totals
-                monthly_totals = {}
-                for stat in stats:
-                    monthly_totals[stat.month] = monthly_totals.get(stat.month, 0) + stat.mean
-
-                # Determine highest and lowest month
-                highest_month = max(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
-                lowest_month = min(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
-
-                return jsonify({
-                    'mean': float(np.mean([stat.mean for stat in stats])),
-                    'highest': highest_month[1],
-                    'lowest': lowest_month[1],
-                    'highestMonth': highest_month[0],
-                    'lowestMonth': lowest_month[0],
-                    'monthlyData': [{'month': month, 'consumption': total} for month, total in monthly_totals.items()]
-                })
-
-            # Fetch monthly stats
-            stat_cache_key = f"electricity_stats_{year}_{month}_{building}"
-            cached_stats = cache.get(stat_cache_key)
-            if cached_stats:
-                return jsonify(cached_stats)
-
-            stats = ElectricityStatistics.query.filter_by(
-                date=datetime(year, month, 1).date(),
-                building=building
-            ).first()
-
-            if not stats:
-                return jsonify({'error': 'No statistics found for the specified parameters'}), 404
-
-            stat_data = {
-                'month': stats.month,
-                'date': stats.date,
-                'mean': stats.mean,
-                'highest': stats.highest,
-                'lowest': stats.lowest,
-                'median': stats.median,
-                'building': stats.building,
-                'highestMonth': stats.month,
-                'lowestMonth': stats.month,
-            }
-            cache.set(stat_cache_key, stat_data)
-            return jsonify(stat_data)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-
-@app.route('/fetch-data/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
-def fetch_data_by_params(year, month, day, building):
-    building = unquote(building)
-    with app.app_context(): 
-
-        if day == 0:
-            cache_key = f"electricity_data_{year}_{month}_all_{building}"
-        else:
-            cache_key = f"electricity_data_{year}_{month}_{day}_{building}"
-    
-        cached_data = cache.get(cache_key)
-    
-        if cached_data:
-            # print("Cache contents:")
-            # if isinstance(cached_data, list):
-            #     for entry in cached_data:
-            #         print(entry)
-            # else:
-            #     for key in cached_data:
-            #         print(f"{key}: {cached_data[key]}")
-            return jsonify(cached_data)
-    
-    
-        print(f"No cache data found for key: {cache_key}")
-        return jsonify({'error': 'No data found for the specified parameters'}), 404
 
 @app.route('/predict', methods=['POST'])
 def predict_future():
@@ -429,60 +399,88 @@ def predict_future():
 
 @app.route('/get-available-data', methods=['GET'])
 def get_available_data():
-    with app.app_context():
-        cache_keys = cache.cache._cache.keys()  # Get all the cache keys
-        available_data = {}
+    """Endpoint to list all available data in the system (from cache and database)"""
+    try:
+        with app.app_context():
+            # First try to get from cache if available
+            cache_key = "available_data_summary"
+            cached_data = get_cached_data(cache_key)
+            if cached_data:
+                return jsonify(cached_data)
 
-        for key in cache_keys:
-            # Split key based on underscores
-            parts = key.split('_')  # Example key: electricity_data_2023_2_1_Building110
-            if len(parts) == 6 and parts[0] == "electricity" and parts[1] == "data":
-                year, month_int, day_str, building = int(parts[2]), int(parts[3]), parts[4], parts[5]
+            # If not in cache, build the data structure from database
+            available_data = {}
 
-                # If the month is in datetime.date format, we can directly access the month
-                if isinstance(month_int, int):
-                    month = month_int
-                else:
-                    # If it's a string or not in int format, we handle it accordingly (in case of other formats)
-                    date_obj = datetime.strptime(month_int, '%B')  # 'August' -> datetime object
-                    month = date_obj.month
+            # Get all unique buildings
+            buildings = db.session.query(
+                ElectricityData.building.distinct()
+            ).all()
 
-                # If day is 'all', we skip this part and consider the month as a whole
-                if day_str == 'all':
-                    day = 'all'
-                else:
-                    day = int(day_str)
+            for (building,) in buildings:
+                building_clean = building.replace(" ", "_")
+                available_data[building] = {}
 
-                # Add to available_data in nested structure: {building: {year: {month: [days]}}}
-                if building not in available_data:
-                    available_data[building] = {}
+                # Get all years with data for this building
+                years = db.session.query(
+                    db.func.extract('year', ElectricityData.date).distinct()
+                ).filter(
+                    ElectricityData.building == building
+                ).order_by(
+                    db.func.extract('year', ElectricityData.date).desc()
+                ).all()
 
-                if year not in available_data[building]:
+                for (year,) in years:
+                    year = int(year)
                     available_data[building][year] = {}
 
-                if month not in available_data[building][year]:
-                    available_data[building][year][month] = []
+                    # Get all months with data for this building/year
+                    months = db.session.query(
+                        db.func.extract('month', ElectricityData.date).distinct()
+                    ).filter(
+                        db.func.extract('year', ElectricityData.date) == year,
+                        ElectricityData.building == building
+                    ).order_by(
+                        db.func.extract('month', ElectricityData.date)
+                    ).all()
 
-                # Add the day (or 'all' if it's a monthly cache) to the list of days for the given building, year, and month
-                available_data[building][year][month].append(day)
+                    for (month,) in months:
+                        month = int(month)
+                        available_data[building][year][month] = []
 
+                        # Check if we have full month data cached
+                        month_cache_key = generate_cache_key(year, month, 0, building)
+                        if get_cached_data(month_cache_key):
+                            available_data[building][year][month].append('all')
 
-        #print("Available Data:", available_data)
-        
-        # Convert days to a sorted list, excluding 'all', and prepare the final data
-        for building in available_data:
-            for year in available_data[building]:
-                for month in available_data[building][year]:
-                    # Filter out 'all' before sorting
-                    days = [day for day in available_data[building][year][month] if day != 'all']
-                    available_data[building][year][month] = sorted(days)
+                        # Get individual days with data
+                        days = db.session.query(
+                            db.func.extract('day', ElectricityData.date).distinct()
+                        ).filter(
+                            db.func.extract('year', ElectricityData.date) == year,
+                            db.func.extract('month', ElectricityData.date) == month,
+                            ElectricityData.building == building
+                        ).order_by(
+                            db.func.extract('day', ElectricityData.date)
+                        ).all()
 
-                    # If 'all' is present, add it back to the list
-                    if 'all' in available_data[building][year][month]:
-                        available_data[building][year][month].append('all')
+                        for (day,) in days:
+                            day = int(day)
+                            # Check if this specific day is cached
+                            day_cache_key = generate_cache_key(year, month, day, building)
+                            if get_cached_data(day_cache_key):
+                                available_data[building][year][month].append(day)
 
-        return jsonify(available_data)
+                        # If no specific days but we have month data, add 'all'
+                        if not available_data[building][year][month] and days:
+                            available_data[building][year][month].append('all')
 
+            # Cache this summary for 1 hour
+            cache_data(cache_key, available_data)
+
+            return jsonify(available_data)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

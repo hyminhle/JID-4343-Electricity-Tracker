@@ -27,10 +27,65 @@ const Calendar = ({ buildingStats }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [jumpToDate, setJumpToDate] = useState(initialDate);
 
+  const getLocalStorageSize = () => {
+    let total = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        total += (localStorage[key].length * 2) / 1024 / 1024; // Size in MB
+      }
+    }
+    return total;
+  };
+
   // Function to save data to localStorage
   const saveDataToLocalStorage = (data) => {
     try {
-      localStorage.setItem('consumptionData', JSON.stringify(data));
+      // Set a storage limit (e.g., 4MB to be safe)
+      const STORAGE_LIMIT_MB = 4;
+      
+      // Check current size
+      const currentSize = getLocalStorageSize();
+      
+      // If approaching limit, prune old data
+      if (currentSize > STORAGE_LIMIT_MB * 0.8) { // Start pruning at 80% of limit
+        const dataToSave = { ...data };
+        
+        // Collect all entries with their dates and lastAccessed timestamps
+        const allEntries = [];
+        for (const [dateKey, buildings] of Object.entries(dataToSave)) {
+          for (const [buildingName, buildingData] of Object.entries(buildings)) {
+            allEntries.push({
+              dateKey,
+              buildingName,
+              lastAccessed: buildingData.lastAccessed || 0
+            });
+          }
+        }
+        
+        // Sort by lastAccessed (oldest first)
+        allEntries.sort((a, b) => a.lastAccessed - b.lastAccessed);
+        
+        // Remove entries until we're under the threshold (remove 20% of entries)
+        const entriesToRemove = Math.ceil(allEntries.length * 0.2);
+        for (let i = 0; i < entriesToRemove; i++) {
+          const entry = allEntries[i];
+          if (dataToSave[entry.dateKey] && dataToSave[entry.dateKey][entry.buildingName]) {
+            delete dataToSave[entry.dateKey][entry.buildingName];
+            
+            // Remove empty date objects
+            if (Object.keys(dataToSave[entry.dateKey]).length === 0) {
+              delete dataToSave[entry.dateKey];
+            }
+          }
+        }
+        
+        // Save the pruned data
+        localStorage.setItem('consumptionData', JSON.stringify(dataToSave));
+        console.log(`Storage limit approached. Removed ${entriesToRemove} old entries.`);
+      } else {
+        // Normal save if under the limit
+        localStorage.setItem('consumptionData', JSON.stringify(data));
+      }
     } catch (error) {
       console.error('Error saving to localStorage:', error);
     }
@@ -174,8 +229,23 @@ const Calendar = ({ buildingStats }) => {
 
     // Check if we already have this data cached
     if (consumptionData[dateKey] && consumptionData[dateKey][building]) {
-      return consumptionData[dateKey][building];
-    }
+    // Update the last accessed timestamp
+    setConsumptionData(prevData => {
+      const updatedData = {
+        ...prevData,
+        [dateKey]: {
+          ...prevData[dateKey],
+          [building]: {
+            ...prevData[dateKey][building],
+            lastAccessed: Date.now() // Update the timestamp
+          }
+        }
+      };
+      
+      return updatedData;
+    });
+    return consumptionData[dateKey][building];
+  }
 
     try {
       const response = await fetch(`http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${encodedBuilding}`);
@@ -200,7 +270,8 @@ const Calendar = ({ buildingStats }) => {
           max: stat_data.highest,
           min: stat_data.lowest,
           median: stat_data.median
-        }]
+        }],
+        lastAccessed: Date.now()
       };
 
       // Update the consumptionData state with the new data
