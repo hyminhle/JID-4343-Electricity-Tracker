@@ -1,0 +1,42 @@
+.chatbot-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #4DD0E1; /* Turquoise color similar to the reference image */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Dark Mode Button */
+body.dark-theme .chatbot-button,
+[data-theme='dark'] .chatbot-button {
+  background-color: #00B8D4; /* Slightly darker turquoise for dark mode */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.chatbot-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark Mode Button Hover */
+body.dark-theme .chatbot-button:hover,
+[data-theme='dark'] .chatbot-button:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+
+.chatbot-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+} 

@@ -9,6 +9,7 @@ import Sidebar from './components/Sidebar';
 import Calendar from './components/Calendar';
 import Settings from './components/Settings';
 import ThemeInitializer from './ThemeInitializer';
+import Chatbot from './components/Chatbot';
 
 // Lazy load the Map component
 const Map = React.lazy(() => import('./components/Heatmap/MapVisual'));
@@ -41,6 +42,8 @@ function App() {
             </Routes>
           </Suspense>
         </div>
+        {/* Chatbot is outside the Routes since it should be available on all pages */}
+        <Chatbot />
       </div>
     </Router>
   );
