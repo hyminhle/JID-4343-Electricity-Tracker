@@ -412,6 +412,52 @@ body.dark-theme .message.bot .bubble {
   border-left: 3px solid #ff6b6b;
   padding-left: 10px;
 }
+.chatbot-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.clear-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.clear-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme .clear-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.loading {
+  position: relative;
+}
+.loading::after {
+  content: '...';
+  animation: dots 1.5s infinite steps(3);
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+.error-message {
+  color: #ff6b6b;
+  border-left: 3px solid #ff6b6b;
+  padding-left: 10px;
+}
 @media (max-width: 480px) {
   .chatbot-dialog {
     width: 90%;

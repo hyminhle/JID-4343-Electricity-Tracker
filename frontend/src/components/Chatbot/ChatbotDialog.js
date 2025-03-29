@@ -11,17 +11,15 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
       }
     ];
   });
-  
+
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Save conversation to localStorage
   useEffect(() => {
     localStorage.setItem('chatHistory', JSON.stringify(messages));
   }, [messages]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -35,66 +33,128 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
     ]);
   };
 
-  const fetchBuildingInsights = async (building, date) => {
+  const fetchLlamaResponse = async (prompt) => {
     try {
-      // First try the new chatbot endpoint
-      let response = await fetch(
-        `http://localhost:5000/api/chatbot/consumption?building=${encodeURIComponent(building)}&date=${date}`
-      );
-      
-      // If the new endpoint fails, try the old one
-      if (!response.ok) {
-        response = await fetch(
-          `http://localhost:5000/api/consumption?building=${encodeURIComponent(building)}&date=${date}`
-        );
+      const response = await fetch('http://localhost:8080/completion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt,
+          temperature: 0.2,
+          max_tokens: 200,
+          stop: ['\n', '}'],
+          top_p: 0.9,
+          repeat_penalty: 1.2
+        })
+      });
+      const text = await response.text();
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}') + 1;
+      const jsonString = jsonStart >= 0 && jsonEnd > 0 ? text.slice(jsonStart, jsonEnd) : '{}';
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error('LLAMA Error:', error);
+      throw new Error('Failed to process your request. Please try again.');
+    }
+  };
+
+  const fetchBuildingData = async (building, date) => {
+    try {
+      const endpoints = [
+        `http://localhost:5000/api/chatbot/consumption?building=${encodeURIComponent(building)}&date=${date}`,
+        `http://localhost:5000/api/consumption?building=${encodeURIComponent(building)}&date=${date}`,
+        `http://localhost:5000/fetch-data/${date.split('-')[0]}/${date.split('-')[1]}/${date.split('-')[2]}/${encodeURIComponent(building)}`
+      ];
+      let lastError = null;
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint);
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.message || `HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          if (!data.building && !data.consumption) {
+            throw new Error('Invalid data structure received');
+          }
+          return {
+            building: data.building || building,
+            date: data.date || date,
+            consumption: data.consumption,
+            cost: data.cost || (data.consumption * 0.12).toFixed(2),
+            comparison: data.comparison || 'No comparison data',
+            insights: data.insights || ['No insights available']
+          };
+        } catch (error) {
+          console.log(`Failed with endpoint ${endpoint}:`, error);
+          lastError = error;
+          continue;
+        }
       }
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || 'Data not found for this building and date');
-      }
-      
-      const data = await response.json();
-      
-      // Ensure the response has required fields
-      if (!data.building || !data.date) {
-        throw new Error('Incomplete data received from server');
-      }
-      
-      return data;
+      throw lastError || new Error('All API endpoints failed');
     } catch (error) {
       console.error('API Error:', error);
       throw new Error(error.message || 'Failed to fetch data. Please check the building name and date format.');
     }
   };
 
+  const parseDate = (dateStr) => {
+    if (dateStr.toLowerCase() === 'yesterday') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.toISOString().split('T')[0];
+    } else if (dateStr.toLowerCase() === 'today') {
+      return new Date().toISOString().split('T')[0];
+    }
+    return dateStr;
+  };
+
+  const generateComparison = (data1, data2) => {
+    return `
+      📊 Comparison between ${data1.building} and ${data2.building} on ${data1.date}:
+      - ${data1.building}: ${data1.consumption?.toLocaleString() || 'N/A'} kWh ($${data1.cost || 'N/A'})
+      - ${data2.building}: ${data2.consumption?.toLocaleString() || 'N/A'} kWh ($${data2.cost || 'N/A'})
+      Difference: ${Math.abs((data1.consumption || 0) - (data2.consumption || 0)).toLocaleString()} kWh
+    `;
+  };
+
+  const formatResponse = (data) => {
+    return `🏢 ${data.building} on ${data.date}:
+    🔋 Usage: ${data.consumption?.toLocaleString() || 'N/A'} kWh
+    💵 Cost: $${data.cost || 'N/A'}
+    📊 ${data.comparison || 'No comparison data'}
+    💡 ${data.insights.join('\n')}`;
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
-    const userMessage = inputText;
+    const userMessage = inputText.trim(); // ✅ Declare userMessage here
     setInputText('');
     setMessages(prev => [...prev, { sender: 'user', text: userMessage }]);
     setIsLoading(true);
 
     try {
-      // Handle special commands
       if (userMessage.toLowerCase().includes('list buildings')) {
-        const response = await fetch('http://localhost:5000/api/buildings');
-        const buildings = await response.json();
-        const buildingList = buildings.map(b => `• ${b.name} (${b.data_start} to ${b.data_end})`).join('\n');
-        addBotMessage(`🏢 Available Buildings:\n${buildingList}`);
+        try {
+          const response = await fetch('http://localhost:5000/api/buildings');
+          if (!response.ok) throw new Error('Failed to fetch buildings');
+          const buildings = await response.json();
+          const buildingList = buildings.map(b => `• ${b.name} (${b.data_start} to ${b.data_end})`).join('\n');
+          addBotMessage(`🏢 Available Buildings:\n${buildingList}`);
+        } catch (error) {
+          addBotMessage(`⚠️ Could not fetch building list. Try again later.`);
+        }
         return;
       }
 
-      // Try to extract building and date directly
       const buildingMatch = userMessage.match(/(building\s*\d+|hq)/i);
       const dateMatch = userMessage.match(/(\d{4}-\d{2}-\d{2}|yesterday|today)/i);
-      
+
       if (buildingMatch && dateMatch) {
         const building = buildingMatch[0].toUpperCase().replace(/\s+/g, ' ');
         let date = dateMatch[0];
-        
-        // Handle relative dates
+
         if (date.toLowerCase() === 'yesterday') {
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
@@ -103,43 +163,68 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
           date = new Date().toISOString().split('T')[0];
         }
 
-        // Add loading message
         const loadingId = Date.now();
-        setMessages(prev => [...prev, { 
-          sender: 'bot', 
+        setMessages(prev => [...prev, {
+          sender: 'bot',
           text: `⏳ Fetching data for ${building} on ${date}...`,
-          tempId: loadingId 
+          tempId: loadingId
         }]);
 
-        // Get data from backend
-        const data = await fetchBuildingInsights(building, date);
+        const data = await fetchBuildingData(building, date);
         const response = formatResponse(data);
 
-        // Replace loading message
-        setMessages(prev => prev.map(msg => 
+        setMessages(prev => prev.map(msg =>
           msg.tempId === loadingId ? { sender: 'bot', text: response } : msg
         ));
         return;
       }
 
-      // If direct extraction fails, show help
-      addBotMessage(`Please specify both a building and date. Examples:\n• "Building 110 2024-08-01"\n• "Show HQ usage for yesterday"\n• "Compare Building 210 with HQ"`);
+      if (userMessage.toLowerCase().includes('compare')) {
+        const parts = userMessage.match(/compare\s+(.*?)\s+with\s+(.*?)\s+(?:on|for)\s+(.*)/i);
+        if (parts && parts.length === 4) {
+          const [_, building1, building2, dateStr] = parts;
+          const date = parseDate(dateStr);
 
+          const loadingId = Date.now();
+          setMessages(prev => [...prev, {
+            sender: 'bot',
+            text: `⏳ Comparing ${building1} with ${building2} on ${date}...`,
+            tempId: loadingId
+          }]);
+
+          const data1 = await fetchBuildingData(building1.trim().toUpperCase(), date);
+          const data2 = await fetchBuildingData(building2.trim().toUpperCase(), date);
+
+          const comparison = generateComparison(data1, data2);
+
+          setMessages(prev => prev.map(msg =>
+            msg.tempId === loadingId ? { sender: 'bot', text: comparison } : msg
+          ));
+          return;
+        }
+        addBotMessage("To compare buildings, please specify:\n• First building\n• Second building\n• Date\nExample: 'Compare Building 110 with HQ for 2024-08-01'");
+        return;
+      }
+
+      const llamaResponse = await fetchLlamaResponse(`Extract intent, building(s), and date from: ${userMessage}`);
+      if (llamaResponse.intent === 'show') {
+        const { building, date } = llamaResponse;
+        const data = await fetchBuildingData(building.toUpperCase(), date);
+        addBotMessage(formatResponse(data));
+      } else if (llamaResponse.intent === 'compare') {
+        const { building1, building2, date } = llamaResponse;
+        const data1 = await fetchBuildingData(building1.toUpperCase(), date);
+        const data2 = await fetchBuildingData(building2.toUpperCase(), date);
+        addBotMessage(generateComparison(data1, data2));
+      } else {
+        addBotMessage("I didn't understand. Try listing buildings, showing usage, or comparing.");
+      }
     } catch (error) {
       console.error('Error:', error);
-      addBotMessage(`⚠️ ${error.message}\n\nTry one of these formats:\n• "Building 110 2024-08-01"\n• "Show HQ usage for yesterday"`);
+      addBotMessage(`⚠️ Error: ${error.message || 'Something went wrong. Please try again.'}`);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatResponse = (data) => {
-    return `🏢 ${data.building} on ${data.date}:
-🔋 Usage: ${data.consumption?.toLocaleString() || 'N/A'} kWh
-💵 Cost: $${data.cost || 'N/A'}
-📊 Compared to average: ${data.comparison || 'N/A'}
-
-💡 ${data.insights?.join('\n') || 'No insights available'}`;
   };
 
   const addBotMessage = (text) => {
@@ -159,7 +244,6 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
             <button className="close-button" onClick={onClose}>×</button>
           </div>
         </div>
-        
         <div className="chatbot-messages">
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.sender}`}>
@@ -176,7 +260,6 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
           ))}
           <div ref={messagesEndRef} />
         </div>
-
         <div className="chatbot-input">
           <textarea
             value={inputText}

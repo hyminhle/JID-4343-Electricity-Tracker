@@ -563,7 +563,26 @@ def generate_suggestions(current_usage, monthly_stats):
         suggestions.append("Great efficiency! Maintain these conservation practices")
     
     return suggestions
+@app.route('/api/buildings')
+def mock_buildings():
+    return jsonify([
+        {"name": "Building 110", "data_start": "2023-01-01", "data_end": "2024-12-31"},
+        {"name": "Building 210", "data_start": "2023-01-01", "data_end": "2024-12-31"},
+        {"name": "HQ", "data_start": "2023-01-01", "data_end": "2024-12-31"}
+    ])
 
+@app.route('/api/consumption')
+def mock_consumption():
+    building = request.args.get('building')
+    date = request.args.get('date')
+    return jsonify({
+        "building": building,
+        "date": date,
+        "consumption": 1250.42,
+        "cost": 187.56,
+        "comparison": "15% higher than monthly average",
+        "insights": ["Peak usage between 2-4 PM", "Consider HVAC optimization"]
+    })
 @app.route('/api/buildings', methods=['GET'])
 def get_buildings():
     """Get list of all available buildings with metadata"""
