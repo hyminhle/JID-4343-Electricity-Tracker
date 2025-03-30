@@ -7,7 +7,7 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
     return saved ? JSON.parse(saved) : [
       { 
         sender: 'bot', 
-        text: "Hello! I'm your local AI assistant for electricity consumption. How can I help you today?"
+        text: "Hello! I'm your local AI assistant powered by llama.cpp. How can I help you today?"
       }
     ];
   });
@@ -30,7 +30,7 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
     setMessages([
       { 
         sender: 'bot', 
-        text: "Hello! I'm your local AI assistant for electricity consumption. How can I help you today?"
+        text: "Hello! I'm your local AI assistant powered by llama.cpp. How can I help you today?"
       }
     ]);
   };
@@ -43,10 +43,22 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
       setMessages(prev => [...prev, { sender: 'user', text: prompt }]);
       
       // Create the full conversation history with proper formatting
-      const systemPrompt = `You are a helpful, respectful, and honest assistant that is made to assist in electricity consumption of the sugar land campus. 
-      Always answer as helpfully as possible, while being safe. 
-      Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. 
-      If a question does not make any sense, explain why instead of answering something incorrect. `;
+      
+    const systemPrompt = `You are an expert assistant for electricity consumption tracking. 
+    Your role is to:
+    - Analyze electricity usage data
+    - Compare building consumption
+    - Provide energy efficiency insights
+    - Never discuss unrelated topics
+    
+    Only respond to queries about:
+    - Electricity usage
+    - Building consumption
+    - Energy metrics
+    - Cost analysis
+    
+    If asked unrelated questions, respond:
+    "I specialize in electricity consumption tracking. How can I help with energy data?"`;
 
       const conversationHistory = [
         { role: 'system', content: systemPrompt },
