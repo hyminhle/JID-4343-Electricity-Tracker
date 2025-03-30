@@ -338,40 +338,44 @@ def fetch_data_by_params(year, month, day, building):
 
 # Cache maintenance
 def refresh_cache():
-    """Periodically refresh popular cache items"""
-    try:
-        # Get most frequently accessed data and refresh those
-        popular_buildings = db.session.query(
-            ElectricityData.building,
-            db.func.count(ElectricityData.building)
-        ).group_by(ElectricityData.building).order_by(db.func.count(ElectricityData.building).desc()).limit(5).all()
-        
-        for building, _ in popular_buildings:
-            # Refresh last 3 months of data for popular buildings
-            current_date = datetime.now()
-            for i in range(3):
-                month = current_date.month - i
-                year = current_date.year
-                if month < 1:
-                    month += 12
-                    year -= 1
-                get_from_db_or_cache(year, month, 0, building, "data")
-                get_from_db_or_cache(year, month, 0, building, "stats")
-                
-        print(f"Cache refreshed at {datetime.now()}")
-    except Exception as e:
-        print(f"Error refreshing cache: {e}")
-
-
-# Function to start the scheduler in a separate thread
-def start_scheduler():
-    scheduler.add_job(refresh_cache, 'interval', minutes=5)  # Adjust interval as needed
-    scheduler.start()
-
-# Ensure scheduler runs with app context in a separate thread
-def start_scheduler_with_context():
+    """Periodically refresh popular cache items with proper app context"""
     with app.app_context():
-        start_scheduler()
+        try:
+            # Get most frequently accessed data and refresh those
+            popular_buildings = db.session.query(
+                ElectricityData.building,
+                db.func.count(ElectricityData.building)
+            ).group_by(ElectricityData.building).order_by(db.func.count(ElectricityData.building).desc()).limit(5).all()
+            
+            for building, _ in popular_buildings:
+                # Refresh last 3 months of data for popular buildings
+                current_date = datetime.now()
+                for i in range(3):
+                    month = current_date.month - i
+                    year = current_date.year
+                    if month < 1:
+                        month += 12
+                        year -= 1
+                    get_from_db_or_cache(year, month, 0, building, "data")
+                    get_from_db_or_cache(year, month, 0, building, "stats")
+                    
+            print(f"Cache refreshed at {datetime.now()}")
+        except Exception as e:
+            print(f"Error refreshing cache: {e}")
+        finally:
+            # Ensure session is closed
+            db.session.remove()
+
+
+def scheduler_job():
+    """Wrapper function to run refresh_cache with app context"""
+    with app.app_context():
+        refresh_cache()
+
+def start_scheduler():
+    """Start the scheduler with proper app context handling"""
+    scheduler.add_job(scheduler_job, 'interval', minutes=30)
+    scheduler.start()
 
 def print_cache_keys():
     try:
@@ -483,8 +487,15 @@ def get_available_data():
         return jsonify({'error': str(e)}), 500
 
 
-if __name__ == '__main__':
-    
+
+if __name__ == '__main__':    
 # Run scheduler in a separate thread with app context
-    threading.Thread(target=start_scheduler_with_context).start()
+    with app.app_context():
+        # Initial cache refresh
+        refresh_cache()
+        # Start scheduler
+        scheduler_thread = threading.Thread(target=start_scheduler)
+        scheduler_thread.daemon = True  # Daemonize thread so it exits with main
+        scheduler_thread.start()
+    
     app.run(debug=True)
