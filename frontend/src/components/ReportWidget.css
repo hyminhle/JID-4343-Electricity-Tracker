@@ -170,3 +170,68 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+
+/* Dark Mode Styles for ReportWidget */
+[data-theme="dark"] .report-widget {
+  background-color: var(--card-background);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .report-date {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .metric-item {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .metric-item.compact {
+  background-color: rgba(74, 85, 104, 0.2);
+}
+
+[data-theme="dark"] .metric-item h3 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .metric-item.compact h3 {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .metric-value {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .metric-comparison, 
+[data-theme="dark"] .metric-detail {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .metric-comparison.positive {
+  color: var(--secondary-color);
+}
+
+[data-theme="dark"] .metric-comparison.negative {
+  color: var(--danger-color);
+}
+
+[data-theme="dark"] .buildings-count.compact {
+  border-top-color: var(--border-color);
+}
+
+[data-theme="dark"] .view-details-btn {
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .view-details-btn:hover {
+  background-color: var(--primary-dark);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .loading-spinner {
+  border-color: rgba(74, 85, 104, 0.3);
+  border-top-color: var(--primary-color);
+}
