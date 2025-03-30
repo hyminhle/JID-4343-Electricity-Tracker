@@ -12,9 +12,96 @@ const ReportWidget = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch report data when component mounts or when appDate changes
-    fetchReportData();
+    // Check local storage for cached data when the date changes
+    const cachedReport = checkCachedReport();
+    if (cachedReport) {
+      console.log('Loading report widget data from cache:', appDate.toDateString());
+      setReportData(cachedReport);
+      setIsLoading(false);
+    } else {
+      console.log('No cached report widget data found, fetching new data:', appDate.toDateString());
+      fetchReportData();
+    }
   }, [appDate]);
+
+  // Generate a unique key for the report based on date
+  const getReportStorageKey = () => {
+    const dateKey = appDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    return `electricity_report_widget_${dateKey}`;
+  };
+
+  // Check if we have a cached report for the current date
+  const checkCachedReport = () => {
+    const storageKey = getReportStorageKey();
+    const cachedReportJson = localStorage.getItem(storageKey);
+    
+    if (cachedReportJson) {
+      try {
+        const cachedReport = JSON.parse(cachedReportJson);
+        return cachedReport;
+      } catch (error) {
+        console.error('Error parsing cached report widget data:', error);
+        return null;
+      }
+    }
+    
+    return null;
+  };
+
+  // Save the report data to local storage
+  const saveReportToLocalStorage = (data) => {
+    const storageKey = getReportStorageKey();
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(data));
+      console.log('Saved report widget data to cache for', appDate.toDateString());
+    } catch (error) {
+      console.error('Error saving report widget data to cache:', error);
+      
+      // If localStorage is full, try clearing older reports
+      if (error.name === 'QuotaExceededError') {
+        try {
+          // Clean up old reports (older than 7 days)
+          cleanupOldReports();
+          // Try saving again
+          localStorage.setItem(storageKey, JSON.stringify(data));
+        } catch (e) {
+          console.error('Still unable to save widget data to localStorage after cleanup:', e);
+        }
+      }
+    }
+  };
+  
+  // Clean up older reports from localStorage to free up space
+  const cleanupOldReports = () => {
+    const reportKeyPrefix = 'electricity_report_widget_';
+    const today = new Date();
+    
+    // Keep reports from the last 7 days
+    const oldestDate = new Date();
+    oldestDate.setDate(today.getDate() - 7);
+    
+    // Go through all localStorage items
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      
+      // Only process our report widget keys
+      if (key && key.startsWith(reportKeyPrefix)) {
+        try {
+          // Extract the date part from the key (format: electricity_report_widget_YYYY-MM-DD)
+          const datePart = key.split('_')[3];
+          const reportDate = new Date(datePart);
+          
+          // If this is an old report, remove it
+          if (reportDate < oldestDate) {
+            localStorage.removeItem(key);
+            console.log('Removed old report widget data from cache:', key);
+          }
+        } catch (e) {
+          console.error('Error processing localStorage key:', key, e);
+        }
+      }
+    }
+  };
 
   // Format numbers with commas for thousands
   const formatNumber = (num) => {
@@ -101,6 +188,9 @@ const ReportWidget = () => {
       }
 
       setReportData(allBuildingsData);
+      
+      // Save the fetched data to local storage
+      saveReportToLocalStorage(allBuildingsData);
     } catch (error) {
       console.error('Error fetching report data:', error);
     } finally {
@@ -173,48 +263,51 @@ const ReportWidget = () => {
   };
 
   return (
-    <div className="report-widget">
+    <div className="report-widget compact">
       {isLoading ? (
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p>Loading metrics...</p>
+          <div>Loading energy data...</div>
         </div>
       ) : (
         <>
-          <div className="report-date">
+          <div className="report-date compact">
             <span>{formatDisplayDate()}</span>
           </div>
-          <div className="report-metrics">
-            <div className="metric-item">
-              <h3>⚡ Today's Consumption</h3>
-              <div className="metric-value smaller">{displayEnergyValue(reportData.todayConsumption)}</div>
-              <div className={`metric-comparison ${comparison.isAbove ? 'negative' : 'positive'}`}>
-                {comparison.isAbove ? 
-                  `+${comparison.value}% above average` : 
-                  `-${comparison.value}% below average`}
+          <div className="report-metrics compact">
+            <div className="metric-row">
+              <div className="metric-item compact">
+                <h3>⚡ Today's Usage</h3>
+                <div className="metric-value">{displayEnergyValue(reportData.todayConsumption)}</div>
+                <div className={`metric-comparison ${comparison.isAbove ? 'negative' : 'positive'}`}>
+                  {comparison.isAbove ? `↑${comparison.value}%` : `↓${comparison.value}%`} vs avg
+                </div>
+              </div>
+              
+              <div className="metric-item compact">
+                <h3>📊 Daily Average</h3>
+                <div className="metric-value">{displayEnergyValue(reportData.dailyAverage)}</div>
+                <div className="metric-comparison">year to date</div>
+              </div>
+            </div>
+
+            <div className="metric-row">
+              <div className="metric-item compact">
+                <h3>💰 Estimated Cost</h3>
+                <div className="metric-value">${formatNumber(calculatePrice(reportData.todayConsumption))}</div>
+                <div className="metric-comparison">at $0.11/kWh</div>
+              </div>
+
+              <div className="metric-item compact">
+                <h3>🌿 CO₂ Emissions</h3>
+                <div className="metric-value">{formatNumber(calculateCO2(reportData.todayConsumption))} lbs</div>
+                <div className="metric-comparison">carbon footprint</div>
               </div>
             </div>
             
-            <div className="metric-item">
-              <h3>📊 Daily Average</h3>
-              <div className="metric-value smaller">{displayEnergyValue(reportData.dailyAverage)}</div>
-              <div className="metric-detail">This Month</div>
-            </div>
-
-            <div className="metric-item">
-              <h3>💰 Today's Cost</h3>
-              <div className="metric-value smaller">${formatNumber(calculatePrice(reportData.todayConsumption))}</div>
-            </div>
-
-            <div className="metric-item">
-              <h3>🌿 CO₂ Emissions</h3>
-              <div className="metric-value smaller">{formatNumber(calculateCO2(reportData.todayConsumption))} lbs</div>
-            </div>
-            
-            <div className="metric-item buildings-count">
-              <h3>🏢 Buildings</h3>
-              <div className="metric-value smaller">{Object.keys(reportData.buildingStats).length}</div>
-              <div className="metric-detail">
+            <div className="metric-item buildings-count compact">
+              <div className="buildings-info">
+                <span>🏢 {Object.keys(reportData.buildingStats).length} buildings monitored</span>
                 <button className="view-details-btn">View Details</button>
               </div>
             </div>
