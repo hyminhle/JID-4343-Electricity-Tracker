@@ -317,23 +317,26 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
           </div>
           <div className="chatbot-controls">
             <button 
-              className="settings-button" 
-              onClick={() => setApiEndpoint(prompt('Enter llama.cpp API endpoint:', apiEndpoint))}
+              className="control-btn" 
+              onClick={() => setApiEndpoint(prompt('Enter API endpoint:', apiEndpoint))}
               title="Change API endpoint"
             >
               ⚙️
             </button>
             <button 
-              className="theme-toggle" 
-              onClick={toggleTheme} 
+              className="control-btn" 
+              onClick={toggleTheme}
               title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
             >
               {theme === 'light' ? '🌙' : '☀️'}
             </button>
-            <button className="clear-button" onClick={clearConversation} title="Clear conversation">
+            <button 
+              className="control-btn" 
+              onClick={clearConversation}
+              title="Clear conversation"
+            >
               🗑️
             </button>
-            <button className="close-button" onClick={onClose}>×</button>
           </div>
         </div>
         
