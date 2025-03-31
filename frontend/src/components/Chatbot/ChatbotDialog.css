@@ -29,7 +29,14 @@ body.dark-theme .chatbot-dialog,
     transform: translateY(0);
   }
 }
-
+.building-list {
+  margin-top: 10px;
+  padding-left: 20px;
+}
+.building-list li {
+  list-style-type: disc;
+  margin-bottom: 5px;
+}
 .chatbot-container {
   display: flex;
   flex-direction: column;
