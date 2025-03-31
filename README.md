@@ -1,4 +1,3 @@
-
 # Electricity Consumption Tracker
 
 **Brief Summary**:  
@@ -120,3 +119,48 @@ This is the initial release of the Electricity Consumption Tracker application.
 ### Known Issues
 - **Heatmap Performance**: The heatmap view may experience performance issues with a large number of data points. Optimization will be addressed in future releases.
 - **Shape of Building Object**: Buildings in Heat Map feature all have rectangle shape. Improvements can be made to make the overall map looks more realistic by making the buildings into different shapes and positions.
+
+## Release 0.4.0
+
+### Features
+
+#### Overall System
+- **Theme Toggle**: Added a light/dark mode toggle for the entire web application. All features have implemented dark mode styling
+- **Built-in System Clock**: Added a System Clock to record the date of today (can be change) so that other features can display today's data. 
+
+
+#### Chatbot
+- **UI**: Design Chatbot button and conversation dialog UI (textbox, messages) with dark/light mode styling
+- **WIP Enhanced Chatbot Functionality**: Improved chatbot responses to provide detailed insights into electricity consumption, building comparisons, and energy metrics.
+- **WIP Conversation History**: Chat history is now saved in local storage and persists across sessions.
+- **WIP Error Handling**: Enhanced error handling for chatbot API calls with user-friendly messages.
+
+#### Report Feature
+- **Pie Chart View**: Added a pie chart visualization for building energy consumption breakdown.
+- **Monthly and Yearly Averages**: Displayed monthly and yearly averages for selected buildings.
+- **PDF Export**: Users can now export reports as PDF files.
+- **Dynamic Building Stats**: Enhanced building-specific statistics, including highest and lowest consumption months.
+- **Cache Validation**: Ensures cached data is valid and up-to-date, especially for "All Buildings" selection.
+
+
+#### Report Widget (Dashboard)
+- **Local Storage Caching**: Implemented caching for daily reports to improve performance and reduce API calls.
+- **Data Cleanup**: Automatically removes cached reports older than 7 days to optimize storage usage.
+- **Enhanced Metrics**: Added CO₂ emissions and estimated cost calculations to the widget.
+- **Compact View**: Improved UI for better readability in compact mode.
+
+
+
+### Bug Fixes
+
+- **Chatbot API Endpoint**: Fixed an issue where the chatbot API endpoint could not be updated dynamically.
+- **Report Data Sync**: Resolved inconsistencies in syncing report data with the selected date and building.
+- **Local Storage Quota**: Improved handling of local storage quota errors by cleaning up old data.
+- **UI Responsiveness**: Fixed layout issues in the report widget and report page for smaller screens.
+- **Error Handling**: Enhanced error handling for API failures across all components.
+
+### Known Issues
+
+- **Chatbot Controls Overlap**: The theme toggle button and exit button overlaps with eachother
+- **LLaMA Fetching Issue**: There is fetching issue with LLaMA where it have error communicating with the server 
+- **Chatbot Context Limitations**: The chatbot may lose context for long conversations. Future updates will address this limitation.
