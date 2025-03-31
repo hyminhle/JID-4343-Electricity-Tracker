@@ -29,14 +29,17 @@ body.dark-theme .chatbot-dialog,
     transform: translateY(0);
   }
 }
+
 .building-list {
   margin-top: 10px;
   padding-left: 20px;
 }
+
 .building-list li {
   list-style-type: disc;
   margin-bottom: 5px;
 }
+
 .chatbot-container {
   display: flex;
   flex-direction: column;
@@ -87,45 +90,63 @@ body.dark-theme .chatbot-title h3,
   color: #e0e0e0;
 }
 
+/* Updated Control Buttons */
+.chatbot-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-button, 
+.theme-toggle, 
+.clear-button,
 .close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #666;
-}
-
-/* Dark Mode Close Button */
-body.dark-theme .close-button,
-[data-theme='dark'] .close-button {
-  color: #aaa;
-}
-
-/* Theme Toggle Button */
-.theme-toggle {
   background: none;
   border: none;
   font-size: 18px;
   cursor: pointer;
-  margin-right: 35px;
-  margin-top: -7px;
   padding: 5px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s;
+  width: 28px;
+  height: 28px;
+  color: #666;
 }
 
-.theme-toggle:hover {
+.settings-button:hover, 
+.theme-toggle:hover, 
+.clear-button:hover,
+.close-button:hover {
   background-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Dark Mode Buttons */
+body.dark-theme .settings-button,
+body.dark-theme .theme-toggle,
+body.dark-theme .clear-button,
+body.dark-theme .close-button,
+[data-theme='dark'] .settings-button,
+[data-theme='dark'] .theme-toggle,
+[data-theme='dark'] .clear-button,
+[data-theme='dark'] .close-button {
+  color: #aaa;
+}
+
+body.dark-theme .settings-button:hover,
 body.dark-theme .theme-toggle:hover,
-[data-theme='dark'] .theme-toggle:hover {
+body.dark-theme .clear-button:hover,
+body.dark-theme .close-button:hover,
+[data-theme='dark'] .settings-button:hover,
+[data-theme='dark'] .theme-toggle:hover,
+[data-theme='dark'] .clear-button:hover,
+[data-theme='dark'] .close-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Rest of your existing styles remain unchanged */
 .chatbot-message {
   padding: 15px;
   flex: 1;
@@ -353,4 +374,4 @@ body.dark-theme .send-button:disabled,
     left: 5%;
     max-height: 80vh;
   }
-} 
+}
