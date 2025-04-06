@@ -13,6 +13,7 @@ import ThemeInitializer from './ThemeInitializer';
 import Chatbot from './components/Chatbot';
 import { AppDateProvider } from './components/DateContext';
 import Alert from './components/Alert'; // Import the new Alert component
+import AlertPage from './components/AlertPage';
 
 // Lazy load the Map component
 const Map = React.lazy(() => import('./components/Heatmap/MapVisual'));
@@ -36,7 +37,7 @@ function App() {
                 <Route path="/calendar" element={<Calendar />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/reports" element={<Report />} />
-                <Route path="/alerts" element={<Alert />} /> {/* Add Alert route */}
+                <Route path="/alerts" element={<AlertPage />} />
               </Routes>
             </Suspense>
           </div>
