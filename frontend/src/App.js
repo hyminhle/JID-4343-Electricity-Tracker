@@ -12,7 +12,6 @@ import Report from './components/Report'; // Import the new Report component
 import ThemeInitializer from './ThemeInitializer';
 import Chatbot from './components/Chatbot';
 import { AppDateProvider } from './components/DateContext';
-import Alert from './components/Alert'; // Import the new Alert component
 import AlertPage from './components/AlertPage';
 
 // Lazy load the Map component
