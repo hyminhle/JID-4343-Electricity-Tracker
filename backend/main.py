@@ -14,13 +14,17 @@ from urllib.parse import unquote
 from scipy import stats
 import numpy as np
 from collections import defaultdict
-
+from models import db, ElectricityData, ElectricityStatistics
+from AnomalyDetector import AnomalyDetector
+from anomaly_routes import anomaly_bp
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 # Add database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://SLB_admin:ElectricitySLB15#@electricitydata-db.cve2k4qgkm75.us-east-2.rds.amazonaws.com/electricitydata'
-db = SQLAlchemy(app)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
 
 # Add cache
 app.config['CACHE_TYPE'] = 'SimpleCache'
@@ -31,36 +35,7 @@ cache = Cache(app)
 # Create scheduler
 scheduler = BackgroundScheduler()
 
-class ElectricityData(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    month = db.Column(db.String(20), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    consumption = db.Column(db.Float, nullable=False)
-    building = db.Column(db.String(50), nullable=False)
-
-    def __init__(self, month, date, consumption, building):
-        self.month = month
-        self.date = date
-        self.consumption = consumption
-        self.building = building
-
-class ElectricityStatistics(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    month = db.Column(db.String(20), nullable=False)
-    date = db.Column(db.Date, nullable=False)
-    mean = db.Column(db.Float, nullable=False)
-    highest = db.Column(db.Float, nullable=False)
-    lowest = db.Column(db.Float, nullable=False)
-    median = db.Column(db.Float, nullable=False)
-    building = db.Column(db.String(50), nullable=False)
-    def __init__(self, month, date, mean, highest, lowest, median, building):
-        self.month = month
-        self.date = date
-        self.mean = mean
-        self.highest = highest
-        self.lowest = lowest    
-        self.median = median    
-        self.building = building
+app.register_blueprint(anomaly_bp, url_prefix='/api/anomalies')
 
 # Create tables 
 with app.app_context():
@@ -403,7 +378,116 @@ def predict_future():
         return jsonify(future_predictions)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+        
+@app.route('/api/anomalies/analyze', methods=['POST'])
+def analyze_building_anomalies():
+    """
+    Comprehensive endpoint for analyzing anomalies in building electricity consumption.
+    This endpoint combines detection, analysis, and optional storage in one place.
+    """
+    try:
+        data = request.get_json()
+        building = data.get('building')
+        year = data.get('year')
+        month = data.get('month', 0)
+        method = data.get('method', 'z_score')
+        threshold = float(data.get('threshold', 3.0))
+        store_results = data.get('store_results', True)
+        include_stats = data.get('include_stats', True)
+        
+        # Decode building name if it's URL encoded
+        building = unquote(building)
+        
+        # Get consumption data for the specified building and timeframe
+        if month == 0:  # Full year
+            start_date = datetime(year, 1, 1).date()
+            end_date = datetime(year + 1, 1, 1).date()
+        else:  # Specific month
+            start_date = datetime(year, month, 1).date()
+            if month == 12:
+                end_date = datetime(year + 1, 1, 1).date()
+            else:
+                end_date = datetime(year, month + 1, 1).date()
+        
+        # Query data from database
+        db_data = ElectricityData.query.filter(
+            ElectricityData.date >= start_date,
+            ElectricityData.date < end_date,
+            ElectricityData.building == building
+        ).order_by(ElectricityData.date).all()
+        
+        if not db_data:
+            return jsonify({'error': 'No data found for the specified parameters'}), 404
+        
+        # Format data for anomaly detection
+        formatted_data = [{
+            'date': entry.date,
+            'consumption': entry.consumption,
+            'building': entry.building
+        } for entry in db_data]
+        
+        # Use the AnomalyDetector class for detection
+        detector = AnomalyDetector()
+        anomalies = detector.detect_anomalies(formatted_data, method, threshold)
+        
+        # Store anomalies in database if requested
+        new_anomalies_count = 0
+        if store_results:
+            new_anomalies_count = detector.store_anomalies(anomalies)
+        
+        # Calculate additional statistics if requested
+        stats = {}
+        if include_stats:
+            # Calculate daily statistics
+            daily_consumption = {}
+            for entry in formatted_data:
+                date_str = entry['date'].strftime('%Y-%m-%d')
+                if date_str not in daily_consumption:
+                    daily_consumption[date_str] = []
+                daily_consumption[date_str].append(entry['consumption'])
+            
+            # Calculate mean consumption for each day
+            daily_means = {date: np.mean(values) for date, values in daily_consumption.items()}
+            
+            # Find days with highest and lowest mean consumption
+            if daily_means:
+                highest_day = max(daily_means.items(), key=lambda x: x[1])
+                lowest_day = min(daily_means.items(), key=lambda x: x[1])
+                
+                stats = {
+                    'total_days': len(daily_means),
+                    'days_with_anomalies': len(set(a['date'].strftime('%Y-%m-%d') for a in anomalies)),
+                    'highest_consumption_day': highest_day[0],
+                    'highest_consumption_value': highest_day[1],
+                    'lowest_consumption_day': lowest_day[0],
+                    'lowest_consumption_value': lowest_day[1],
+                    'building_overall_consumption': sum(entry['consumption'] for entry in formatted_data),
+                    'anomaly_percentage': (len(anomalies) / len(formatted_data)) * 100 if formatted_data else 0
+                }
+        
+        # Return results with formatted dates for display
+        for anomaly in anomalies:
+            anomaly['date'] = anomaly['date'].isoformat()
+        
+        response = {
+            'anomalies': anomalies,
+            'count': len(anomalies),
+            'new_count': new_anomalies_count,
+            'critical': sum(1 for a in anomalies if a['severity'] == 'Critical'),
+            'error': sum(1 for a in anomalies if a['severity'] == 'Error'),
+            'warning': sum(1 for a in anomalies if a['severity'] == 'Warning'),
+            'method': method,
+            'threshold': threshold
+        }
+        
+        if include_stats:
+            response['statistics'] = stats
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e), 'traceback': str(e.__traceback__)}), 500
 
 @app.route('/get-available-data', methods=['GET'])
 def get_available_data():
@@ -505,351 +589,3 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
-#ANOMALY ALERTS API ENDPOINTS
-class AnomalyAlert(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    building = db.Column(db.String(50), nullable=False)
-    consumption = db.Column(db.Float, nullable=False)
-    z_score = db.Column(db.Float, nullable=False)
-    severity = db.Column(db.String(20), nullable=False)
-    detection_method = db.Column(db.String(30), nullable=False)
-    is_acknowledged = db.Column(db.Boolean, default=False)
-    is_sdt = db.Column(db.Boolean, default=False)  # Scheduled downtime
-    is_cleared = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __init__(self, date, building, consumption, z_score, severity, detection_method):
-        self.date = date
-        self.building = building
-        self.consumption = consumption
-        self.z_score = z_score
-        self.severity = severity
-        self.detection_method = detection_method
-        self.is_acknowledged = False
-        self.is_sdt = False
-        self.is_cleared = False
-
-# Create tables if they don't exist
-with app.app_context():
-    db.create_all()
-
-def detect_anomalies(data, method="z_score", threshold=3.0):
-    """
-    Detect anomalies in electricity consumption data
-    
-    Args:
-        data: List of dictionaries with 'date' and 'consumption' keys
-        method: Detection method ('z_score', 'iqr', or 'rolling_mean')
-        threshold: Threshold for anomaly detection
-        
-    Returns:
-        List of anomalies with severity classification
-    """
-    if not data or len(data) < 3:
-        return []
-    
-    # Extract consumption values
-    consumption_values = np.array([float(item['consumption']) for item in data])
-    
-    anomalies = []
-    
-    if method == "z_score":
-        # Z-score method (how many standard deviations from the mean)
-        mean = np.mean(consumption_values)
-        std = np.std(consumption_values)
-        
-        if std == 0:  # Avoid division by zero
-            return []
-            
-        z_scores = abs((consumption_values - mean) / std)
-        
-        for i, (z_score, item) in enumerate(zip(z_scores, data)):
-            if z_score > threshold:
-                # Classify severity based on z-score
-                if z_score > threshold * 2:
-                    severity = "Critical"
-                elif z_score > threshold * 1.5:
-                    severity = "Error"
-                else:
-                    severity = "Warning"
-                    
-                anomalies.append({
-                    'date': item['date'],
-                    'consumption': item['consumption'],
-                    'z_score': float(z_score),
-                    'severity': severity,
-                    'building': item['building'],
-                    'detection_method': 'Z-Score'
-                })
-                
-    elif method == "iqr":
-        # Interquartile Range method
-        q1 = np.percentile(consumption_values, 25)
-        q3 = np.percentile(consumption_values, 75)
-        iqr = q3 - q1
-        lower_bound = q1 - threshold * iqr
-        upper_bound = q3 + threshold * iqr
-        
-        for i, item in enumerate(data):
-            consumption = float(item['consumption'])
-            if consumption < lower_bound or consumption > upper_bound:
-                # Calculate equivalent z-score for consistent severity classification
-                mean = np.mean(consumption_values)
-                std = np.std(consumption_values)
-                z_score = abs((consumption - mean) / std) if std > 0 else 0
-                
-                # Classify severity
-                if z_score > threshold * 2:
-                    severity = "Critical"
-                elif z_score > threshold * 1.5:
-                    severity = "Error"
-                else:
-                    severity = "Warning"
-                    
-                anomalies.append({
-                    'date': item['date'],
-                    'consumption': consumption,
-                    'z_score': float(z_score),
-                    'severity': severity,
-                    'building': item['building'],
-                    'detection_method': 'IQR'
-                })
-                
-    elif method == "rolling_mean":
-        # Rolling mean method (moving average)
-        window_size = max(3, len(consumption_values) // 10)  # Dynamic window size
-        
-        for i in range(window_size, len(consumption_values)):
-            window = consumption_values[i-window_size:i]
-            window_mean = np.mean(window)
-            window_std = np.std(window)
-            
-            if window_std == 0:  # Avoid division by zero
-                continue
-                
-            current_value = consumption_values[i]
-            z_score = abs((current_value - window_mean) / window_std)
-            
-            if z_score > threshold:
-                # Classify severity
-                if z_score > threshold * 2:
-                    severity = "Critical"
-                elif z_score > threshold * 1.5:
-                    severity = "Error"
-                else:
-                    severity = "Warning"
-                    
-                anomalies.append({
-                    'date': data[i]['date'],
-                    'consumption': current_value,
-                    'z_score': float(z_score),
-                    'severity': severity,
-                    'building': data[i]['building'],
-                    'detection_method': 'Rolling Mean'
-                })
-    
-    return anomalies
-
-@app.route('/analyze-anomalies', methods=['POST'])
-def analyze_anomalies():
-    """
-    Analyze building data for anomalies and store results
-    """
-    try:
-        data = request.get_json()
-        building = data.get('building')
-        year = data.get('year')
-        month = data.get('month', 0)
-        method = data.get('method', 'z_score')
-        threshold = float(data.get('threshold', 3.0))
-        
-        # Decode building name if it's URL encoded
-        building = unquote(building)
-        
-        # Get consumption data for the specified building and timeframe
-        if month == 0:  # Full year
-            start_date = datetime(year, 1, 1).date()
-            end_date = datetime(year + 1, 1, 1).date()
-        else:  # Specific month
-            start_date = datetime(year, month, 1).date()
-            if month == 12:
-                end_date = datetime(year + 1, 1, 1).date()
-            else:
-                end_date = datetime(year, month + 1, 1).date()
-        
-        # Query data from database
-        db_data = ElectricityData.query.filter(
-            ElectricityData.date >= start_date,
-            ElectricityData.date < end_date,
-            ElectricityData.building == building
-        ).order_by(ElectricityData.date).all()
-        
-        if not db_data:
-            return jsonify({'error': 'No data found for the specified parameters'}), 404
-        
-        # Format data for anomaly detection
-        formatted_data = [{
-            'date': entry.date,
-            'consumption': entry.consumption,
-            'building': entry.building
-        } for entry in db_data]
-        
-        # Detect anomalies
-        anomalies = detect_anomalies(formatted_data, method, threshold)
-        
-        # Store anomalies in database
-        for anomaly in anomalies:
-            # Check if this anomaly already exists
-            existing = AnomalyAlert.query.filter_by(
-                date=anomaly['date'],
-                building=anomaly['building'],
-                detection_method=anomaly['detection_method']
-            ).first()
-            
-            if existing:
-                # Update existing anomaly
-                existing.consumption = anomaly['consumption']
-                existing.z_score = anomaly['z_score']
-                existing.severity = anomaly['severity']
-            else:
-                # Create new anomaly alert
-                new_alert = AnomalyAlert(
-                    date=anomaly['date'],
-                    building=anomaly['building'],
-                    consumption=anomaly['consumption'],
-                    z_score=anomaly['z_score'],
-                    severity=anomaly['severity'],
-                    detection_method=anomaly['detection_method']
-                )
-                db.session.add(new_alert)
-        
-        db.session.commit()
-        
-        # Return results with formatted dates for display
-        for anomaly in anomalies:
-            anomaly['date'] = anomaly['date'].isoformat()
-        
-        return jsonify({
-            'anomalies': anomalies,
-            'count': len(anomalies),
-            'critical': sum(1 for a in anomalies if a['severity'] == 'Critical'),
-            'error': sum(1 for a in anomalies if a['severity'] == 'Error'),
-            'warning': sum(1 for a in anomalies if a['severity'] == 'Warning')
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/get-anomalies', methods=['GET'])
-def get_anomalies():
-    """
-    Get all anomalies with optional filtering
-    """
-    try:
-        # Get filter parameters
-        building = request.args.get('building', '')
-        severity = request.args.get('severity', '')
-        method = request.args.get('method', '')
-        acknowledged = request.args.get('acknowledged')
-        cleared = request.args.get('cleared')
-        sdt = request.args.get('sdt')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        
-        # Decode building name if it's URL encoded
-        if building:
-            building = unquote(building)
-        
-        # Build query
-        query = AnomalyAlert.query
-        
-        if building:
-            query = query.filter(AnomalyAlert.building == building)
-        if severity:
-            query = query.filter(AnomalyAlert.severity == severity)
-        if method:
-            query = query.filter(AnomalyAlert.detection_method == method)
-        if acknowledged is not None:
-            query = query.filter(AnomalyAlert.is_acknowledged == (acknowledged.lower() == 'true'))
-        if cleared is not None:
-            query = query.filter(AnomalyAlert.is_cleared == (cleared.lower() == 'true'))
-        if sdt is not None:
-            query = query.filter(AnomalyAlert.is_sdt == (sdt.lower() == 'true'))
-        
-        # Date filters
-        if start_date:
-            query = query.filter(AnomalyAlert.date >= datetime.strptime(start_date, '%Y-%m-%d').date())
-        if end_date:
-            query = query.filter(AnomalyAlert.date <= datetime.strptime(end_date, '%Y-%m-%d').date())
-        
-        # Execute query
-        alerts = query.order_by(AnomalyAlert.date.desc()).all()
-        
-        # Format results
-        results = []
-        for alert in alerts:
-            results.append({
-                'id': alert.id,
-                'date': alert.date.isoformat(),
-                'building': alert.building,
-                'consumption': alert.consumption,
-                'z_score': alert.z_score,
-                'severity': alert.severity,
-                'detection_method': alert.detection_method,
-                'is_acknowledged': alert.is_acknowledged,
-                'is_sdt': alert.is_sdt,
-                'is_cleared': alert.is_cleared,
-                'created_at': alert.created_at.isoformat() if alert.created_at else None
-            })
-        
-        # Get statistics
-        stats = {
-            'total': len(results),
-            'critical': sum(1 for r in results if r['severity'] == 'Critical'),
-            'error': sum(1 for r in results if r['severity'] == 'Error'),
-            'warning': sum(1 for r in results if r['severity'] == 'Warning'),
-            'acknowledged': sum(1 for r in results if r['is_acknowledged']),
-            'sdt': sum(1 for r in results if r['is_sdt'])
-        }
-        
-        return jsonify({
-            'alerts': results,
-            'stats': stats
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/update-anomaly-status', methods=['POST'])
-def update_anomaly_status():
-    """
-    Update the status of an anomaly alert (acknowledge, clear, or schedule downtime)
-    """
-    try:
-        data = request.get_json()
-        alert_id = data.get('id')
-        status_type = data.get('type')  # 'acknowledge', 'clear', or 'sdt'
-        status_value = data.get('value', True)  # Boolean
-        
-        alert = AnomalyAlert.query.get(alert_id)
-        if not alert:
-            return jsonify({'error': 'Alert not found'}), 404
-        
-        if status_type == 'acknowledge':
-            alert.is_acknowledged = status_value
-        elif status_type == 'clear':
-            alert.is_cleared = status_value
-        elif status_type == 'sdt':
-            alert.is_sdt = status_value
-        else:
-            return jsonify({'error': 'Invalid status type'}), 400
-        
-        db.session.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500

@@ -34,6 +34,7 @@ const AlertPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('past24h');
+  const [analysisStats, setAnalysisStats] = useState(null);
   
   // Month names lookup
   const monthNames = {
@@ -152,7 +153,7 @@ const AlertPage = () => {
       }
       
       // Fetch alerts from API
-      const response = await fetch(`http://127.0.0.1:5000/get-anomalies?${params}`);
+      const response = await fetch(`http://127.0.0.1:5000/api/anomalies/get-anomalies?${params}`);
       const data = await response.json();
       
       if (data.alerts) {
@@ -177,12 +178,13 @@ const AlertPage = () => {
     }
   };
   
-  // Run anomaly detection
+  // Run anomaly detection using the new endpoint
   const runAnomalyDetection = async () => {
     setIsLoading(true);
+    setAnalysisStats(null); // Reset previous stats
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/analyze-anomalies', {
+      const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -192,7 +194,9 @@ const AlertPage = () => {
           year: selectedYear,
           month: selectedMonth,
           method: detectionMethod,
-          threshold: thresholdValue
+          threshold: thresholdValue,
+          store_results: true,
+          include_stats: true
         })
       });
       
@@ -201,8 +205,13 @@ const AlertPage = () => {
       if (result.error) {
         alert(`Error: ${result.error}`);
       } else {
+        // Store the statistics for display
+        if (result.statistics) {
+          setAnalysisStats(result.statistics);
+        }
+        
         alert(`Anomaly analysis complete. Found ${result.count} anomalies (${result.critical} critical, ${result.error} error, ${result.warning} warning)`);
-        fetchAlerts();
+        fetchAlerts(); // Refresh the alerts list
       }
     } catch (error) {
       console.error('Error running anomaly detection:', error);
@@ -296,6 +305,11 @@ const AlertPage = () => {
     const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
     
     return `${date.toLocaleString()} (${diffHours} hours ago)`;
+  };
+  
+  // Format number with commas for thousands
+  const formatNumber = (num) => {
+    return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
   };
   
   return (
@@ -431,6 +445,39 @@ const AlertPage = () => {
                 {isLoading ? 'Processing...' : 'Run Anomaly Detection'}
               </button>
             </div>
+
+            {/* Analysis Statistics Panel */}
+            {analysisStats && (
+              <div className="analysis-stats-panel">
+                <h3>Analysis Results</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">Total Days Analyzed:</span>
+                    <span className="stat-value">{analysisStats.total_days}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Days with Anomalies:</span>
+                    <span className="stat-value">{analysisStats.days_with_anomalies}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Anomaly Percentage:</span>
+                    <span className="stat-value">{analysisStats.anomaly_percentage.toFixed(2)}%</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Total Consumption:</span>
+                    <span className="stat-value">{formatNumber(analysisStats.building_overall_consumption)} kWh</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Highest Consumption Day:</span>
+                    <span className="stat-value">{analysisStats.highest_consumption_day} ({formatNumber(analysisStats.highest_consumption_value)} kWh)</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Lowest Consumption Day:</span>
+                    <span className="stat-value">{analysisStats.lowest_consumption_day} ({formatNumber(analysisStats.lowest_consumption_value)} kWh)</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -604,67 +651,22 @@ const AlertPage = () => {
               alerts.map(alert => (
                 <tr 
                   key={alert.id} 
-                  className={`
-                    alert-row 
-                    severity-${alert.severity.toLowerCase()}
-                    ${alert.is_acknowledged ? 'acknowledged' : ''}
-                    ${alert.is_cleared ? 'cleared' : ''}
-                    ${alert.is_sdt ? 'sdt' : ''}
-                  `}
+                  className={`alert-row severity-${alert.severity.toLowerCase()}`}
                 >
-                  <td className="status-cell">
-                    {alert.is_acknowledged && <span className="status-icon ack">✓</span>}
-                    {alert.is_cleared && <span className="status-icon cleared">🗑️</span>}
-                    {alert.is_sdt && <span className="status-icon sdt">🕒</span>}
-                    {!alert.is_acknowledged && !alert.is_cleared && !alert.is_sdt && 
-                      <span className="status-icon new">New</span>
-                    }
+                  <td className="value-cell">
+                    {alert.actual_value !== undefined && alert.actual_value !== null
+                      ? alert.actual_value.toFixed(2)
+                      : 'N/A'}
                   </td>
-                  <td className={`severity-cell ${alert.severity.toLowerCase()}`}>
-                    {alert.severity === 'CRITICAL' && '⚠️ Critical'}
-                    {alert.severity === 'ERROR' && '❌ Error'}
-                    {alert.severity === 'WARNING' && '⚡ Warning'}
-                  </td>
-                  <td>{alert.building}</td>
-                  <td>{formatDate(alert.detection_time)}</td>
-                  <td className="value-cell">{alert.actual_value.toFixed(2)}</td>
                   <td className="range-cell">
-                    {alert.expected_low.toFixed(2)} - {alert.expected_high.toFixed(2)}
+                    {alert.expected_low !== undefined && alert.expected_low !== null
+                      ? alert.expected_low.toFixed(2)
+                      : 'N/A'} - 
+                    {alert.expected_high !== undefined && alert.expected_high !== null
+                      ? alert.expected_high.toFixed(2)
+                      : 'N/A'}
                   </td>
-                  <td>{alert.detection_method}</td>
-                  <td className="actions-cell">
-                    <button 
-                      className={`action-button ${alert.is_acknowledged ? 'active' : ''}`}
-                      onClick={() => updateAlertStatus(
-                        alert.id, 
-                        'acknowledge', 
-                        !alert.is_acknowledged
-                      )}
-                    >
-                      {alert.is_acknowledged ? 'Unacknowledge' : 'Acknowledge'}
-                    </button>
-                    <button 
-                      className={`action-button ${alert.is_sdt ? 'active' : ''}`}
-                      onClick={() => updateAlertStatus(
-                        alert.id, 
-                        'sdt', 
-                        !alert.is_sdt
-                      )}
-                    >
-                      {alert.is_sdt ? 'Remove SDT' : 'Set SDT'}
-                    </button>
-                    <button 
-                      className={`action-button ${alert.is_cleared ? 'active' : ''}`}
-                      onClick={() => updateAlertStatus(
-                        alert.id, 
-                        'clear', 
-                        !alert.is_cleared
-                      )}
-                      disabled={alert.is_cleared}
-                    >
-                      {alert.is_cleared ? 'Cleared' : 'Clear'}
-                    </button>
-                  </td>
+                  {/* Other cells */}
                 </tr>
               ))
             )}
