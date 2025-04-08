@@ -399,26 +399,47 @@ const Report = () => {
   const getPieChartData = () => {
     const labels = [];
     const data = [];
-    const colors = [
-      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#E7E9ED'
-    ]; // Predefined bright colors
-
+    const backgroundColor = [];
+    
+    // Generate a unique bright color for each building
     Object.entries(reportData.buildingStats).forEach(([building, stats], index) => {
       labels.push(building);
       data.push(stats.totalConsumption || 0);
+      
+      // Golden ratio conjugate to create visually distinct hues
+      const hue = (index * 0.618033988749895) % 1;
+      // High saturation and lightness for brightness
+      const saturation = 0.85 + Math.random() * 0.15; // 85-100%
+      const lightness = 0.5 + Math.random() * 0.2; // 50-70%
+      
+      // Convert HSL to hexadecimal color
+      const color = hslToHex(hue * 360, saturation * 100, lightness * 100);
+      backgroundColor.push(color);
     });
-
+    
     return {
       labels,
       datasets: [
         {
           data,
-          backgroundColor: colors,
+          backgroundColor,
           borderWidth: 1,
         },
       ],
     };
   };
+  
+  // Helper function to convert HSL to hex color format
+  function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
 
   // Force refresh the report (bypass cache)
   const handleRefreshData = () => {
