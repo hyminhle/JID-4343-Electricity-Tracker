@@ -375,6 +375,7 @@ const AlertPage = () => {
 
       {/* Filter Settings */}
       <div className="anomaly-settings-bar">
+        
         <button 
           className="settings-toggle" 
           onClick={() => setShowFilters(!showFilters)}
@@ -382,14 +383,6 @@ const AlertPage = () => {
           {showFilters ? 'Hide Filters' : 'Show Alert Filters'}
         </button>
         
-        {/* Add Refresh Button */}
-        <button 
-          className="refresh-button" 
-          onClick={runAnomalyDetection}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Analyzing...' : 'Run LOF Analysis'}
-        </button>
         
         {showFilters && (
           <div className="anomaly-settings-panel">
@@ -441,6 +434,14 @@ const AlertPage = () => {
             </div>
             
             <div className="settings-actions">
+              {/* Add Refresh Button */}
+              <button 
+                className="refresh-button" 
+                onClick={runAnomalyDetection}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Analyzing...' : 'Run LOF Analysis'}
+              </button>
               <button 
                 className="clear-filters-button" 
                 onClick={clearAllFilters}
@@ -498,8 +499,11 @@ const AlertPage = () => {
           <button className="search-button" onClick={fetchAlerts}>
             <span>🔍</span>
           </button>
+          
         </div>
+        
         <div className="filter-options">
+          
           <select 
             className="filter-button" 
             value={timeRange} 
