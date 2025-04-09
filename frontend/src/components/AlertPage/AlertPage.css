@@ -143,27 +143,69 @@
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+  gap: 10px;
 }
 
-.run-button {
-  padding: 10px 20px;
+.refresh-button {
+  padding: 8px 16px;
   background-color: var(--accent-color);
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 14px;
   transition: background-color 0.3s ease;
 }
 
-.run-button:hover {
+.refresh-button:hover:not(:disabled) {
   background-color: var(--accent-hover);
 }
 
-.run-button:disabled {
+.refresh-button:disabled {
   background-color: var(--sidebar-bg);
   cursor: not-allowed;
   color: var(--text-secondary);
+}
+
+/* Analysis Stats Panel */
+.analysis-stats-panel {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.analysis-stats-panel h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.stat-item {
+  background-color: var(--sidebar-bg);
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 /* Search and Filter Bar */
@@ -231,6 +273,7 @@
   color: var(--text-primary);
   position: relative;
   transition: all 0.3s ease;
+  min-width: 120px;
 }
 
 .filter-button:hover {
@@ -419,6 +462,12 @@
   text-align: right;
 }
 
+/* Building and Date Cells */
+.building-cell,
+.date-cell {
+  white-space: nowrap;
+}
+
 /* Actions Cell */
 .actions-cell {
   display: flex;
@@ -514,6 +563,10 @@
     grid-template-columns: 1fr;
   }
   
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
   .actions-cell {
     flex-direction: column;
   }
@@ -537,11 +590,15 @@
   .alert-table-container {
     overflow-x: auto;
   }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
   .stat-chips {
-    grid-template-columns: 1fr 1fr;
+    flex-direction: column;
   }
   
   .filter-options {
@@ -550,7 +607,7 @@
   
   .filter-button {
     flex: 1;
-    min-width: 120px;
+    min-width: 100px;
     font-size: 13px;
     padding: 8px 12px;
   }
@@ -559,5 +616,4 @@
     font-size: 11px;
     padding: 5px 10px;
   }
-}
-
+} 

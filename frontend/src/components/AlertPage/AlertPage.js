@@ -8,32 +8,23 @@ const AlertPage = () => {
     total: 0,
     critical: 0,
     error: 0,
-    warning: 0,
-    sdt: 0,
-    acknowledged: 0
+    warning: 0
   });
   
   // State for filtering and searching
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState({
-    acknowledged: 'No',
-    sdt: 'No',
-    cleared: 'No'
-  });
   
-  // State for anomaly detection settings
+  // State for filter settings
   const [availableData, setAvailableData] = useState({});
   const [buildingOptions, setBuildingOptions] = useState([]);
-  const [selectedBuilding, setSelectedBuilding] = useState('');
+  const [selectedBuilding, setSelectedBuilding] = useState('All Buildings');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(0); // 0 means all months
-  const [detectionMethod, setDetectionMethod] = useState('z_score');
-  const [thresholdValue, setThresholdValue] = useState(3.0);
   const [yearOptions, setYearOptions] = useState([]);
   const [monthOptions, setMonthOptions] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState('past24h');
+  const [timeRange, setTimeRange] = useState('all'); // Changed default to 'all'
   const [analysisStats, setAnalysisStats] = useState(null);
   
   // Month names lookup
@@ -52,38 +43,163 @@ const AlertPage = () => {
     localStorage.setItem('selectedBuilding', building);
   };
   
-  // Fetch available data on component mount
+  // Fetch available data and run initial anomaly detection on component mount
   useEffect(() => {
-    const fetchAvailableData = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:5000/get-available-data');
-        const data = await response.json();
-        setAvailableData(data);
-
-        // Extract building names from available data
-        const buildings = Object.keys(data).map(building => decodeURIComponent(building));
-        setBuildingOptions(buildings);
-        
-        // Try to get selected building from localStorage first
-        const savedBuilding = loadSelectedBuildingFromLocalStorage();
-        if (savedBuilding && buildings.includes(savedBuilding)) {
-          setSelectedBuilding(savedBuilding);
-        } else if (buildings.length > 0) {
-          setSelectedBuilding(buildings[0]);
-          saveSelectedBuildingToLocalStorage(buildings[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching available data:', error);
-      }
+    const initialize = async () => {
+      await fetchAvailableData();
+      await runInitialAnomalyDetection();
     };
     
-    fetchAvailableData();
-    fetchAlerts();
+    initialize();
   }, []);
+  
+  // Fetch available data
+  const fetchAvailableData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/get-available-data');
+      const data = await response.json();
+      setAvailableData(data);
+
+      // Extract building names from available data
+      const buildings = Object.keys(data).map(building => decodeURIComponent(building));
+      setBuildingOptions(['All Buildings', ...buildings]);
+      
+      // Try to get selected building from localStorage first
+      const savedBuilding = loadSelectedBuildingFromLocalStorage();
+      if (savedBuilding && buildings.includes(savedBuilding)) {
+        setSelectedBuilding(savedBuilding);
+      } else {
+        setSelectedBuilding('All Buildings');
+        saveSelectedBuildingToLocalStorage('All Buildings');
+      }
+      
+      return buildings.length > 0 ? buildings[0] : null;
+    } catch (error) {
+      console.error('Error fetching available data:', error);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Run anomaly detection
+  const runAnomalyDetection = async () => {
+    setIsLoading(true);
+
+    try {
+      const building = selectedBuilding === 'All Buildings' ? 
+        (buildingOptions.length > 1 ? buildingOptions[1] : '') : 
+        selectedBuilding;
+      
+      if (!building) {
+        console.error('No building available for anomaly detection');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Run anomaly detection with current parameters
+      const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          building: building,
+          year: selectedYear,
+          month: selectedMonth,
+          method: 'LOF', // Use Local Outlier Factor
+          threshold: 3.0,
+          store_results: true,
+          include_stats: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        console.error(`Error in anomaly detection: ${result.error}`);
+      } else {
+        // Store the statistics for display
+        if (result.statistics) {
+          setAnalysisStats(result.statistics);
+        }
+        
+        console.log(`Anomaly analysis complete. Found ${result.count} anomalies`);
+        
+        // Fetch alerts to display them
+        fetchAlerts();
+      }
+    } catch (error) {
+      console.error('Error running anomaly detection:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Run initial anomaly detection when app opens
+  const runInitialAnomalyDetection = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Wait a moment to ensure selectedBuilding is set
+      setTimeout(async () => {
+        const building = selectedBuilding === 'All Buildings' ? 
+          (buildingOptions.length > 1 ? buildingOptions[1] : '') : 
+          selectedBuilding;
+        
+        if (!building) {
+          console.error('No building available for anomaly detection');
+          setIsLoading(false);
+          return;
+        }
+        
+        const currentYear = new Date().getFullYear();
+        
+        // Run anomaly detection with default parameters
+        const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            building: building,
+            year: currentYear,
+            month: 0, // All months
+            method: 'LOF', // Use Local Outlier Factor as default
+            threshold: 3.0,
+            store_results: true,
+            include_stats: true
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.error) {
+          console.error(`Error in initial anomaly detection: ${result.error}`);
+        } else {
+          // Store the statistics for display
+          if (result.statistics) {
+            setAnalysisStats(result.statistics);
+          }
+          
+          console.log(`Initial anomaly analysis complete. Found ${result.count} anomalies`);
+          
+          // Fetch alerts to display them
+          fetchAlerts();
+        }
+        
+        setIsLoading(false);
+      }, 500);
+    } catch (error) {
+      console.error('Error running initial anomaly detection:', error);
+      setIsLoading(false);
+    }
+  };
   
   // Update year options when building changes
   useEffect(() => {
-    if (selectedBuilding && availableData[selectedBuilding]) {
+    if (selectedBuilding !== 'All Buildings' && availableData[selectedBuilding]) {
       const years = Object.keys(availableData[selectedBuilding])
         .map(year => parseInt(year))
         .sort((a, b) => b - a); // Sort in descending order
@@ -98,7 +214,7 @@ const AlertPage = () => {
   
   // Update month options when year changes
   useEffect(() => {
-    if (selectedBuilding && availableData[selectedBuilding] && 
+    if (selectedBuilding !== 'All Buildings' && availableData[selectedBuilding] && 
         availableData[selectedBuilding][selectedYear]) {
       const months = Object.keys(availableData[selectedBuilding][selectedYear])
         .map(month => parseInt(month))
@@ -120,20 +236,16 @@ const AlertPage = () => {
       // Prepare filter parameters
       const params = new URLSearchParams();
       
-      if (selectedBuilding) {
+      if (selectedBuilding && selectedBuilding !== 'All Buildings') {
         params.append('building', selectedBuilding);
       }
       
-      if (activeFilters.acknowledged) {
-        params.append('acknowledged', activeFilters.acknowledged === 'Yes');
+      if (selectedYear) {
+        params.append('year', selectedYear);
       }
       
-      if (activeFilters.sdt) {
-        params.append('sdt', activeFilters.sdt === 'Yes');
-      }
-      
-      if (activeFilters.cleared) {
-        params.append('cleared', activeFilters.cleared === 'Yes');
+      if (selectedMonth !== 0) {
+        params.append('month', selectedMonth);
       }
       
       // Add time range filter
@@ -163,8 +275,8 @@ const AlertPage = () => {
           const query = searchQuery.toLowerCase();
           filteredAlerts = filteredAlerts.filter(alert => 
             alert.building.toLowerCase().includes(query) ||
-            alert.severity.toLowerCase().includes(query) ||
-            alert.detection_method.toLowerCase().includes(query)
+            alert.severity.toLowerCase().includes(query)
+            // Removed detection_method from the filter
           );
         }
         
@@ -178,96 +290,17 @@ const AlertPage = () => {
     }
   };
   
-  // Run anomaly detection using the new endpoint
-  const runAnomalyDetection = async () => {
-    setIsLoading(true);
-    setAnalysisStats(null); // Reset previous stats
-    
-    try {
-      const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          building: selectedBuilding,
-          year: selectedYear,
-          month: selectedMonth,
-          method: detectionMethod,
-          threshold: thresholdValue,
-          store_results: true,
-          include_stats: true
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.error) {
-        alert(`Error: ${result.error}`);
-      } else {
-        // Store the statistics for display
-        if (result.statistics) {
-          setAnalysisStats(result.statistics);
-        }
-        
-        alert(`Anomaly analysis complete. Found ${result.count} anomalies (${result.critical} critical, ${result.error} error, ${result.warning} warning)`);
-        fetchAlerts(); // Refresh the alerts list
-      }
-    } catch (error) {
-      console.error('Error running anomaly detection:', error);
-      alert('Error running anomaly detection. Please check console for details.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Handle alert status update (acknowledge, clear, SDT)
-  const updateAlertStatus = async (alertId, statusType, statusValue) => {
-    try {
-      const response = await fetch('http://127.0.0.1:5000/update-anomaly-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          id: alertId,
-          type: statusType,
-          value: statusValue
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Update the alert in the UI
-        setAlerts(alerts.map(alert => {
-          if (alert.id === alertId) {
-            return {
-              ...alert,
-              is_acknowledged: statusType === 'acknowledge' ? statusValue : alert.is_acknowledged,
-              is_cleared: statusType === 'clear' ? statusValue : alert.is_cleared,
-              is_sdt: statusType === 'sdt' ? statusValue : alert.is_sdt
-            };
-          }
-          return alert;
-        }));
-        
-        // Refresh stats
-        fetchAlerts();
-      }
-    } catch (error) {
-      console.error('Error updating alert status:', error);
-    }
-  };
+  // Apply filters when they change
+  useEffect(() => {
+    fetchAlerts();
+  }, [selectedBuilding, selectedYear, selectedMonth, timeRange]);
   
   // Handle filter change
   const handleFilterChange = (filterName, value) => {
-    setActiveFilters({
-      ...activeFilters,
-      [filterName]: value
-    });
+    setSearchQuery('');
+    setSelectedMonth(0);
     
-    // Apply filters
+    // Apply changes
     setTimeout(() => {
       fetchAlerts();
     }, 100);
@@ -275,12 +308,11 @@ const AlertPage = () => {
   
   // Clear all filters
   const clearAllFilters = () => {
-    setActiveFilters({
-      acknowledged: 'No',
-      sdt: 'No',
-      cleared: 'No'
-    });
+    setSelectedBuilding('All Buildings');
+    saveSelectedBuildingToLocalStorage('All Buildings');
     setSearchQuery('');
+    setSelectedMonth(0);
+    setTimeRange('all');
     
     // Apply changes
     setTimeout(() => {
@@ -291,20 +323,28 @@ const AlertPage = () => {
   // Handle time range change
   const handleTimeRangeChange = (range) => {
     setTimeRange(range);
-    
-    // Apply changes
-    setTimeout(() => {
-      fetchAlerts();
-    }, 100);
   };
   
-  // Format date for display
+  // Format date for display - now includes full date
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
     const date = new Date(dateString);
     const now = new Date();
     const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
     
-    return `${date.toLocaleString()} (${diffHours} hours ago)`;
+    const formattedDate = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    const formattedTime = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return `${formattedDate} ${formattedTime} (${diffHours} hours ago)`;
   };
   
   // Format number with commas for thousands
@@ -330,31 +370,32 @@ const AlertPage = () => {
             <span className="stat-icon">⚡</span>
             <span>{alertStats.warning} Warning</span>
           </div>
-          <div className="stat-chip sdt">
-            <span className="stat-icon">🕒</span>
-            <span>{alertStats.sdt} SDT</span>
-          </div>
-          <div className="stat-chip acknowledged">
-            <span className="stat-icon">✓</span>
-            <span>{alertStats.acknowledged} Acknowledged</span>
-          </div>
         </div>
       </div>
 
-      {/* Anomaly Detection Settings */}
+      {/* Filter Settings */}
       <div className="anomaly-settings-bar">
         <button 
           className="settings-toggle" 
-          onClick={() => setShowSettings(!showSettings)}
+          onClick={() => setShowFilters(!showFilters)}
         >
-          {showSettings ? 'Hide Settings' : 'Show Anomaly Detection Settings'}
+          {showFilters ? 'Hide Filters' : 'Show Alert Filters'}
         </button>
         
-        {showSettings && (
+        {/* Add Refresh Button */}
+        <button 
+          className="refresh-button" 
+          onClick={runAnomalyDetection}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Analyzing...' : 'Run LOF Analysis'}
+        </button>
+        
+        {showFilters && (
           <div className="anomaly-settings-panel">
             <div className="settings-grid">
               <div className="settings-group">
-                <h3>Building & Time Period</h3>
+                <h3>Filter Alerts</h3>
                 <div className="settings-row">
                   <label>Building:</label>
                   <select 
@@ -375,6 +416,7 @@ const AlertPage = () => {
                   <select 
                     value={selectedYear} 
                     onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    disabled={selectedBuilding === 'All Buildings'}
                   >
                     {yearOptions.map(year => (
                       <option key={year} value={year}>{year}</option>
@@ -387,6 +429,7 @@ const AlertPage = () => {
                   <select 
                     value={selectedMonth} 
                     onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                    disabled={selectedBuilding === 'All Buildings'}
                   >
                     <option value={0}>All Months</option>
                     {monthOptions.map(month => (
@@ -395,54 +438,14 @@ const AlertPage = () => {
                   </select>
                 </div>
               </div>
-              
-              <div className="settings-group">
-                <h3>Detection Method</h3>
-                <div className="settings-row">
-                  <label>Method:</label>
-                  <select 
-                    value={detectionMethod} 
-                    onChange={(e) => setDetectionMethod(e.target.value)}
-                  >
-                    <option value="z_score">Z-Score (Standard Deviation)</option>
-                    <option value="iqr">IQR (Interquartile Range)</option>
-                    <option value="rolling_mean">Rolling Mean</option>
-                  </select>
-                </div>
-                
-                <div className="settings-row">
-                  <label>Threshold:</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="10" 
-                    step="0.1"
-                    value={thresholdValue} 
-                    onChange={(e) => setThresholdValue(parseFloat(e.target.value))}
-                  />
-                </div>
-                
-                <div className="settings-description">
-                  {detectionMethod === 'z_score' && (
-                    <p>Z-Score method detects points that are multiple standard deviations away from the mean. Lower threshold = more anomalies.</p>
-                  )}
-                  {detectionMethod === 'iqr' && (
-                    <p>IQR method detects points outside the interquartile range. Works well for skewed distributions.</p>
-                  )}
-                  {detectionMethod === 'rolling_mean' && (
-                    <p>Rolling Mean method compares each point to the average of previous points. Good for detecting trend changes.</p>
-                  )}
-                </div>
-              </div>
             </div>
             
             <div className="settings-actions">
               <button 
-                className="run-button" 
-                onClick={runAnomalyDetection}
-                disabled={isLoading}
+                className="clear-filters-button" 
+                onClick={clearAllFilters}
               >
-                {isLoading ? 'Processing...' : 'Run Anomaly Detection'}
+                Reset Filters
               </button>
             </div>
 
@@ -502,43 +505,11 @@ const AlertPage = () => {
             value={timeRange} 
             onChange={(e) => handleTimeRangeChange(e.target.value)}
           >
+            <option value="all">All Time</option>
             <option value="past24h">Past 24 hours</option>
             <option value="past7d">Past 7 days</option>
             <option value="past30d">Past 30 days</option>
-            <option value="all">All Time</option>
           </select>
-          <button className="filter-button">
-            Detection Method ▼
-            <div className="dropdown-menu">
-              <div className="dropdown-item">
-                <input 
-                  type="checkbox" 
-                  id="method-zscore" 
-                  checked={true}
-                  onChange={() => {}} 
-                />
-                <label htmlFor="method-zscore">Z-Score</label>
-              </div>
-              <div className="dropdown-item">
-                <input 
-                  type="checkbox" 
-                  id="method-iqr" 
-                  checked={true}
-                  onChange={() => {}} 
-                />
-                <label htmlFor="method-iqr">IQR</label>
-              </div>
-              <div className="dropdown-item">
-                <input 
-                  type="checkbox" 
-                  id="method-rolling" 
-                  checked={true}
-                  onChange={() => {}} 
-                />
-                <label htmlFor="method-rolling">Rolling Mean</label>
-              </div>
-            </div>
-          </button>
           <button className="filter-button">
             Severity ▼
             <div className="dropdown-menu">
@@ -571,44 +542,6 @@ const AlertPage = () => {
               </div>
             </div>
           </button>
-          <button className="filter-button">
-            Status ▼
-            <div className="dropdown-menu">
-              <div className="dropdown-item">
-                <select 
-                  id="filter-acknowledged"
-                  value={activeFilters.acknowledged}
-                  onChange={(e) => handleFilterChange('acknowledged', e.target.value)}
-                >
-                  <option value="All">Any Acknowledged</option>
-                  <option value="Yes">Acknowledged: Yes</option>
-                  <option value="No">Acknowledged: No</option>
-                </select>
-              </div>
-              <div className="dropdown-item">
-                <select 
-                  id="filter-sdt"
-                  value={activeFilters.sdt}
-                  onChange={(e) => handleFilterChange('sdt', e.target.value)}
-                >
-                  <option value="All">Any SDT</option>
-                  <option value="Yes">SDT: Yes</option>
-                  <option value="No">SDT: No</option>
-                </select>
-              </div>
-              <div className="dropdown-item">
-                <select 
-                  id="filter-cleared"
-                  value={activeFilters.cleared}
-                  onChange={(e) => handleFilterChange('cleared', e.target.value)}
-                >
-                  <option value="All">Any Cleared</option>
-                  <option value="Yes">Cleared: Yes</option>
-                  <option value="No">Cleared: No</option>
-                </select>
-              </div>
-            </div>
-          </button>
           <button 
             className="clear-filters-button" 
             onClick={clearAllFilters}
@@ -623,27 +556,26 @@ const AlertPage = () => {
         <table className="alert-table">
           <thead>
             <tr>
-              <th>Status</th>
               <th>Severity</th>
               <th>Building</th>
+              <th>Date</th>
               <th>Detection Time</th>
               <th>Value</th>
               <th>Expected Range</th>
-              <th>Method</th>
-              <th>Actions</th>
+              {/* Removed Method header */}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="8" className="loading-cell">
+                <td colSpan="6" className="loading-cell">
                   <div className="loading-spinner"></div>
                   <p>Loading alerts...</p>
                 </td>
               </tr>
             ) : alerts.length === 0 ? (
               <tr>
-                <td colSpan="8" className="empty-cell">
+                <td colSpan="6" className="empty-cell">
                   <p>No alerts found matching your filters.</p>
                 </td>
               </tr>
@@ -653,20 +585,21 @@ const AlertPage = () => {
                   key={alert.id} 
                   className={`alert-row severity-${alert.severity.toLowerCase()}`}
                 >
+                  <td className="severity-cell">{alert.severity}</td>
+                  <td className="building-cell">{alert.building}</td>
+                  <td className="date-cell">{alert.date}</td>
+                  <td className="date-cell">{formatDate(alert.detection_time || alert.created_at)}</td>
                   <td className="value-cell">
                     {alert.actual_value !== undefined && alert.actual_value !== null
                       ? alert.actual_value.toFixed(2)
-                      : 'N/A'}
+                      : alert.consumption ? alert.consumption.toFixed(2) : 'N/A'}
                   </td>
                   <td className="range-cell">
                     {alert.expected_low !== undefined && alert.expected_low !== null
-                      ? alert.expected_low.toFixed(2)
-                      : 'N/A'} - 
-                    {alert.expected_high !== undefined && alert.expected_high !== null
-                      ? alert.expected_high.toFixed(2)
+                      ? `${alert.expected_low.toFixed(2)} - ${alert.expected_high.toFixed(2)}`
                       : 'N/A'}
                   </td>
-                  {/* Other cells */}
+                  {/* Removed Method column */}
                 </tr>
               ))
             )}
