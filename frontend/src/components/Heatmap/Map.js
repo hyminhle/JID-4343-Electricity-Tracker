@@ -251,20 +251,20 @@ const loadSelectedBuildingFromLocalStorage = () => {
   
           // All building sizes increased by 1.5x
           const buildingSizes = {
-            'Building 110': 0.00052,   // Was 0.00035
-            'Building 121': 0.00045,   // Was 0.00030
-            'Building 200':   0.00022,   // Was 0.00015
-            'Building 210':   0.00037,   // Was 0.00025
-            'Building 300':   0.00015,   // Was 0.00010
+            'Building 110': 0.00048,   // Was 0.00035
+            'Building 121': 0.00048,   // Was 0.00030
+            'Building 200':   0.00048,   // Was 0.00015
+            'Building 210':   0.00048,   // Was 0.00025
+            'Building 300':   0.00048,   // Was 0.00010
             'Building 525':   0.00048,   // Was 0.00032
-            'Building 545':   0.00027,   // Was 0.00018
-            'Building 555':   0.00033,   // Was 0.00022
-            'Building 125':   0.00018,   // Was 0.00012
-            'Building 145':   0.00042,   // Was 0.00028
-            'Building 150':   0.00030,   // Was 0.00020
-            'Building 155':   0.00024,    // Was 0.00016
-            'Building 170':   0.00034,    // Was 0.00016
-            'Building 180':   0.00034    // Was 0.00016
+            'Building 545':   0.00048,   // Was 0.00018
+            'Building 555':   0.00048,   // Was 0.00022
+            'Building 125':   0.00048,   // Was 0.00012
+            'Building 145':   0.00048,   // Was 0.00028
+            'Building 150':   0.00048,   // Was 0.00020
+            'Building 155':   0.00048,    // Was 0.00016
+            'Building 170':   0.00048,    // Was 0.00016
+            'Building 180':   0.00048    // Was 0.00016
           };
   
           // Keep the same consumption-based colors
@@ -339,20 +339,20 @@ const loadSelectedBuildingFromLocalStorage = () => {
 
         // All building sizes increased by 1.5x
         const buildingSizes = {
-          'Building 110': 0.00052,   // Was 0.00035
-          'Building 121': 0.00045,   // Was 0.00030
-          'Building 200':   0.00022,   // Was 0.00015
-          'Building 210':   0.00037,   // Was 0.00025
-          'Building 300':   0.00015,   // Was 0.00010
+          'Building 110': 0.00048,   // Was 0.00035
+          'Building 121': 0.00048,   // Was 0.00030
+          'Building 200':   0.00048,   // Was 0.00015
+          'Building 210':   0.00048,   // Was 0.00025
+          'Building 300':   0.00048,   // Was 0.00010
           'Building 525':   0.00048,   // Was 0.00032
-          'Building 545':   0.00027,   // Was 0.00018
-          'Building 555':   0.00033,   // Was 0.00022
-          'Building 125':   0.00018,   // Was 0.00012
-          'Building 145':   0.00042,   // Was 0.00028
-          'Building 150':   0.00030,   // Was 0.00020
-          'Building 155':   0.00024,    // Was 0.00016
-          'Building 170':   0.00034,    // Was 0.00016
-          'Building 180':   0.00034    // Was 0.00016
+          'Building 545':   0.00048,   // Was 0.00018
+          'Building 555':   0.00048,   // Was 0.00022
+          'Building 125':   0.00048,   // Was 0.00012
+          'Building 145':   0.00048,   // Was 0.00028
+          'Building 150':   0.00048,   // Was 0.00020
+          'Building 155':   0.00048,    // Was 0.00016
+          'Building 170':   0.00048,    // Was 0.00016
+          'Building 180':   0.00048    // Was 0.00016
         };
 
         // Keep the same consumption-based colors

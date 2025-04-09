@@ -84,18 +84,18 @@ const MapWidget = () => {
       };
 
       const buildingSizes = {
-        'Building 110': 0.00052,
-        'Building 121': 0.00045,
-        'Building 200': 0.00022,
-        'Building 210': 0.00037,
-        'Building 300': 0.00015,
+        'Building 110': 0.00048,
+        'Building 121': 0.00048,
+        'Building 200': 0.00048,
+        'Building 210': 0.00048,
+        'Building 300': 0.00048,
         'Building 525': 0.00048,
-        'Building 545': 0.00027,
-        'Building 555': 0.00033,
-        'Building 125': 0.00018,
-        'Building 145': 0.00042,
-        'Building 150': 0.00030,
-        'Building 155': 0.00024,
+        'Building 545': 0.00048,
+        'Building 555': 0.00048,
+        'Building 125': 0.00048,
+        'Building 145': 0.00048,
+        'Building 150': 0.00048,
+        'Building 155': 0.00048,
       };
 
       const newBuildings = {};
