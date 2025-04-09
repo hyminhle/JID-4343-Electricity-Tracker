@@ -276,7 +276,6 @@ const AlertPage = () => {
           filteredAlerts = filteredAlerts.filter(alert => 
             alert.building.toLowerCase().includes(query) ||
             alert.severity.toLowerCase().includes(query)
-            // Removed detection_method from the filter
           );
         }
         
@@ -565,8 +564,6 @@ const AlertPage = () => {
               <th>Date</th>
               <th>Detection Time</th>
               <th>Value</th>
-              <th>Expected Range</th>
-              {/* Removed Method header */}
             </tr>
           </thead>
           <tbody>
@@ -601,7 +598,7 @@ const AlertPage = () => {
                   <td className="range-cell">
                     {alert.expected_low !== undefined && alert.expected_low !== null
                       ? `${alert.expected_low.toFixed(2)} - ${alert.expected_high.toFixed(2)}`
-                      : 'N/A'}
+                      : ''}
                   </td>
                   {/* Removed Method column */}
                 </tr>
