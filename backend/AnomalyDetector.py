@@ -5,10 +5,10 @@ from sklearn.neighbors import LocalOutlierFactor
 
 class AnomalyDetector:
     def __init__(self):
-        # No need for methods dictionary anymore since we're only using LOF
+    
         pass
     
-    def detect_anomalies(self, data, n_neighbors=20, contamination=0.2):
+    def detect_anomalies(self, data, n_neighbors=100, contamination=1):
         """
         Detect anomalies in electricity consumption data using Local Outlier Factor (LOF)
         
@@ -18,7 +18,7 @@ class AnomalyDetector:
             contamination: Expected proportion of outliers in the data (default=0.2)
             
         Returns:
-            List of anomalies with severity classification
+            List of anomalies with severity classification (Critical or Warning only)
         """
         if not data or len(data) < 3:
             return []
@@ -39,7 +39,7 @@ class AnomalyDetector:
                 # Normalize it to make classification consistent
                 normalized_score = abs(score)
                 
-                # Classify severity based on normalized LOF score
+                # Classify severity based on normalized LOF score - now only Critical or Warning
                 severity = self._classify_severity(normalized_score)
                 
                 anomalies.append({
@@ -54,15 +54,9 @@ class AnomalyDetector:
         return anomalies
     
     def _classify_severity(self, lof_score):
-        """Classify the severity of an anomaly based on its LOF score"""
-        # LOF scores are typically negative, with more negative values indicating stronger outliers
-        # We've already converted to absolute value in the calling function
-        
-        # Adjusted thresholds to make more points classified as higher severity
-        if lof_score > 1.35:
+        """Classify the severity of an anomaly based on its LOF score - only Critical or Warning"""
+        if lof_score > 1.1:  # Previously the threshold for "Error"
             return "Critical"
-        elif lof_score > 1.1:
-            return "Error"
         else:
             return "Warning"
     
