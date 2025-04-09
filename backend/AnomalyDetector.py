@@ -8,14 +8,14 @@ class AnomalyDetector:
         # No need for methods dictionary anymore since we're only using LOF
         pass
     
-    def detect_anomalies(self, data, n_neighbors=20, contamination=0.1):
+    def detect_anomalies(self, data, n_neighbors=20, contamination=0.2):
         """
         Detect anomalies in electricity consumption data using Local Outlier Factor (LOF)
         
         Args:
             data: List of dictionaries with 'date', 'consumption', and 'building' keys
             n_neighbors: Number of neighbors to consider for LOF (default=20)
-            contamination: Expected proportion of outliers in the data (default=0.1)
+            contamination: Expected proportion of outliers in the data (default=0.2)
             
         Returns:
             List of anomalies with severity classification
@@ -26,7 +26,7 @@ class AnomalyDetector:
         # Extract consumption values and reshape for sklearn
         consumption_values = np.array([float(item['consumption']) for item in data]).reshape(-1, 1)
         
-        # Apply LOF algorithm
+        # Apply LOF algorithm with higher contamination value
         clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=contamination)
         y_pred = clf.fit_predict(consumption_values)
         outlier_scores = clf.negative_outlier_factor_
@@ -58,11 +58,10 @@ class AnomalyDetector:
         # LOF scores are typically negative, with more negative values indicating stronger outliers
         # We've already converted to absolute value in the calling function
         
-        # Define thresholds for severity classification
-        # These thresholds might need adjustment based on your specific data
-        if lof_score > 1.5:
+        # Adjusted thresholds to make more points classified as higher severity
+        if lof_score > 1.35:
             return "Critical"
-        elif lof_score > 1.2:
+        elif lof_score > 1.1:
             return "Error"
         else:
             return "Warning"
