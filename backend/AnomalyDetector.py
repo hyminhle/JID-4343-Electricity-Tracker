@@ -1,23 +1,21 @@
 import numpy as np
 from datetime import datetime
 from models import AnomalyAlert, db
+from sklearn.neighbors import LocalOutlierFactor
 
 class AnomalyDetector:
     def __init__(self):
-        self.methods = {
-            "z_score": self._z_score_method,
-            "iqr": self._iqr_method,
-            "rolling_mean": self._rolling_mean_method
-        }
+        # No need for methods dictionary anymore since we're only using LOF
+        pass
     
-    def detect_anomalies(self, data, method="z_score", threshold=3.0):
+    def detect_anomalies(self, data, n_neighbors=20, contamination=0.1):
         """
-        Detect anomalies in electricity consumption data
+        Detect anomalies in electricity consumption data using Local Outlier Factor (LOF)
         
         Args:
-            data: List of dictionaries with 'date' and 'consumption' keys
-            method: Detection method ('z_score', 'iqr', or 'rolling_mean')
-            threshold: Threshold for anomaly detection
+            data: List of dictionaries with 'date', 'consumption', and 'building' keys
+            n_neighbors: Number of neighbors to consider for LOF (default=20)
+            contamination: Expected proportion of outliers in the data (default=0.1)
             
         Returns:
             List of anomalies with severity classification
@@ -25,117 +23,46 @@ class AnomalyDetector:
         if not data or len(data) < 3:
             return []
         
-        # Call the appropriate method based on the requested detection algorithm
-        if method in self.methods:
-            return self.methods[method](data, threshold)
-        else:
-            # Default to z-score if method not found
-            return self._z_score_method(data, threshold)
-    
-    def _z_score_method(self, data, threshold):
-        """Z-score anomaly detection method"""
-        # Extract consumption values
-        consumption_values = np.array([float(item['consumption']) for item in data])
+        # Extract consumption values and reshape for sklearn
+        consumption_values = np.array([float(item['consumption']) for item in data]).reshape(-1, 1)
         
-        mean = np.mean(consumption_values)
-        std = np.std(consumption_values)
+        # Apply LOF algorithm
+        clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=contamination)
+        y_pred = clf.fit_predict(consumption_values)
+        outlier_scores = clf.negative_outlier_factor_
         
-        if std == 0:  # Avoid division by zero
-            return []
-            
-        z_scores = abs((consumption_values - mean) / std)
-        
+        # Find outliers (LOF returns -1 for outliers, 1 for inliers)
         anomalies = []
-        for i, (z_score, item) in enumerate(zip(z_scores, data)):
-            if z_score > threshold:
-                # Classify severity based on z-score
-                severity = self._classify_severity(z_score, threshold)
-                    
+        for i, (pred, score, item) in enumerate(zip(y_pred, outlier_scores, data)):
+            if pred == -1:  # This is an outlier
+                # Convert LOF score to positive severity measure (more negative = more anomalous)
+                # Normalize it to make classification consistent
+                normalized_score = abs(score)
+                
+                # Classify severity based on normalized LOF score
+                severity = self._classify_severity(normalized_score)
+                
                 anomalies.append({
                     'date': item['date'],
-                    'consumption': item['consumption'],
-                    'z_score': float(z_score),
+                    'consumption': float(item['consumption']),
+                    'lof_score': float(normalized_score),
                     'severity': severity,
                     'building': item['building'],
-                    'detection_method': 'Z-Score'
+                    'detection_method': 'LOF'
                 })
         
         return anomalies
     
-    def _iqr_method(self, data, threshold):
-        """Interquartile Range anomaly detection method"""
-        # Extract consumption values
-        consumption_values = np.array([float(item['consumption']) for item in data])
+    def _classify_severity(self, lof_score):
+        """Classify the severity of an anomaly based on its LOF score"""
+        # LOF scores are typically negative, with more negative values indicating stronger outliers
+        # We've already converted to absolute value in the calling function
         
-        q1 = np.percentile(consumption_values, 25)
-        q3 = np.percentile(consumption_values, 75)
-        iqr = q3 - q1
-        lower_bound = q1 - threshold * iqr
-        upper_bound = q3 + threshold * iqr
-        
-        anomalies = []
-        for i, item in enumerate(data):
-            consumption = float(item['consumption'])
-            if consumption < lower_bound or consumption > upper_bound:
-                # Calculate equivalent z-score for consistent severity classification
-                mean = np.mean(consumption_values)
-                std = np.std(consumption_values)
-                z_score = abs((consumption - mean) / std) if std > 0 else 0
-                
-                # Classify severity
-                severity = self._classify_severity(z_score, threshold)
-                    
-                anomalies.append({
-                    'date': item['date'],
-                    'consumption': consumption,
-                    'z_score': float(z_score),
-                    'severity': severity,
-                    'building': item['building'],
-                    'detection_method': 'IQR'
-                })
-        
-        return anomalies
-    
-    def _rolling_mean_method(self, data, threshold):
-        """Rolling mean anomaly detection method"""
-        # Extract consumption values
-        consumption_values = np.array([float(item['consumption']) for item in data])
-        
-        # Dynamic window size
-        window_size = max(3, len(consumption_values) // 10)
-        
-        anomalies = []
-        for i in range(window_size, len(consumption_values)):
-            window = consumption_values[i-window_size:i]
-            window_mean = np.mean(window)
-            window_std = np.std(window)
-            
-            if window_std == 0:  # Avoid division by zero
-                continue
-                
-            current_value = consumption_values[i]
-            z_score = abs((current_value - window_mean) / window_std)
-            
-            if z_score > threshold:
-                # Classify severity
-                severity = self._classify_severity(z_score, threshold)
-                    
-                anomalies.append({
-                    'date': data[i]['date'],
-                    'consumption': current_value,
-                    'z_score': float(z_score),
-                    'severity': severity,
-                    'building': data[i]['building'],
-                    'detection_method': 'Rolling Mean'
-                })
-        
-        return anomalies
-    
-    def _classify_severity(self, z_score, threshold):
-        """Classify the severity of an anomaly based on its z-score"""
-        if z_score > threshold * 2:
+        # Define thresholds for severity classification
+        # These thresholds might need adjustment based on your specific data
+        if lof_score > 1.5:
             return "Critical"
-        elif z_score > threshold * 1.5:
+        elif lof_score > 1.2:
             return "Error"
         else:
             return "Warning"
@@ -163,7 +90,7 @@ class AnomalyDetector:
             if existing:
                 # Update existing anomaly
                 existing.consumption = anomaly['consumption']
-                existing.z_score = anomaly['z_score']
+                existing.z_score = anomaly.get('lof_score', 0)  # Store LOF score in z_score field
                 existing.severity = anomaly['severity']
             else:
                 # Create new anomaly alert
@@ -171,7 +98,7 @@ class AnomalyDetector:
                     date=anomaly['date'],
                     building=anomaly['building'],
                     consumption=anomaly['consumption'],
-                    z_score=anomaly['z_score'],
+                    z_score=anomaly.get('lof_score', 0),  # Store LOF score in z_score field
                     severity=anomaly['severity'],
                     detection_method=anomaly['detection_method']
                 )
