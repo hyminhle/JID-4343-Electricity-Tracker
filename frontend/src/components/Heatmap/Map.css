@@ -350,3 +350,27 @@
 [data-theme="dark"] .consumption-value.bad {
   color: #f87171; /* Brighter red for dark mode */
 }
+
+.edit-buildings-list {
+  margin-top: 20px;
+}
+
+.edit-building-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.delete-button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background-color: #ff1a1a;
+}
