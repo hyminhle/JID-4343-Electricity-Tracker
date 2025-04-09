@@ -5,6 +5,7 @@ import ChartContainer from './LineGraph/ChartContainer';
 import MapWidget from './Heatmap/MapWidget';
 import CalendarWidget from './CalendarWidget';
 import ReportWidget from './ReportWidget';
+import ReportSummaryWidget from './ReportSummaryWidget';
 
 const WIDGET_TYPES = {
   ENERGY_USAGE: 'Energy-Usage-Linegraph',
@@ -288,63 +289,18 @@ const Dashboard = () => {
           </div>
         );
         
-      case WIDGET_TYPES.REPORT_SUMMARY:
-        return (
-          <div 
-            key={widget.id} 
-            className={`dashboard-card Report-Summary ${dragClass} ${dropTargetClass} ${customizingClass}`}
-            {...dragAttributes}
-          >
-            <div className="card-header">
-              <h2>Monthly Report</h2>
-              <div className="card-actions">
-                <button className="icon-button">
-                  <svg viewBox="0 0 24 24" width="18" height="18">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                  </svg>
-                </button>
-                {isCustomizing && (
-                  <button 
-                    className="widget-remove-btn" 
-                    onClick={() => toggleWidgetVisibility(widget.id)}
-                    title="Hide Widget"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="card-content">
-              <div className="report-highlights">
-                <div className="highlight-item">
-                  <span className="highlight-label">Total Usage</span>
-                  <span className="highlight-value">920 kWh</span>
-                  <span className="highlight-change increase">+5.2%</span>
-                </div>
-                <div className="highlight-item">
-                  <span className="highlight-label">Peak Day</span>
-                  <span className="highlight-value">Oct 15</span>
-                  <span className="highlight-subvalue">45 kWh</span>
-                </div>
-                <div className="highlight-item">
-                  <span className="highlight-label">Lowest Day</span>
-                  <span className="highlight-value">Oct 3</span>
-                  <span className="highlight-subvalue">22 kWh</span>
-                </div>
-                <div className="highlight-item">
-                  <span className="highlight-label">Cost</span>
-                  <span className="highlight-value">$243</span>
-                  <span className="highlight-change decrease">-2.1%</span>
-                </div>
-              </div>
-            </div>
-            {isCustomizing && (
-              <div className="widget-drag-handle">
-                <span>⋮⋮</span>
-              </div>
-            )}
-          </div>
-        );
+        case WIDGET_TYPES.REPORT_SUMMARY:
+          return (
+            <ReportSummaryWidget 
+              id={widget.id}
+              isCustomizing={isCustomizing}
+              dragClass={dragClass}
+              dropTargetClass={dropTargetClass}
+              customizingClass={customizingClass}
+              dragAttributes={dragAttributes}
+              toggleWidgetVisibility={toggleWidgetVisibility}
+            />
+          );
         
       default:
         return null;
