@@ -5,20 +5,20 @@ from sklearn.neighbors import LocalOutlierFactor
 
 class AnomalyDetector:
     def __init__(self):
-        # No need for methods dictionary anymore since we're only using LOF
+    
         pass
     
-    def detect_anomalies(self, data, n_neighbors=20, contamination=0.1):
+    def detect_anomalies(self, data, n_neighbors=100, contamination=1):
         """
         Detect anomalies in electricity consumption data using Local Outlier Factor (LOF)
         
         Args:
             data: List of dictionaries with 'date', 'consumption', and 'building' keys
             n_neighbors: Number of neighbors to consider for LOF (default=20)
-            contamination: Expected proportion of outliers in the data (default=0.1)
+            contamination: Expected proportion of outliers in the data (default=0.2)
             
         Returns:
-            List of anomalies with severity classification
+            List of anomalies with severity classification (Critical or Warning only)
         """
         if not data or len(data) < 3:
             return []
@@ -26,7 +26,7 @@ class AnomalyDetector:
         # Extract consumption values and reshape for sklearn
         consumption_values = np.array([float(item['consumption']) for item in data]).reshape(-1, 1)
         
-        # Apply LOF algorithm
+        # Apply LOF algorithm with higher contamination value
         clf = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=contamination)
         y_pred = clf.fit_predict(consumption_values)
         outlier_scores = clf.negative_outlier_factor_
@@ -39,7 +39,7 @@ class AnomalyDetector:
                 # Normalize it to make classification consistent
                 normalized_score = abs(score)
                 
-                # Classify severity based on normalized LOF score
+                # Classify severity based on normalized LOF score - now only Critical or Warning
                 severity = self._classify_severity(normalized_score)
                 
                 anomalies.append({
@@ -54,16 +54,9 @@ class AnomalyDetector:
         return anomalies
     
     def _classify_severity(self, lof_score):
-        """Classify the severity of an anomaly based on its LOF score"""
-        # LOF scores are typically negative, with more negative values indicating stronger outliers
-        # We've already converted to absolute value in the calling function
-        
-        # Define thresholds for severity classification
-        # These thresholds might need adjustment based on your specific data
-        if lof_score > 1.5:
+        """Classify the severity of an anomaly based on its LOF score - only Critical or Warning"""
+        if lof_score > 1.1:  # Previously the threshold for "Error"
             return "Critical"
-        elif lof_score > 1.2:
-            return "Error"
         else:
             return "Warning"
     

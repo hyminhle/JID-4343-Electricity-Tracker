@@ -7,7 +7,6 @@ const AlertPage = () => {
   const [alertStats, setAlertStats] = useState({
     total: 0,
     critical: 0,
-    error: 0,
     warning: 0
   });
   
@@ -26,6 +25,14 @@ const AlertPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('all'); // Changed default to 'all'
   const [analysisStats, setAnalysisStats] = useState(null);
+  
+  // Add detection method selection
+  const [detectionMethod, setDetectionMethod] = useState('ZSCORE'); // Default to Z-Score instead of LOF
+  
+  // Add sensitivity settings for both methods
+  const [lofSensitivity, setLofSensitivity] = useState(2.0); // Lower threshold for more sensitivity
+  const [zscoreThreshold, setZscoreThreshold] = useState(2.5); // Default Z-score threshold
+  const [timeWindow, setTimeWindow] = useState(7); // Default 7-day window for Z-score
   
   // Month names lookup
   const monthNames = {
@@ -98,6 +105,9 @@ const AlertPage = () => {
         return;
       }
       
+      // Get the appropriate threshold based on selected method
+      const threshold = detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold;
+      
       // Run anomaly detection with current parameters
       const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
         method: 'POST',
@@ -108,10 +118,13 @@ const AlertPage = () => {
           building: building,
           year: selectedYear,
           month: selectedMonth,
-          method: 'LOF', // Use Local Outlier Factor
-          threshold: 3.0,
+          method: detectionMethod, // Use selected method
+          threshold: threshold, // Use appropriate threshold
+          time_window: timeWindow, // For Z-score method
           store_results: true,
-          include_stats: true
+          include_stats: true,
+          cluster_all_buildings: selectedBuilding === 'All Buildings',
+          severity_levels: ['warning', 'critical'] // Only use two severity levels
         })
       });
       
@@ -156,6 +169,9 @@ const AlertPage = () => {
         
         const currentYear = new Date().getFullYear();
         
+        // Get the appropriate threshold based on selected method
+        const threshold = detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold;
+        
         // Run anomaly detection with default parameters
         const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
           method: 'POST',
@@ -166,10 +182,13 @@ const AlertPage = () => {
             building: building,
             year: currentYear,
             month: 0, // All months
-            method: 'LOF', // Use Local Outlier Factor as default
-            threshold: 3.0,
+            method: detectionMethod, // Use selected method
+            threshold: threshold, // Use appropriate threshold
+            time_window: timeWindow, // For Z-score method
             store_results: true,
-            include_stats: true
+            include_stats: true,
+            cluster_all_buildings: selectedBuilding === 'All Buildings',
+            severity_levels: ['warning', 'critical'] // Only use two severity levels
           })
         });
         
@@ -264,6 +283,12 @@ const AlertPage = () => {
         params.append('start_date', lastMonth.toISOString().split('T')[0]);
       }
       
+      // Only get warning and critical alerts (no error)
+      params.append('severity', 'warning,critical');
+      
+      // Add method parameter to get alerts from the correct method
+      params.append('method', detectionMethod);
+      
       // Fetch alerts from API
       const response = await fetch(`http://127.0.0.1:5000/api/anomalies/get-anomalies?${params}`);
       const data = await response.json();
@@ -276,12 +301,15 @@ const AlertPage = () => {
           filteredAlerts = filteredAlerts.filter(alert => 
             alert.building.toLowerCase().includes(query) ||
             alert.severity.toLowerCase().includes(query)
-            // Removed detection_method from the filter
           );
         }
         
         setAlerts(filteredAlerts);
-        setAlertStats(data.stats);
+        setAlertStats({
+          total: data.stats.total,
+          critical: data.stats.critical || 0,
+          warning: data.stats.warning || 0
+        });
       }
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -293,7 +321,7 @@ const AlertPage = () => {
   // Apply filters when they change
   useEffect(() => {
     fetchAlerts();
-  }, [selectedBuilding, selectedYear, selectedMonth, timeRange]);
+  }, [selectedBuilding, selectedYear, selectedMonth, timeRange, detectionMethod]);
   
   // Handle filter change
   const handleFilterChange = (filterName, value) => {
@@ -352,6 +380,12 @@ const AlertPage = () => {
     return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
   };
   
+  // Get button text based on method
+  const getAnalysisButtonText = () => {
+    if (isLoading) return 'Analyzing...';
+    return `Run ${detectionMethod === 'LOF' ? 'LOF' : 'Z-Score'} Analysis`;
+  };
+  
   return (
     <div className="alert-page">
       {/* Alert Statistics Header */}
@@ -361,10 +395,6 @@ const AlertPage = () => {
           <div className="stat-chip critical">
             <span className="stat-icon">⚠️</span>
             <span>{alertStats.critical} Critical</span>
-          </div>
-          <div className="stat-chip error">
-            <span className="stat-icon">❌</span>
-            <span>{alertStats.error} Error</span>
           </div>
           <div className="stat-chip warning">
             <span className="stat-icon">⚡</span>
@@ -430,6 +460,75 @@ const AlertPage = () => {
                     ))}
                   </select>
                 </div>
+                
+                {/* Add method selection */}
+                <div className="settings-row">
+                  <label>Detection Method:</label>
+                  <select 
+                    value={detectionMethod} 
+                    onChange={(e) => setDetectionMethod(e.target.value)}
+                  >
+                    <option value="LOF">Local Outlier Factor</option>
+                    <option value="ZSCORE">Z-Score Method</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="settings-group">
+                <h3>{detectionMethod === 'LOF' ? 'LOF Settings' : 'Z-Score Settings'}</h3>
+                
+                {detectionMethod === 'LOF' ? (
+                  <>
+                    <div className="settings-row">
+                      <label>Sensitivity:</label>
+                      <select 
+                        value={lofSensitivity} 
+                        onChange={(e) => setLofSensitivity(parseFloat(e.target.value))}
+                      >
+                        <option value={1.0}>Very High</option>
+                        <option value={1.5}>High</option>
+                        <option value={2.0}>Medium</option>
+                        <option value={2.5}>Low</option>
+                        <option value={3.0}>Very Low</option>
+                      </select>
+                    </div>
+                    <div className="settings-description">
+                      Lower values increase sensitivity for detecting anomalies
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="settings-row">
+                      <label>Z-Score Threshold:</label>
+                      <select 
+                        value={zscoreThreshold} 
+                        onChange={(e) => setZscoreThreshold(parseFloat(e.target.value))}
+                      >
+                        <option value={1.5}>Very High (1.5)</option>
+                        <option value={2.0}>High (2.0)</option>
+                        <option value={2.5}>Medium (2.5)</option>
+                        <option value={3.0}>Low (3.0)</option>
+                        <option value={3.5}>Very Low (3.5)</option>
+                      </select>
+                    </div>
+                    <div className="settings-row">
+                      <label>Time Window (days):</label>
+                      <select 
+                        value={timeWindow} 
+                        onChange={(e) => setTimeWindow(parseInt(e.target.value))}
+                      >
+                        <option value={3}>3 days</option>
+                        <option value={5}>5 days</option>
+                        <option value={7}>7 days</option>
+                        <option value={14}>14 days</option>
+                        <option value={30}>30 days</option>
+                      </select>
+                    </div>
+                    <div className="settings-description">
+                      Lower Z-Score values increase sensitivity. Time window controls the period used for calculating normal patterns.
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             
@@ -440,7 +539,7 @@ const AlertPage = () => {
                 onClick={runAnomalyDetection}
                 disabled={isLoading}
               >
-                {isLoading ? 'Analyzing...' : 'Run LOF Analysis'}
+                {getAnalysisButtonText()}
               </button>
               <button 
                 className="clear-filters-button" 
@@ -529,15 +628,6 @@ const AlertPage = () => {
               <div className="dropdown-item">
                 <input 
                   type="checkbox" 
-                  id="severity-error" 
-                  checked={true}
-                  onChange={() => {}} 
-                />
-                <label htmlFor="severity-error">Error</label>
-              </div>
-              <div className="dropdown-item">
-                <input 
-                  type="checkbox" 
                   id="severity-warning" 
                   checked={true}
                   onChange={() => {}} 
@@ -566,7 +656,6 @@ const AlertPage = () => {
               <th>Detection Time</th>
               <th>Value</th>
               <th>Expected Range</th>
-              {/* Removed Method header */}
             </tr>
           </thead>
           <tbody>
@@ -581,6 +670,9 @@ const AlertPage = () => {
               <tr>
                 <td colSpan="6" className="empty-cell">
                   <p>No alerts found matching your filters.</p>
+                  {detectionMethod === 'LOF' && (
+                    <p className="method-suggestion">Try switching to Z-Score method for more sensitivity to time-based patterns.</p>
+                  )}
                 </td>
               </tr>
             ) : (
@@ -589,7 +681,7 @@ const AlertPage = () => {
                   key={alert.id} 
                   className={`alert-row severity-${alert.severity.toLowerCase()}`}
                 >
-                  <td className="severity-cell">{alert.severity}</td>
+                  <td className={`severity-cell ${alert.severity.toLowerCase()}`}>{alert.severity}</td>
                   <td className="building-cell">{alert.building}</td>
                   <td className="date-cell">{alert.date}</td>
                   <td className="date-cell">{formatDate(alert.detection_time || alert.created_at)}</td>
@@ -601,9 +693,8 @@ const AlertPage = () => {
                   <td className="range-cell">
                     {alert.expected_low !== undefined && alert.expected_low !== null
                       ? `${alert.expected_low.toFixed(2)} - ${alert.expected_high.toFixed(2)}`
-                      : 'N/A'}
+                      : ''}
                   </td>
-                  {/* Removed Method column */}
                 </tr>
               ))
             )}

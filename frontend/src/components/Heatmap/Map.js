@@ -62,7 +62,24 @@ const MapComponent = () => {
       .sort((a, b) => a[1] - b[1]) // Sort by access time (oldest first)
       .map(entry => entry[0]);
   };
+  // Inside the MapComponent function
 
+  const deleteBuilding = (buildingName) => {
+    // Remove the building from the state
+    setBuildings((prevBuildings) => {
+      const updatedBuildings = { ...prevBuildings };
+      delete updatedBuildings[buildingName];
+      saveBuildingsToLocalStorage(updatedBuildings); // Save updated buildings to localStorage
+      return updatedBuildings;
+    });
+
+    // Clear the selected building if it was deleted
+    if (selectedBuilding === buildingName) {
+      setSelectedBuilding(null);
+    }
+  };
+
+  
   const saveBuildingsToLocalStorage = (buildings) => {
   try {
     // Check current storage usage
@@ -246,7 +263,7 @@ const loadSelectedBuildingFromLocalStorage = () => {
             'Building 150':   [29.627014, -95.611753],
             'Building 155':   [29.629514, -95.608553],
             'Building 170':   [29.630124, -95.608653],
-            'Building 180':   [29.627124, -95.608653]
+            'Building 180':   [29.627124, -95.608253]
           };
   
           // All building sizes increased by 1.5x
@@ -334,7 +351,7 @@ const loadSelectedBuildingFromLocalStorage = () => {
           'Building 150':   [29.627014, -95.611753],
           'Building 155':   [29.629514, -95.608553],
           'Building 170':   [29.630124, -95.608653],
-          'Building 180':   [29.627124, -95.608653]
+          'Building 180':   [29.627124, -95.608253]
         };
 
         // All building sizes increased by 1.5x
@@ -558,11 +575,6 @@ const loadSelectedBuildingFromLocalStorage = () => {
     }
   };
 
-  const deleteBuilding = (buildingName) => {  
-    const updatedBuildings = { ...buildings };
-    delete updatedBuildings[buildingName];
-    setBuildings(updatedBuildings);
-  };
 
   const handleBuildingClick = (buildingName) => {
     setSelectedBuilding(buildingName);
@@ -925,6 +937,24 @@ const loadSelectedBuildingFromLocalStorage = () => {
           >
             {isEditing ? "Exit Edit Mode" : "Edit Buildings"}
           </button>
+          {isEditing && (
+            <div className="edit-buildings-list">
+              <h4>Edit Buildings</h4>
+              <ul>
+                {Object.keys(buildings).map((buildingName) => (
+                  <li key={buildingName} className="edit-building-item">
+                    <span>{buildingName}</span>
+                    <button
+                      className="delete-button"
+                      onClick={() => deleteBuilding(buildingName)}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
             <div className="filter-buttons">
               <button 
                 className={`filter-button ${buildingFilter === 'all' ? 'active' : ''}`}

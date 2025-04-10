@@ -618,3 +618,72 @@
     padding: 5px 10px;
   }
 } 
+
+
+/* Z-Score specific settings */
+.zscore-settings {
+  background-color: rgba(75, 192, 192, 0.1);
+  border-left: 4px solid #4bc0c0;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 4px;
+}
+
+.lof-settings {
+  background-color: rgba(153, 102, 255, 0.1);
+  border-left: 4px solid #9966ff;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 4px;
+}
+
+.method-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding: 8px;
+  background-color: var(--sidebar-bg);
+  border-radius: 4px;
+  border-left: 3px solid var(--accent-color);
+}
+
+.method-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.method-tag.zscore {
+  background-color: rgba(75, 192, 192, 0.2);
+  color: #4bc0c0;
+}
+
+.method-tag.lof {
+  background-color: rgba(153, 102, 255, 0.2);
+  color: #9966ff;
+}
+
+/* Enhance the settings panel */
+.settings-group {
+  position: relative;
+}
+
+.settings-group h3 {
+  display: flex;
+  align-items: center;
+}
+
+/* Responsive adjustments for method settings */
+@media (max-width: 768px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .zscore-settings,
+  .lof-settings {
+    margin-top: 15px;
+  }
+}
