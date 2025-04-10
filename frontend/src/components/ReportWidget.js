@@ -308,7 +308,6 @@ const ReportWidget = () => {
             <div className="metric-item buildings-count compact">
               <div className="buildings-info">
                 <span>🏢 {Object.keys(reportData.buildingStats).length} buildings monitored</span>
-                <button className="view-details-btn">View Details</button>
               </div>
             </div>
           </div>

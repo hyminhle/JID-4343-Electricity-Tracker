@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDate } from './DateContext';
+import { useNavigate } from 'react-router-dom'
 
 const ReportSummaryWidget = ({ id, isCustomizing, dragClass, dropTargetClass, customizingClass, dragAttributes, toggleWidgetVisibility }) => {
+  const navigate = useNavigate();
   const { appDate } = useAppDate();
   const [buildings, setBuildings] = useState([]);
   const [selectedBuilding, setSelectedBuilding] = useState('All Buildings');
@@ -525,9 +527,10 @@ const ReportSummaryWidget = ({ id, isCustomizing, dragClass, dropTargetClass, cu
             {isRefreshing && <span className="refresh-spinner"></span>}
           </button>
 
-          <button className="icon-button" onClick={handleViewFullReport} title="View Full Report">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+          <button className="icon-button" onClick={() => navigate('/reports')} 
+                 title="View Full Report">
+            <svg viewBox="0 0 24 24" className="icon">
+                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
             </svg>
           </button>
           {isCustomizing && (
@@ -555,7 +558,7 @@ const ReportSummaryWidget = ({ id, isCustomizing, dragClass, dropTargetClass, cu
             
             <div className="report-highlights">
               <div className="highlight-item">
-                <span className="highlight-label">Total Usage</span>
+                <span className="highlight-label">⚡ Total Usage</span>
                 <span className="highlight-value">{formatEnergyValue(reportData.totalUsage)}</span>
                 <span className={`highlight-change ${getChangeClass(reportData.totalUsageChange)}`}>
                   {formatChange(reportData.totalUsageChange)}
@@ -563,7 +566,7 @@ const ReportSummaryWidget = ({ id, isCustomizing, dragClass, dropTargetClass, cu
               </div>
               
               <div className="highlight-item">
-                <span className="highlight-label">Peak Day</span>
+                <span className="highlight-label">📉 Highest Consumption Day</span>
                 <span className="highlight-value">{reportData.peakDay.date || 'N/A'}</span>
                 <span className="highlight-subvalue">
                   {reportData.peakDay.usage > 0 ? `${Math.round(reportData.peakDay.usage)} kWh` : ''}
@@ -571,26 +574,26 @@ const ReportSummaryWidget = ({ id, isCustomizing, dragClass, dropTargetClass, cu
               </div>
               
               <div className="highlight-item">
-                <span className="highlight-label">Lowest Day</span>
+                <span className="highlight-label">📈 Lowest Consumption Day</span>
                 <span className="highlight-value">{reportData.lowestDay.date || 'N/A'}</span>
                 <span className="highlight-subvalue">
                   {reportData.lowestDay.usage > 0 ? `${Math.round(reportData.lowestDay.usage)} kWh` : ''}
                 </span>
-              </div>
+              </div>    
               
               <div className="highlight-item">
-                <span className="highlight-label">Cost</span>
+                <span className="highlight-label">💰 Cost</span>
                 <span className="highlight-value">${formatNumber(Math.round(reportData.cost))}</span>
               </div>
               
               <div className="highlight-item">
-                <span className="highlight-label">Daily Average</span>
+                <span className="highlight-label">📊 Daily Average</span>
                 <span className="highlight-value">{Math.round(reportData.averageDailyUsage)} kWh</span>
               </div>
               
               {selectedBuilding === 'All Buildings' && reportData.topChangeBuildingName && (
                 <div className="highlight-item">
-                  <span className="highlight-label">Top Change</span>
+                  <span className="highlight-label">🏢 Top Change</span>
                   <span className="highlight-value">{reportData.topChangeBuildingName}</span>
                   <span className={`highlight-change ${getChangeClass(reportData.topChangePercentage)}`}>
                     {formatChange(reportData.topChangePercentage)}

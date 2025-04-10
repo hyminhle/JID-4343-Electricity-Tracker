@@ -53,6 +53,9 @@ const Calendar = ({ buildingStats }) => {
         // Collect all entries with their dates and lastAccessed timestamps
         const allEntries = [];
         for (const [dateKey, buildings] of Object.entries(dataToSave)) {
+          // Skip the monthlyStats object
+          if (dateKey === 'monthlyStats') continue;
+          
           for (const [buildingName, buildingData] of Object.entries(buildings)) {
             allEntries.push({
               dateKey,
@@ -220,76 +223,84 @@ const Calendar = ({ buildingStats }) => {
   // Improved fetch and cache function
   const fetchAndCacheData = async (date, building) => {
     if (!building) return null;
-    
+  
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // JavaScript months are 0-based
     const day = date.getDate();
     const dateKey = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     const encodedBuilding = encodeURIComponent(building);
-
+  
+    console.log(`Attempting to fetch data for date: ${dateKey}, building: ${building}`);
+  
     // Check if we already have this data cached
     if (consumptionData[dateKey] && consumptionData[dateKey][building]) {
-    // Update the last accessed timestamp
-    setConsumptionData(prevData => {
-      const updatedData = {
-        ...prevData,
-        [dateKey]: {
-          ...prevData[dateKey],
-          [building]: {
-            ...prevData[dateKey][building],
-            lastAccessed: Date.now() // Update the timestamp
+      console.log(`Found cached data for ${dateKey}, ${building}`);
+      setConsumptionData(prevData => {
+        const updatedData = {
+          ...prevData,
+          [dateKey]: {
+            ...prevData[dateKey],
+            [building]: {
+              ...prevData[dateKey][building],
+              lastAccessed: Date.now() // Update the timestamp
+            }
           }
-        }
-      };
-      
-      return updatedData;
-    });
-    return consumptionData[dateKey][building];
-  }
-
+        };
+        return updatedData;
+      });
+      return consumptionData[dateKey][building];
+    }
+  
     try {
+      console.log(`Making API call for consumption data: year=${year}, month=${month}, day=${day}, building=${encodedBuilding}`);
       const response = await fetch(`http://127.0.0.1:5000/fetch-data/${year}/${month}/${day}/${encodedBuilding}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-
-      const response2 = await fetch(`http://127.0.0.1:5000/stats/${year}/${month}/${encodedBuilding}`);
-      if (!response2.ok) {
-        throw new Error(`HTTP error! status: ${response2.status}`);
+  
+      console.log(`Making API call for monthly stats: year=${year}, month=${month}, building=${encodedBuilding}`);
+      const statsResponse = await fetch(`http://127.0.0.1:5000/stats/${year}/${month}/${encodedBuilding}`);
+      if (!statsResponse.ok) {
+        throw new Error(`HTTP error! status: ${statsResponse.status}`);
       }
-      const stat_data = await response2.json();
-
-      // Create the new entry
+      const statsData = await statsResponse.json();
+  
       const newEntry = {
         consumption: data.consumption,
-        buildings: [{
-          name: building,
-          consumption: data.consumption,
-          average: stat_data.mean,
-          max: stat_data.highest,
-          min: stat_data.lowest,
-          median: stat_data.median
-        }],
+        buildings: [
+          {
+            name: building,
+            consumption: data.consumption,
+            average: statsData.mean,
+            max: statsData.highest,
+            min: statsData.lowest,
+            median: statsData.median
+          }
+        ],
         lastAccessed: Date.now()
       };
-
-      // Update the consumptionData state with the new data
+  
       setConsumptionData(prevData => {
         const updatedData = {
           ...prevData,
           [dateKey]: {
             ...(prevData[dateKey] || {}),
             [building]: newEntry
+          },
+          monthlyStats: {
+            ...(prevData.monthlyStats || {}),
+            [`${year}-${month}`]: {
+              ...(prevData.monthlyStats?.[`${year}-${month}`] || {}),
+              [building]: statsData
+            }
           }
         };
-        
-        // Save to localStorage
+  
         saveDataToLocalStorage(updatedData);
-        
         return updatedData;
       });
-
+  
       return newEntry;
     } catch (error) {
       console.error(`Error fetching data for ${dateKey}:`, error);
@@ -375,9 +386,26 @@ const Calendar = ({ buildingStats }) => {
     const dayData = consumptionData[dateKey] && consumptionData[dateKey][selectedBuilding];
     
     if (dayData) {
+      // Get the current month and year for fetching monthly stats
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1;
+      const monthKey = `${year}-${month}`;
+      
+      // Get the latest monthly stats
+      const monthlyStats = consumptionData.monthlyStats?.[monthKey]?.[selectedBuilding];
+      
+      // Update the buildings array with the latest monthly stats if available
+      const updatedBuildings = dayData.buildings.map(building => ({
+        ...building,
+        average: monthlyStats?.average || building.average,
+        max: monthlyStats?.max || building.max,
+        min: monthlyStats?.min || building.min,
+        median: monthlyStats?.median || building.median
+      }));
+      
       return {
         consumption: dayData.consumption || 0,
-        buildings: dayData.buildings || []
+        buildings: updatedBuildings
       };
     }
     

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Dashboard.css';
 import FileUploadWidget from './FileUploadWidget';
+import { useNavigate } from 'react-router-dom';
 import ChartContainer from './LineGraph/ChartContainer';
 import MapWidget from './Heatmap/MapWidget';
 import CalendarWidget from './CalendarWidget';
@@ -16,6 +17,7 @@ const WIDGET_TYPES = {
 };
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [activeAlert, setActiveAlert] = useState(true);
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [dashboardTheme, setDashboardTheme] = useState('light');
@@ -184,15 +186,13 @@ const Dashboard = () => {
             <div className="card-header">
               <h2>Energy Usage</h2>
               <div className="card-actions">
-                <select 
-                  className="time-selector"
-                  value={userPreferences.defaultTimeRange}
-                  onChange={(e) => updateUserPreference('defaultTimeRange', e.target.value)}
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
+              <button className="icon-button"
+              onClick={() => navigate('/graph')} 
+              >
+              <svg viewBox="0 0 24 24" className="icon">
+                <path d="M3.5 18.5l6-6 4 4L22 6.92 20.59 5.5l-7.09 8.5-4-4-6 6z"/>
+              </svg>
+              </button>
                 {isCustomizing && (
                   <button 
                     className="widget-remove-btn" 
@@ -225,10 +225,12 @@ const Dashboard = () => {
             <div className="card-header">
               <h2>Usage by Location</h2>
               <div className="card-actions">
-                <button className="icon-button">
-                  <svg viewBox="0 0 24 24" width="18" height="18">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                  </svg>
+                <button className="icon-button"
+                onClick={() => navigate('/map')} 
+                >
+                <svg viewBox="0 0 24 24" className="icon">
+                  <path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/>
+                </svg>
                 </button>
                 {isCustomizing && (
                   <button 
@@ -262,10 +264,12 @@ const Dashboard = () => {
             <div className="card-header">
               <h2>Usage Calendar</h2>
               <div className="card-actions">
-                <button className="icon-button">
-                  <svg viewBox="0 0 24 24" width="18" height="18">
-                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7v-5z"/>
-                  </svg>
+                <button className="icon-button"
+                onClick={() => navigate('/calendar')} 
+                >
+                <svg viewBox="0 0 24 24" className="icon">
+                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+                </svg>
                 </button>
                 {isCustomizing && (
                   <button 
