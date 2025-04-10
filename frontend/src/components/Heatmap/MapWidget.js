@@ -154,7 +154,7 @@ const MapWidget = () => {
       }
       const data = await response.json();
 
-      const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${buildingName}`;
+      const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${day}/${buildingName}`;
       const response2 = await fetch(API_URL2);
       if (!response2.ok) {
         throw new Error(`HTTP error! status: ${response2.status}`);

@@ -174,7 +174,7 @@ const Report = () => {
       const dailyData = await dailyDataResponse.json();
 
       // Fetch yearly statistics
-      yearlyDataResponse = await fetch(`http://localhost:5000/stats/${year}/0/${encodedBuilding}`);
+      yearlyDataResponse = await fetch(`http://localhost:5000/stats/${year}/${month}/0/${encodedBuilding}`);
       if (!yearlyDataResponse.ok) {
         throw new Error(`Failed to fetch yearly stats for ${building}`);
       }

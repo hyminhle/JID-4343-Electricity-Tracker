@@ -666,7 +666,7 @@ const loadSelectedBuildingFromLocalStorage = () => {
           }
           const data = await response.json();
 
-          const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${buildingName}`;
+          const API_URL2 = `http://127.0.0.1:5000/stats/${year}/${month}/${day}/${buildingName}`;
           console.log(`Fetching stats for ${buildingName} from ${API_URL2}`);
 
           const response2 = await fetch(API_URL2);
