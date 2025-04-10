@@ -238,29 +238,63 @@ def get_from_db_or_cache(year, month, day, building, data_type="data"):
             }
             
     elif data_type == "stats":
-        db_data = ElectricityStatistics.query.filter(
-            db.func.extract('year', ElectricityStatistics.date) == year,
-            db.func.extract('month', ElectricityStatistics.date) == month,
-            ElectricityStatistics.building == building
-        ).first()
-        
-        if not db_data:
-            return None
+        if day == 0:  # Yearly stats request
+            # Get all monthly stats for the requested year and building
+            db_data = ElectricityStatistics.query.filter(
+                db.func.extract('year', ElectricityStatistics.date) == year,
+                ElectricityStatistics.building == building
+            ).order_by(ElectricityStatistics.date).all()
             
-        result = {
-            'month': db_data.month,
-            'date': db_data.date.isoformat(),
-            'mean': db_data.mean,
-            'highest': db_data.highest,
-            'lowest': db_data.lowest,
-            'median': db_data.median,
-            'building': db_data.building
-        }
+            if not db_data:
+                return None
+                
+            # Prepare monthly data using stored statistics
+            monthly_data = []
+            for stat in db_data:
+                monthly_data.append({
+                    'month': stat.month,
+                    'consumption': stat.mean,  
+                    'mean': stat.mean,
+                    'highest': stat.highest,
+                    'lowest': stat.lowest,
+                    'median': stat.median
+                })
+            
+            # Find overall extremes across the year
+            highest_month = max(db_data, key=lambda x: x.highest)
+            lowest_month = min(db_data, key=lambda x: x.lowest)
+            
+            result = {
+                'mean': float(np.mean([stat.mean for stat in db_data])),
+                'highest': highest_month.highest,
+                'lowest': lowest_month.lowest,
+                'highestMonth': highest_month.month,
+                'lowestMonth': lowest_month.month,
+                'monthlyData': monthly_data  # Includes all stored stats for each month
+            }
+            
+        else:  # Monthly stats
+            db_data = ElectricityStatistics.query.filter(
+                db.func.extract('year', ElectricityStatistics.date) == year,
+                db.func.extract('month', ElectricityStatistics.date) == month,
+                ElectricityStatistics.building == building
+            ).first()
+            
+            if not db_data:
+                return None
+                
+            result = {
+                'month': db_data.month,
+                'date': db_data.date.isoformat(),
+                'mean': db_data.mean,
+                'highest': db_data.highest,
+                'lowest': db_data.lowest,
+                'median': db_data.median,
+                'building': db_data.building
+            }
     
-    # Cache the result before returning
     if result is not None:
         cache_data(cache_key, result)
-        
     return result
 
 def print_july_2024_cache():
@@ -273,11 +307,11 @@ def print_july_2024_cache():
             print("Value:", value)
     
 
-@app.route('/stats/<int:year>/<int:month>/<building>', methods=['GET'])
-def get_stats_by_params(year, month, building):
+@app.route('/stats/<int:year>/<int:month>/<int:day>/<building>', methods=['GET'])
+def get_stats_by_params(year, month, day, building):
     building = unquote(building)
     try:
-        data = get_from_db_or_cache(year, month, 0, building, "stats")
+        data = get_from_db_or_cache(year, month, day, building, "stats")
         if data is None:
             return jsonify({'error': 'No statistics found for the specified parameters'}), 404
         return jsonify(data)

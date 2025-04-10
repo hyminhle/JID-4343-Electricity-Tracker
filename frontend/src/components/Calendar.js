@@ -260,7 +260,7 @@ const Calendar = ({ buildingStats }) => {
       const data = await response.json();
   
       console.log(`Making API call for monthly stats: year=${year}, month=${month}, building=${encodedBuilding}`);
-      const statsResponse = await fetch(`http://127.0.0.1:5000/stats/${year}/${month}/${encodedBuilding}`);
+      const statsResponse = await fetch(`http://127.0.0.1:5000/stats/${year}/${month}/${day}/${encodedBuilding}`);
       if (!statsResponse.ok) {
         throw new Error(`HTTP error! status: ${statsResponse.status}`);
       }
