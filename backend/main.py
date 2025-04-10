@@ -178,7 +178,9 @@ def generate_cache_key(year, month, day, building, data_type="data"):
 
 def cache_data(key, data):
     """Cache data with the given key, ensuring we don't exceed cache limits"""
+    print(f"Setting cache for key: {key}")
     cache.set(key, data)
+    print(f"Cache set operation completed for key: {key}")
     
 def get_cached_data(key):
     """Retrieve data from cache if it exists"""
@@ -187,11 +189,11 @@ def get_cached_data(key):
 def get_from_db_or_cache(year, month, day, building, data_type="data"):
     """Helper function to implement cache-first pattern"""
     cache_key = generate_cache_key(year, month, day, building, data_type)
-    
     # Try to get from cache first
     cached_data = get_cached_data(cache_key)
     if cached_data is not None:
         return cached_data
+    
     
     # If not in cache, fetch from database
     if data_type == "data":
@@ -236,61 +238,41 @@ def get_from_db_or_cache(year, month, day, building, data_type="data"):
             }
             
     elif data_type == "stats":
-        if day == 0:  # Yearly stats
-            db_data = ElectricityStatistics.query.filter(
-                ElectricityStatistics.date.between(datetime(year, 1, 1), datetime(year, 12, 31)),
-                ElectricityStatistics.building == building
-            ).all()
+        db_data = ElectricityStatistics.query.filter(
+            db.func.extract('year', ElectricityStatistics.date) == year,
+            db.func.extract('month', ElectricityStatistics.date) == month,
+            ElectricityStatistics.building == building
+        ).first()
+        
+        if not db_data:
+            return None
             
-            if not db_data:
-                return None
-                
-            # Calculate monthly totals
-            monthly_totals = {}
-            for stat in db_data:
-                monthly_totals[stat.month] = monthly_totals.get(stat.month, 0) + stat.mean
-
-            # Determine highest and lowest month
-            highest_month = max(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
-            lowest_month = min(monthly_totals.items(), key=lambda x: x[1], default=('', 0))
-
-            result = {
-                'mean': float(np.mean([stat.mean for stat in db_data])),
-                'highest': highest_month[1],
-                'lowest': lowest_month[1],
-                'highestMonth': highest_month[0],
-                'lowestMonth': lowest_month[0],
-                'monthlyData': [{'month': month, 'consumption': total} for month, total in monthly_totals.items()]
-            }
-            
-        else:  # Monthly stats
-            db_data = ElectricityStatistics.query.filter_by(
-                date=datetime(year, month, 1).date(),
-                building=building
-            ).first()
-            
-            if not db_data:
-                return None
-                
-            result = {
-                'month': db_data.month,
-                'date': db_data.date.isoformat(),
-                'mean': db_data.mean,
-                'highest': db_data.highest,
-                'lowest': db_data.lowest,
-                'median': db_data.median,
-                'building': db_data.building,
-                'highestMonth': db_data.month,
-                'lowestMonth': db_data.month,
-            }
+        result = {
+            'month': db_data.month,
+            'date': db_data.date.isoformat(),
+            'mean': db_data.mean,
+            'highest': db_data.highest,
+            'lowest': db_data.lowest,
+            'median': db_data.median,
+            'building': db_data.building
+        }
     
     # Cache the result before returning
     if result is not None:
         cache_data(cache_key, result)
-    
+        
     return result
 
-# Routes
+def print_july_2024_cache():
+    print("\n=== July 2024 Cache Contents ===")
+    cache_keys = list(cache.cache._cache.keys())
+    for key in cache_keys:
+        if '2024_7' in key or 'July' in key or 'Building_555' in key:
+            value = cache.get(key)
+            print(f"\nKey: {key}")
+            print("Value:", value)
+    
+
 @app.route('/stats/<int:year>/<int:month>/<building>', methods=['GET'])
 def get_stats_by_params(year, month, building):
     building = unquote(building)

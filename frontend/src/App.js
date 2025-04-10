@@ -8,7 +8,7 @@ import Graph from './components/LineGraph/Graph';
 import Sidebar from './components/Sidebar';
 import Calendar from './components/Calendar';
 import Settings from './components/Settings';
-import Report from './components/Report'; // Import the new Report component
+import Report from './components/Report'; 
 import ThemeInitializer from './ThemeInitializer';
 import Chatbot from './components/Chatbot';
 import { AppDateProvider } from './components/DateContext';

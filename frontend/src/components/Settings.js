@@ -20,6 +20,9 @@ function Settings() {
   const [timeValue, setTimeValue] = useState(() => {
     return appDate.toTimeString().slice(0, 5); // Format as HH:MM
   });
+  
+  // New state for cache clearing feedback
+  const [cacheClearFeedback, setCacheClearFeedback] = useState('');
 
   // Apply theme when component mounts and when darkMode changes
   useEffect(() => {
@@ -73,6 +76,24 @@ function Settings() {
     setTimeValue(now.toTimeString().slice(0, 5));
   };
 
+
+  // Function to clear all localStorage items
+  const clearAllLocalData = () => {
+    // This will clear everything in localStorage
+    localStorage.clear();
+    
+    // Reset dark mode state to default (light)
+    setDarkMode(false);
+    
+    // Show feedback to the user
+    setCacheClearFeedback('All local data cleared successfully!');
+    
+    // Hide feedback after 3 seconds
+    setTimeout(() => {
+      setCacheClearFeedback('');
+    }, 3000);
+  };
+
   return (
     <div className="settings-container">
       <h1 className="settings-title">Settings</h1>
@@ -98,7 +119,7 @@ function Settings() {
         </div>
       </div>
       
-      {/* New Date/Time Setting Section */}
+      {/* Date/Time Setting Section */}
       <div className="settings-section">
         <h2 className="section-title">Date & Time</h2>
         
@@ -173,6 +194,32 @@ function Settings() {
             </select>
           </div>
         </div>
+      </div>
+      
+      {/* New Cache Management Section */}
+      <div className="settings-section">
+        <h2 className="section-title">Cache Management</h2>
+        
+        <div className="setting-item">
+          <div className="setting-info">
+            <h3>Clear All Local Data</h3>
+            <p>Remove all locally stored data including theme preferences</p>
+          </div>
+          <div className="setting-control">
+            <button 
+              className="settings-button clear-all-button" 
+              onClick={clearAllLocalData}
+            >
+              Clear All Data
+            </button>
+          </div>
+        </div>
+        
+        {cacheClearFeedback && (
+          <div className="feedback-message success-message">
+            {cacheClearFeedback}
+          </div>
+        )}
       </div>
       
       <div className="settings-section">
