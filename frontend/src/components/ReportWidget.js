@@ -215,7 +215,7 @@ const ReportWidget = () => {
 
       // Fetch yearly statistics to get daily average
       const yearlyDataResponse = await fetch(
-        `http://localhost:5000/stats/${year}/0/${encodedBuilding}`
+        `http://localhost:5000/stats/${year}/${month}/0/${encodedBuilding}`
       );
       
       if (!yearlyDataResponse.ok) {
