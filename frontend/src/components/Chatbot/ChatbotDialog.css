@@ -401,3 +401,29 @@ body.dark-theme .send-button:disabled,
     max-height: 80vh;
   }
 }
+/* Loading Spinner */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+  border-top-color: #4CAF50;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Dark mode spinner */
+body.dark-theme .spinner,
+[data-theme='dark'] .spinner {
+  border-top-color: #8BC34A;
+}
