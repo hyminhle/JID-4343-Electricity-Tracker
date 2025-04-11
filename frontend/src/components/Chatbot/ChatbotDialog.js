@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatbotDialog.css';
+import PropTypes from 'prop-types';
 
 const ChatbotDialog = ({ onClose, theme = 'light' }) => {
-  // State declarations
+  // State declarations (keep all your existing state)
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('chatHistory');
     return saved ? JSON.parse(saved) : [
@@ -19,14 +20,13 @@ const ChatbotDialog = ({ onClose, theme = 'light' }) => {
   const [apiEndpoint, setApiEndpoint] = useState('http://localhost:8080/completion');
   const [availableData, setAvailableData] = useState({});
   const [buildingOptions, setBuildingOptions] = useState([]);
-  // Modified conversation context to store multiple interactions
   const [conversationContext, setConversationContext] = useState({
-    interactions: [], // Array to store all relevant data queries and responses
+    interactions: [],
     lastQuery: null,
-    lastDataType: null, // 'single', 'comparison', null
-    lastBuildings: [], // Store buildings involved in last query
+    lastDataType: null,
+    lastBuildings: [],
     lastDate: null,
-    recentData: null // Store recent data shown to user
+    recentData: null
   });
   const messagesEndRef = useRef(null);
 
@@ -799,112 +799,121 @@ Provide a clear, concise answer based only on the data provided. If the question
       };
 
       const handleInputChange = (e) => {
-      setInputText(e.target.value);
+        setInputText(e.target.value);
       };
-
+    
       const handleSendMessage = async () => {
-      if (inputText.trim() === '') return;
-
-      const userMessage = inputText.trim();
-      setInputText('');
-
-      await fetchLlamaResponse(userMessage);
+        if (inputText.trim() === '') return;
+        const userMessage = inputText.trim();
+        setInputText('');
+        await fetchLlamaResponse(userMessage);
       };
-
+    
       const handleKeyPress = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSendMessage();
-      }
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage();
+        }
       };
-
+    
       return (
-      <div className={`chatbot-dialog ${theme === 'dark' ? 'dark-theme' : ''}`}>
-        <div className="chatbot-header">
-          <h2>Energy Consumption Assistant</h2>
-          <div className="chatbot-controls">
-            <button 
-              className="theme-toggle-btn" 
-              onClick={toggleTheme} 
-              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
-            <button 
-              className="clear-chat-btn" 
-              onClick={clearConversation}
-              title="Clear conversation"
-            >
-              🗑️
-            </button>
-            <button 
-              className="close-btn" 
-              onClick={onClose}
-              title="Close chatbot"
-            >
-              ✕
-            </button>
+        <div className={`chatbot-dialog ${theme}`}>
+          <div className="chatbot-container">
+            <div className="chatbot-header">
+              <div className="chatbot-avatar">
+                <span>⚡</span>
+              </div>
+              <div className="chatbot-title">
+                <h3>Energy Consumption Assistant</h3>
+              </div>
+              <div className="chatbot-controls">
+                <button 
+                  className="control-btn" 
+                  onClick={() => setApiEndpoint(prompt('Enter API endpoint:', apiEndpoint))}
+                  title="Change API endpoint"
+                >
+                  ⚙️
+                </button>
+                <button 
+                  className="control-btn" 
+                  onClick={toggleTheme}
+                  title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                >
+                  {theme === 'light' ? '🌙' : '☀️'}
+                </button>
+                <button 
+                  className="control-btn" 
+                  onClick={clearConversation}
+                  title="Clear conversation"
+                >
+                  🗑️
+                </button>
+                <button 
+                  className="control-btn" 
+                  onClick={onClose}
+                  title="Close chatbot"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div className="chatbot-messages">
+              {messages.map((msg, i) => (
+                <div key={i} className={`message ${msg.sender}`}>
+                  {msg.sender === 'bot' && <div className="message-avatar">⚡</div>}
+                  <div className="message-bubble">
+                    {msg.text.split('\n').map((line, j) => (
+                      <React.Fragment key={j}>
+                        {line}
+                        <br />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="message bot">
+                  <div className="message-avatar">⚡</div>
+                  <div className="message-bubble typing-indicator">
+                    <span className="spinner"></span>
+                    Analyzing your request...
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+            
+            <div className="chatbot-input">
+              <textarea
+                value={inputText}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask about building energy usage..."
+                disabled={isLoading}
+                rows={1}
+              />
+              <button 
+                onClick={handleSendMessage} 
+                disabled={!inputText.trim() || isLoading}
+                className="send-button"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24px" height="24px">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M3.4 20.4l17.45-7.48c.81-.35.81-1.49 0-1.84L3.4 3.6c-.66-.29-1.39.2-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-        
-        <div className="chat-messages">
-          {messages.map((message, index) => (
-            <div 
-              key={index} 
-              className={`message ${message.sender === 'user' ? 'user-message' : 'bot-message'}`}
-            >
-              <div className="message-content">
-                {message.text.split('\n').map((text, i) => (
-                  <p key={i}>{text}</p>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-          
-          {isLoading && (
-            <div className="bot-message">
-              <div className="message-content">
-                <p className="typing-indicator">
-                  <span className="spinner"></span>
-                  Analyzing your request...
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        <div className="chat-input-container">
-          <textarea
-            className="chat-input"
-            value={inputText}
-            onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask about building energy usage..."
-            rows={1}
-          />
-          <button 
-            className="send-btn" 
-            onClick={handleSendMessage}
-            disabled={isLoading || inputText.trim() === ''}
-          >
-            📤
-          </button>
-        </div>
-
-        <div className="chat-footer">
-          <span className="info-text">
-            Try: "Show Building 110 usage for today" or "Compare Building 121 with 125"
-          </span>
-        </div>
-      </div>
       );
-      };
-
-      // Add PropTypes for TypeScript-like type checking
-      ChatbotDialog.propTypes = {
-      onClose: React.PropTypes.func.isRequired,
-      theme: React.PropTypes.oneOf(['light', 'dark'])
-      };
-
-      export default ChatbotDialog;
+    };
+    
+    ChatbotDialog.propTypes = {
+      onClose: PropTypes.func.isRequired,
+      theme: PropTypes.oneOf(['light', 'dark'])
+    };
+    
+    export default ChatbotDialog;
