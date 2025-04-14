@@ -2,21 +2,22 @@
 .report-container {
     background-color: var(--background-color);
     color: var(--text-primary);
-    padding: 2rem;
+    padding: 20px;
+    height: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
   
   .report-header {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    gap: 10px;
+    margin-bottom: 20px;
   }
   
   .report-header h1 {
     margin: 0;
-    color: var(--primary-color);
     transition: color 0.3s ease;
+    font-size: 28px;
   }
   
   .report-date {
@@ -144,7 +145,7 @@
   .metric-card h2 {
     margin-top: 0;
     margin-bottom: 1rem;
-    font-size: 1.2rem;
+    font-size: 28px;
     color: var(--text-secondary);
     transition: color 0.3s ease;
   }
@@ -184,7 +185,7 @@
     margin-top: 0;
     margin-bottom: 1.5rem;
     color: var(--primary-color);
-    font-size: 1.4rem;
+    font-size: 28px;
     transition: color 0.3s ease;
   }
   
@@ -230,7 +231,7 @@
     margin-top: 0;
     margin-bottom: 1rem;
     color: var(--text-primary);
-    font-size: 1.2rem;
+    font-size: 28px;
     transition: color 0.3s ease;
   }
   
@@ -404,7 +405,7 @@
   
   @media (max-width: 480px) {
     .report-header h1 {
-      font-size: 1.5rem;
+      font-size: 28px;
     }
     
     .metric-card {

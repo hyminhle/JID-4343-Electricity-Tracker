@@ -673,7 +673,7 @@ const Calendar = ({ buildingStats }) => {
 
   return (
     <div className="calendar-page">
-      <h1>Electricity Consumption Calendar</h1>
+      <h1 className="page-header">Calendar</h1>
       <div className="calendar-controls">
         <div className="control-group">
           <label>Select Building:</label>

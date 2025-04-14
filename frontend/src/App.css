@@ -95,6 +95,7 @@ body {
 /* Input styles - updated with variables */
 input[type="file"] {
   font-family: inherit;
+  margin-bottom: 2.5rem;
 }
 
 input[type="file"]::-webkit-file-upload-button {
@@ -107,11 +108,13 @@ input[type="file"]::before {
   display: inline-block;
   background: var(--button-bg-color);
   color: var(--button-text-color);
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 12px 20px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   font-size: 14px;
+  margin-right: 1.5rem;
+  transition: all 0.2s ease-in-out;
 }
 
 input[type="file"]:hover::before {

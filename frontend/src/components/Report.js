@@ -450,7 +450,7 @@ const Report = () => {
   return (
     <div className="report-container">
       <div className="report-header">
-        <h1>Report</h1>
+        <h1 className="page-header">Report</h1>
         <div className="report-date">
           {appDate.toLocaleDateString('en-US', { 
             weekday: 'long', 

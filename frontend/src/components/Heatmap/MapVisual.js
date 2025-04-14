@@ -5,7 +5,7 @@ import './Map.css';
 function MapVisual() {
   return (
     <div className="map-page">
-      <h1>Map Visualization</h1>
+      <h1 className="page-header">Map</h1>
       <div className="map-visual-container">
         <Map />
       </div>
