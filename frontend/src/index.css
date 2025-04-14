@@ -11,3 +11,31 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Global header styles */
+.page-header,
+h1.page-header,
+.graph-page h1,
+.map-page h1,
+.report-header h1,
+.alerts-container h1,
+.dashboard-container h1 {
+  font-size: 28px;
+  margin: 0 0 20px 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+/* Ensure consistent header sizes in responsive views */
+@media (max-width: 480px) {
+  .page-header,
+  h1.page-header,
+  .graph-page h1,
+  .map-page h1,
+  .report-header h1,
+  .alerts-container h1,
+  .dashboard-container h1 {
+    font-size: 28px;  /* Maintain size even on mobile */
+  }
+}

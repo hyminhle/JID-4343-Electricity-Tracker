@@ -5,7 +5,7 @@ import './Graph.css';
 function Graph() {
   return (
     <div className="graph-page">
-      <h1>Line Graph Visualization</h1>
+      <h1 className="page-header">Graph</h1>
       <div className="graph-container">
         <LineGraph />
       </div>
