@@ -32,7 +32,8 @@ class Predictor:
 
             df = pd.DataFrame(predict_data)
 
-            df['ds'] = pd.to_datetime(df['date'], format='%a, %d %b %Y %H:%M:%S %Z', errors='coerce')
+           
+            df['ds'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
             df['ds'] = df['ds'].dt.tz_localize(None)
             df['y'] = df['consumption']
 
