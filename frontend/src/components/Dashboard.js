@@ -328,18 +328,6 @@ const Dashboard = () => {
           <button className={`action-button customize-button ${isCustomizing ? 'active' : ''}`} onClick={toggleCustomizeMode}>
             {isCustomizing ? 'Save Layout' : 'Customize Dashboard'}
           </button>
-          <button className="action-button">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-            New Report
-          </button>
-          <button className="action-button">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-            </svg>
-            Export Data
-          </button>
         </div>
       </div>
     

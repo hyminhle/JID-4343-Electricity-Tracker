@@ -391,6 +391,8 @@ input:checked + .toggle-slider:before {
   background-color: var(--button-hover-bg-color);
 }
 
+
+
 /* Color Options */
 .settings-color-options {
   display: flex;

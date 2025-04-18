@@ -68,7 +68,7 @@ const ChartDisplay = ({ datasets, height = '600px', showGrid = true, darkMode = 
     // Colors based on theme
     const gridColor = 'rgba(0, 0, 0, 0.22)';
     const textColor = 'rgb(72, 68, 68)';
-    const backgroundColor = 'white'; // Always use white regardless of mode
+    const backgroundColor = darkMode ? 'white': '#e2e8f0'; // Always use white regardless of mode
 
     // Create datasets array for the chart
     const chartDatasets = datasets.map((ds) => {

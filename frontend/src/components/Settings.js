@@ -162,7 +162,7 @@ function Settings() {
               onChange={handleTimeChange}
             />
             <button 
-              className="settings-button reset-button" 
+              className="reset-button" 
               onClick={resetToCurrentDateTime}
               title="Reset to current time"
             >
@@ -194,7 +194,7 @@ function Settings() {
             <p>Manage email and in-app notifications</p>
           </div>
           <div className="setting-control">
-            <button className="settings-button">Manage</button>
+            <button className="account-button">Manage</button>
           </div>
         </div>
         
