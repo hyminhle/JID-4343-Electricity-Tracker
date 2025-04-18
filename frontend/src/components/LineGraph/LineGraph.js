@@ -21,7 +21,7 @@ const LineGraph = () => {
   const [secondaryDataset, setSecondaryDataset] = useState(null);
   const [isAverageDisplayed, setIsAverageDisplayed] = useState(false);
   const [averageDataset, setAverageDataset] = useState(null);
-  const [showGrid, setShowGrid] = useState(true); // New state for grid visibility
+  const [showGrid, setShowGrid] = useState(true);
   
   // Fetch available buildings, years, and months
   useEffect(() => {
@@ -108,11 +108,18 @@ const LineGraph = () => {
       // Generate a random color for the new dataset
       const randomColor = `rgba(${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, ${Math.floor(Math.random() * 250)}, 0.4)`;
 
+      // Sort data by date to ensure it's displayed in correct order
+      const sortedData = [...data].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA - dateB;
+      });
+
       const newDataset = {
         building: selectedBuilding,
         year: selectedYear,
         month: selectedMonth,
-        data: data,
+        data: sortedData,
         color: randomColor,
         borderDash: (selectedBuilding === 'Prediction' || selectedBuilding === 'Average Aggregate') ? [] : [5, 5],
       };
@@ -163,6 +170,45 @@ const LineGraph = () => {
     }
   };
 
+    // Helper function to get days in month - FIXED
+  const getDaysInMonth = (year, month) => {
+    // For 1-indexed months (where January = 1)
+    // This works because new Date(year, month, 0) gives the last day of the previous month
+    // So new Date(2023, 2, 0) gives February 28, 2023 (or 29 in leap years)
+    return new Date(parseInt(year), parseInt(month), 0).getDate();
+  };
+
+  // Find the actual days in each dataset's month - IMPROVED
+  const findActualDaysForDatasets = (datasets) => {
+    if (!datasets || datasets.length === 0) return { maxDays: 31, daysByDataset: {} };
+    
+    const daysByDataset = {};
+    let maxDays = 0;
+    
+    datasets.forEach((ds, index) => {
+      let daysInThisDataset;
+      
+      // For real month datasets (not prediction or average)
+      if (ds.year && ds.month && !isNaN(ds.year) && !isNaN(ds.month) && 
+          ds.building !== 'Prediction' && ds.label !== 'Average Aggregate') {
+        daysInThisDataset = getDaysInMonth(ds.year, ds.month);
+      } else if (ds.building === 'Prediction' || ds.label === 'Average Aggregate') {
+        // For prediction or average datasets, use the max days from their data
+        daysInThisDataset = Math.max(...ds.data.map(point => 
+          point.date ? new Date(point.date).getDate() : 0
+        ));
+      } else {
+        // Default fallback
+        daysInThisDataset = 31;
+      }
+      
+      daysByDataset[index] = daysInThisDataset;
+      if (daysInThisDataset > maxDays) maxDays = daysInThisDataset;
+    });
+    
+    return { maxDays, daysByDataset };
+  };
+
   // Modify the chart update effect
   useEffect(() => {
     if (loading || error || selectedDatasets.length === 0) {
@@ -179,27 +225,54 @@ const LineGraph = () => {
     }
   
     const ctx = chartRef.current.getContext('2d');
+    
+    // Get the actual days for each dataset
+    const { maxDays, daysByDataset } = findActualDaysForDatasets(selectedDatasets);
+    
+    // Generate labels from 1 to maxDays
+    const dayLabels = Array.from({ length: maxDays }, (_, i) => i + 1);
   
     // Create datasets array for the chart
-    const datasets = selectedDatasets.map((ds) => ({
-      label: ds.building === 'Prediction' ? 'Future Prediction' : 
-             (ds.label || `${ds.building} - ${ds.month}/${ds.year}`),
-      data: ds.data.map((entry) => entry.consumption),
-      borderColor: ds.borderColor || ds.color,
-      backgroundColor: ds.backgroundColor || 'transparent',
-      tension: 0.1,
-      fill: ds.fill || false,
-      borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
-      borderWidth: ds.borderWidth || 1.5,
-      pointBackgroundColor: ds.pointBackgroundColor || ds.color,
-      pointRadius: ds.pointRadius || 1,
-      pointStyle: ds.pointStyle || 'circle',
-    }));
+    const datasets = selectedDatasets.map((ds, dsIndex) => {
+      // Get the number of days for this specific dataset
+      const daysInThisDataset = daysByDataset[dsIndex] || maxDays;
+      
+      // Create an array with correct length for this dataset's month
+      const formattedData = Array(maxDays).fill(null);
+      
+      // Fill in actual data points where they exist
+      ds.data.forEach(entry => {
+        const entryDate = new Date(entry.date);
+        // Force local timezone interpretation to avoid date shifting
+        const dayIndex = entryDate.getUTCDate() - 1; // Use UTC date to avoid timezone issues
+        
+        // Only include data points that are within this dataset's actual month length
+        if (dayIndex >= 0 && dayIndex < daysInThisDataset) {
+          formattedData[dayIndex] = entry.consumption;
+        }
+      });
+      
+      return {
+        label: ds.building === 'Prediction' ? 'Future Prediction' : 
+              (ds.label || `${ds.building} - ${ds.month}/${ds.year}`),
+        data: formattedData,
+        borderColor: ds.borderColor || ds.color,
+        backgroundColor: ds.backgroundColor || 'transparent',
+        tension: 0.1,
+        fill: ds.fill || false,
+        borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
+        borderWidth: ds.borderWidth || 1.5,
+        pointBackgroundColor: ds.pointBackgroundColor || ds.color,
+        pointRadius: ds.pointRadius || 1,
+        pointStyle: ds.pointStyle || 'circle',
+        spanGaps: true, // Allow drawing lines between points with null values
+      };
+    });
   
     const newChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: selectedDatasets[0].data.map((entry) => new Date(entry.date).getDate()),
+        labels: dayLabels,
         datasets: datasets,
       },
       options: {
@@ -250,7 +323,7 @@ const LineGraph = () => {
     });
   
     setChartInstance(newChart);
-  }, [selectedDatasets, loading, error, showGrid]); // Added showGrid to the dependency array
+  }, [selectedDatasets, loading, error, showGrid]);
 
   const removeDataset = (index) => {
     setSelectedDatasets((prev) => {
@@ -283,40 +356,54 @@ const LineGraph = () => {
       return;
     }
   
-    // Determine the number of days from the first dataset
-    const numDays = Math.max(...selectedDatasets.map((dataset) => dataset?.data?.length || 0));
+    // Get actual days for each dataset
+    const { maxDays, daysByDataset } = findActualDaysForDatasets(selectedDatasets);
+    
+    // Initialize arrays for accumulating values and counts
+    const aggregateData = Array(maxDays).fill(0);
+    const counts = Array(maxDays).fill(0);
   
-    if (numDays === 0) {
-      setAddError('Selected datasets do not have valid data.');
-      return;
-    }
-  
-    const aggregateData = Array(numDays).fill(0);
-    const counts = Array(numDays).fill(0);
-  
-    selectedDatasets.forEach((dataset) => {
-      let lastDefinedValue = 0;
-      dataset.data.forEach((entry, index) => {
-        const value = entry?.consumption !== undefined ? entry.consumption : lastDefinedValue;
-        if (entry?.consumption !== undefined) {
-          lastDefinedValue = entry.consumption;
+    selectedDatasets.forEach((dataset, index) => {
+      // Get the actual number of days for this dataset
+      const daysInThisDataset = daysByDataset[index] || maxDays;
+      
+      dataset.data.forEach((entry) => {
+        const entryDate = new Date(entry.date);
+        const day = entryDate.getDate() - 1; // Convert to 0-based index for array
+        
+        // Only include days that are actually in this dataset's month
+        if (day >= 0 && day < daysInThisDataset) {
+          aggregateData[day] += entry.consumption;
+          counts[day] += 1;
         }
-        aggregateData[index] += value;
-        counts[index] += 1;
       });
     });
   
-    const averageData = aggregateData.map((total, index) => total / counts[index]);
-    console.log('Average Data:', averageData);
+    // Calculate average for each day
+    const averageData = [];
+    for (let i = 0; i < maxDays; i++) {
+      if (counts[i] > 0) {
+        const avgValue = aggregateData[i] / counts[i];
+        // Create a date object for this day (using first dataset's month/year for reference)
+        const referenceDate = new Date(selectedDatasets[0].data[0].date);
+        const avgDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), i + 1);
+        
+        averageData.push({
+          date: avgDate.toISOString(),
+          consumption: avgValue,
+          day: i + 1
+        });
+      }
+    }
   
     // Create the average dataset
     const averageDataset = {
       label: 'Average Aggregate',
-      data: averageData.map((y, i) => ({ day: i + 1, consumption: y })), // Ensure proper format
+      data: averageData,
       building: 'Data',
       year: selectedDatasets.length + ' Months',
       month: 'Aggregate Average',
-      color: 'rgba(8, 252, 57, 0.82)',
+      color: 'rgba(240, 8, 252, 0.82)',
       tension: 0.1,
       borderDash: [5, 5],
       fill: false,
@@ -377,10 +464,12 @@ const LineGraph = () => {
       }
       const predictionData = await response.json();
       console.log('Prediction Data:', predictionData);
+      
       // Format the prediction data for the graph
-      const formattedPredictions = predictionData.predictions.map(prediction => ({
+      const formattedPredictions = predictionData.predictions.map((prediction, index) => ({
         date: prediction.ds, // Ensure this matches the format used in the graph
         consumption: prediction.Final_Prediction, // Ensure this matches the key used in the graph
+        day: index + 1 // Add day number for consistency
       }));
       console.log('Formatted Predictions:', formattedPredictions);
 
@@ -430,10 +519,13 @@ const LineGraph = () => {
     // Check if the dataset is the prediction dataset
     if (dataset.building === 'Prediction') {
       const consumptionValues = dataset.data.slice(0,30).map(entry => entry.consumption);
-      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-      const max = Math.max(...consumptionValues);
-      const min = Math.min(...consumptionValues);
-      const total = consumptionValues.reduce((a, b) => a + b, 0);
+      const validValues = consumptionValues.filter(value => value !== null && value !== undefined);
+      if (validValues.length === 0) return { average: '0.00', max: '0.00', min: '0.00', total: '0.00' };
+      
+      const average = validValues.reduce((a, b) => a + b, 0) / validValues.length;
+      const max = Math.max(...validValues);
+      const min = Math.min(...validValues);
+      const total = validValues.reduce((a, b) => a + b, 0);
       const meanAbsoluteError = dataset.evaluation?.mean_absolute_error || 0;
       const rootMeanSquaredError = dataset.evaluation?.root_mean_squared_error || 0;
       const percentageMAE = dataset.evaluation?.percentage_mae || 0;
@@ -451,12 +543,15 @@ const LineGraph = () => {
         percentageRMSE: percentageRMSE.toFixed(2),
       };
     } else if (dataset.label === 'Average Aggregate') {
-      // For Average Aggregate, take only the first 30 values
-      const consumptionValues = dataset.data.slice(0, 30).map(entry => entry.consumption);
-      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-      const max = Math.max(...consumptionValues);
-      const min = Math.min(...consumptionValues);
-      const total = consumptionValues.reduce((a, b) => a + b, 0);
+      // For Average Aggregate, take only valid values
+      const consumptionValues = dataset.data.map(entry => entry.consumption);
+      const validValues = consumptionValues.filter(value => value !== null && value !== undefined);
+      if (validValues.length === 0) return { average: '0.00', max: '0.00', min: '0.00', total: '0.00' };
+      
+      const average = validValues.reduce((a, b) => a + b, 0) / validValues.length;
+      const max = Math.max(...validValues);
+      const min = Math.min(...validValues);
+      const total = validValues.reduce((a, b) => a + b, 0);
   
       return {
         label: dataset.label,
@@ -467,10 +562,13 @@ const LineGraph = () => {
       };
     } else {
       const consumptionValues = dataset.data.map(entry => entry.consumption);
-      const average = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length;
-      const max = Math.max(...consumptionValues);
-      const min = Math.min(...consumptionValues);
-      const total = consumptionValues.reduce((a, b) => a + b, 0);
+      const validValues = consumptionValues.filter(value => value !== null && value !== undefined);
+      if (validValues.length === 0) return { average: '0.00', max: '0.00', min: '0.00', total: '0.00' };
+      
+      const average = validValues.reduce((a, b) => a + b, 0) / validValues.length;
+      const max = Math.max(...validValues);
+      const min = Math.min(...validValues);
+      const total = validValues.reduce((a, b) => a + b, 0);
   
       return {
         label: dataset.label || `${dataset.building} - ${dataset.month}/${dataset.year}`,

@@ -387,11 +387,15 @@ def predict_future():
     try:
         data = request.get_json()
         datasets = data.get('datasets')
-        #print(datasets)
-
+        
         predictor = Predictor()
-        future_predictions = predictor.predict(datasets)
-        return jsonify(future_predictions)
+        result = predictor.predict(datasets)
+        
+        # Check if result contains an error
+        if 'error' in result:
+            return jsonify({'error': result['error']}), 500
+        print("Returning result:", result)
+        return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
         
