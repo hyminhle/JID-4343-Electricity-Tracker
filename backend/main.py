@@ -17,6 +17,9 @@ from collections import defaultdict
 from models import db, ElectricityData, ElectricityStatistics
 from AnomalyDetector import AnomalyDetector
 from anomaly_routes import anomaly_bp
+import smtplib
+from email.message import EmailMessage
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -31,6 +34,15 @@ app.config['CACHE_TYPE'] = 'SimpleCache'
 app.config['CACHE_THRESHOLD'] = 1000
 app.config['CACHE_DEFAULT_TIMEOUT'] = 3600  # Cache timeout in seconds (5 minutes)
 cache = Cache(app)
+
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USERNAME'] = 'jdoee1455@gmail.com'  # Replace with your Gmail address
+app.config['MAIL_PASSWORD'] = 'eeid vwqq uniw wpul'     # Replace with your App Password
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+mail = Mail(app)
 
 # Create scheduler
 scheduler = BackgroundScheduler()
@@ -594,6 +606,65 @@ def get_available_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Helper function to send email
+def send_email(subject, content, recipients):
+    try:
+        msg = Message(
+            subject=subject,
+            sender=app.config['MAIL_USERNAME'],  # Use the configured sender email
+            recipients=recipients
+        )
+        msg.body = content
+        mail.send(msg)
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+@app.route('/send-daily-report', methods=['POST'])
+def send_daily_report():
+    try:
+        data = request.get_json()
+        alerts = data.get('alerts', [])
+        email_list = data.get('emailList', [])
+
+        if not alerts or not email_list:
+            return jsonify({'error': 'No alerts or email list provided'}), 400
+
+        # Format the email content
+        content = "Daily Anomaly Report:\n\n"
+        for alert in alerts:
+            content += f"Severity: {alert['severity']}\n"
+            content += f"Building: {alert['building']}\n"
+            content += f"Date: {alert['date']}\n"
+            content += f"Consumption: {alert['consumption']} kWh\n\n"
+
+        # Send email to all recipients
+        send_email('Daily Anomaly Report', content, email_list)
+        return jsonify({'message': 'Daily report sent successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/send-specific-alert', methods=['POST'])
+def send_specific_alert():
+    try:
+        data = request.get_json()
+        alert = data.get('alert')
+        email_list = data.get('emailList', [])
+
+        if not alert or not email_list:
+            return jsonify({'error': 'No alert or email list provided'}), 400
+
+        # Format the email content
+        content = "Critical Anomaly Alert:\n\n"
+        content += f"Severity: {alert['severity']}\n"
+        content += f"Building: {alert['building']}\n"
+        content += f"Date: {alert['date']}\n"
+        content += f"Consumption: {alert['consumption']} kWh\n"
+
+        # Send email to all recipients
+        send_email('Critical Anomaly Alert', content, email_list)
+        return jsonify({'message': 'Specific alert sent successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':    

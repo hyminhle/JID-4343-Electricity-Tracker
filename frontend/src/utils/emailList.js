@@ -20,3 +20,9 @@ export const removeEmailFromList = (emailToRemove) => {
   const emailList = getEmailList().filter(email => email !== emailToRemove);
   localStorage.setItem(EMAIL_LIST_KEY, JSON.stringify(emailList));
 };
+
+// Get the email list for sending notifications
+export const getEmailRecipients = () => {
+  const emailList = getEmailList();
+  return emailList.length > 0 ? emailList : []; // Ensure an empty array is returned if no emails are found
+};

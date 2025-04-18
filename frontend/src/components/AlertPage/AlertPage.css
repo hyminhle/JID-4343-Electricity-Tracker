@@ -687,3 +687,32 @@
     margin-top: 15px;
   }
 }
+
+.send-report-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.send-report-button:hover {
+  background-color: #0056b3;
+}
+
+.send-alert-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.send-alert-button:hover {
+  background-color: #a71d2a;
+}
