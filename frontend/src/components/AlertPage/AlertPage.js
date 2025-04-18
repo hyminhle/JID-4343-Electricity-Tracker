@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDate } from '../DateContext'; // Import useAppDate
 import './AlertPage.css';
+import { getEmailRecipients } from '../../utils/emailList';
 
 const AlertPage = () => {
   const { appDate } = useAppDate(); // Use the system clock from DateContext
@@ -486,6 +487,56 @@ const AlertPage = () => {
     }
   };
 
+  const sendDailyReport = async () => {
+    const emailList = getEmailRecipients();
+    if (emailList.length === 0) {
+      alert('No email recipients found.');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/send-daily-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alerts, emailList })
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        alert('Daily report sent successfully.');
+      } else {
+        alert(`Error sending daily report: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending daily report:', error);
+    }
+  };
+  
+  const sendSpecificAlert = async (alertData) => {
+    const emailList = getEmailRecipients();
+    if (emailList.length === 0) {
+      alert('No email recipients found.');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/send-specific-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert: alertData, emailList })
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        alert('Specific alert sent successfully.');
+      } else {
+        alert(`Error sending specific alert: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending specific alert:', error);
+    }
+  };
+
   return (
     <div className="alert-page">
       {/* Alert Statistics Header */}
@@ -647,6 +698,12 @@ const AlertPage = () => {
               >
                 Reset Filters
               </button>
+              <button 
+                className="send-report-button" 
+                onClick={sendDailyReport}
+              >
+                Send Daily Report
+              </button>
             </div>
 
             {/* Analysis Statistics Panel */}
@@ -755,19 +812,20 @@ const AlertPage = () => {
               <th>Date</th>
               <th>Detection Time</th>
               <th>Value</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="5" className="loading-cell">
+                <td colSpan="6" className="loading-cell">
                   <div className="loading-spinner"></div>
                   <p>Loading alerts...</p>
                 </td>
               </tr>
             ) : filteredAlerts.length === 0 ? (
               <tr>
-                <td colSpan="5" className="empty-cell">
+                <td colSpan="6" className="empty-cell">
                   <p>No alerts found matching your filters.</p>
                 </td>
               </tr>
@@ -783,6 +841,14 @@ const AlertPage = () => {
                   <td className="date-cell">{formatDate(new Date().toISOString())}</td>
                   <td className="value-cell">
                     {alert.consumption !== 'N/A' ? parseFloat(alert.consumption).toFixed(2) : 'N/A'}
+                  </td>
+                  <td>
+                    <button 
+                      className="send-alert-button" 
+                      onClick={() => sendSpecificAlert(alert)}
+                    >
+                      Send Alert
+                    </button>
                   </td>
                 </tr>
               ))

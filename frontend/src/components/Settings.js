@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { useAppDate } from './DateContext';
+import { getEmailList, addEmailToList, removeEmailFromList } from '../utils/emailList'; // Import global email list functions
 
 function Settings() {
   // Initialize theme from localStorage or default to light
@@ -23,6 +24,10 @@ function Settings() {
   
   // New state for cache clearing feedback
   const [cacheClearFeedback, setCacheClearFeedback] = useState('');
+
+  // State to manage email input
+  const [email, setEmail] = useState('');
+  const [emailList, setEmailList] = useState(getEmailList()); // Initialize from global list
 
   // Apply theme when component mounts and when darkMode changes
   useEffect(() => {
@@ -94,6 +99,21 @@ function Settings() {
     }, 3000);
   };
 
+  // Function to handle adding an email
+  const addEmail = () => {
+    if (email && !emailList.includes(email)) {
+      addEmailToList(email); // Update global list
+      setEmailList(getEmailList()); // Refresh local state
+      setEmail(''); // Clear input field
+    }
+  };
+
+  // Function to handle removing an email
+  const removeEmail = (emailToRemove) => {
+    removeEmailFromList(emailToRemove); // Update global list
+    setEmailList(getEmailList()); // Refresh local state
+  };
+
   return (
     <div className="settings-container">
       <h1 className="settings-title">Settings</h1>
@@ -162,65 +182,9 @@ function Settings() {
         </div>
       </div>
       
-      <div className="settings-section">
-        <h2 className="section-title">Data Preferences</h2>
-        
-        <div className="setting-item">
-          <div className="setting-info">
-            <h3>Default View</h3>
-            <p>Set your default landing page</p>
-          </div>
-          <div className="setting-control">
-            <select className="select-control">
-              <option value="dashboard">Dashboard</option>
-              <option value="graph">Graph</option>
-              <option value="map">Map</option>
-              <option value="calendar">Calendar</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="setting-item">
-          <div className="setting-info">
-            <h3>Data Refresh</h3>
-            <p>Set how often data should automatically refresh</p>
-          </div>
-          <div className="setting-control">
-            <select className="select-control">
-              <option value="manual">Manual only</option>
-              <option value="15min">Every 15 minutes</option>
-              <option value="1hour">Every hour</option>
-              <option value="daily">Daily</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Removed Data Preferences Section */}
       
-      {/* New Cache Management Section */}
-      <div className="settings-section">
-        <h2 className="section-title">Cache Management</h2>
-        
-        <div className="setting-item">
-          <div className="setting-info">
-            <h3>Clear All Local Data</h3>
-            <p>Remove all locally stored data including theme preferences</p>
-          </div>
-          <div className="setting-control">
-            <button 
-              className="reset-button" 
-              onClick={clearAllLocalData}
-            >
-              Clear All Data
-            </button>
-          </div>
-        </div>
-        
-        {cacheClearFeedback && (
-          <div className="feedback-message success-message">
-            {cacheClearFeedback}
-          </div>
-        )}
-      </div>
+      {/* Removed Cache Management Section */}
       
       <div className="settings-section">
         <h2 className="section-title">Account</h2>
@@ -240,7 +204,41 @@ function Settings() {
             <p>Update your profile information</p>
           </div>
           <div className="setting-control">
-            <button className="account-button">Edit Profile</button>
+            <input 
+              type="email" 
+              placeholder="Enter your email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              className="email-input"
+            />
+            <button 
+              className="settings-button add-email-button" 
+              onClick={addEmail}
+            >
+              Add Email
+            </button>
+          </div>
+        </div>
+
+        <div className="setting-item">
+          <div className="setting-info">
+            <h3>Saved Emails</h3>
+            <p>List of all saved emails</p>
+          </div>
+          <div className="setting-display">
+            <ul>
+              {emailList.map((email, index) => (
+                <li key={index}>
+                  {email}
+                  <button 
+                    className="settings-button remove-email-button" 
+                    onClick={() => removeEmail(email)}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>
