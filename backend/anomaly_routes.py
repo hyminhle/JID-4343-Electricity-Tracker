@@ -14,14 +14,16 @@ def analyze_anomalies():
     """
     try:
         data = request.get_json()
-        building = data.get('building')
+        building = data.get('building')  # None indicates all buildings
         year = data.get('year')
         month = data.get('month', 0)
         method = data.get('method', 'z_score')
         threshold = float(data.get('threshold', 3.0))
+        system_clock = data.get('system_clock')  # Get system clock from frontend
         
         # Decode building name if it's URL encoded
-        building = unquote(building)
+        if building:
+            building = unquote(building)
         
         # Get consumption data for the specified building and timeframe
         if month == 0:  # Full year
@@ -35,11 +37,15 @@ def analyze_anomalies():
                 end_date = datetime(year, month + 1, 1).date()
         
         # Query data from database
-        db_data = ElectricityData.query.filter(
+        query = ElectricityData.query.filter(
             ElectricityData.date >= start_date,
-            ElectricityData.date < end_date,
-            ElectricityData.building == building
-        ).order_by(ElectricityData.date).all()
+            ElectricityData.date < end_date
+        )
+        
+        if building:  # Filter by building if specified
+            query = query.filter(ElectricityData.building == building)
+        
+        db_data = query.order_by(ElectricityData.date).all()
         
         if not db_data:
             return jsonify({'error': 'No data found for the specified parameters'}), 404
@@ -52,7 +58,12 @@ def analyze_anomalies():
         } for entry in db_data]
         
         # Detect anomalies
-        anomalies = anomaly_detector.detect_anomalies(formatted_data, method, threshold)
+        anomalies = anomaly_detector.detect_anomalies(
+            formatted_data,
+            method=method,
+            threshold=threshold,
+            system_clock=datetime.fromisoformat(system_clock) if system_clock else None  # Pass system clock
+        )
         
         # Store anomalies in database
         new_anomalies = anomaly_detector.store_anomalies(anomalies)
@@ -60,16 +71,19 @@ def analyze_anomalies():
         # Return results with formatted dates for display
         for anomaly in anomalies:
             anomaly['date'] = anomaly['date'].isoformat()
+            anomaly['expected_low'] = anomaly.get('expected_low', None)  # Add expected range if available
+            anomaly['expected_high'] = anomaly.get('expected_high', None)
         
         return jsonify({
             'anomalies': anomalies,
             'count': len(anomalies),
             'new_count': new_anomalies,
             'critical': sum(1 for a in anomalies if a['severity'] == 'Critical'),
-            'error': sum(1 for a in anomalies if a['severity'] == 'Error'),
             'warning': sum(1 for a in anomalies if a['severity'] == 'Warning')
         })
         
+    except TypeError as e:
+        return jsonify({'error': f"TypeError: {str(e)}"}), 500
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

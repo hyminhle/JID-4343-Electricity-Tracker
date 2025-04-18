@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useAppDate } from '../DateContext'; // Import useAppDate
 import './AlertPage.css';
 
 const AlertPage = () => {
+  const { appDate } = useAppDate(); // Use the system clock from DateContext
   // State for alerts and filtering
   const [alerts, setAlerts] = useState([]);
   const [alertStats, setAlertStats] = useState({
@@ -27,7 +29,7 @@ const AlertPage = () => {
   const [analysisStats, setAnalysisStats] = useState(null);
   
   // Add detection method selection
-  const [detectionMethod, setDetectionMethod] = useState('ZSCORE'); // Default to Z-Score instead of LOF
+  const [detectionMethod, setDetectionMethod] = useState('z_score'); // Default to z_score instead of LOF
   
   // Add sensitivity settings for both methods
   const [lofSensitivity, setLofSensitivity] = useState(2.0); // Lower threshold for more sensitivity
@@ -54,7 +56,7 @@ const AlertPage = () => {
   useEffect(() => {
     const initialize = async () => {
       await fetchAvailableData();
-      await runInitialAnomalyDetection();
+      await runAnomalyDetection(); // Automatically run anomaly detection
     };
     
     initialize();
@@ -95,53 +97,90 @@ const AlertPage = () => {
     setIsLoading(true);
 
     try {
-      const building = selectedBuilding === 'All Buildings' ? 
-        (buildingOptions.length > 1 ? buildingOptions[1] : '') : 
-        selectedBuilding;
-      
-      if (!building) {
-        console.error('No building available for anomaly detection');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get the appropriate threshold based on selected method
-      const threshold = detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold;
-      
-      // Run anomaly detection with current parameters
-      const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          building: building,
-          year: selectedYear,
-          month: selectedMonth,
-          method: detectionMethod, // Use selected method
-          threshold: threshold, // Use appropriate threshold
-          time_window: timeWindow, // For Z-score method
-          store_results: true,
-          include_stats: true,
-          cluster_all_buildings: selectedBuilding === 'All Buildings',
-          severity_levels: ['warning', 'critical'] // Only use two severity levels
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.error) {
-        console.error(`Error in anomaly detection: ${result.error}`);
-      } else {
-        // Store the statistics for display
-        if (result.statistics) {
-          setAnalysisStats(result.statistics);
+      if (selectedBuilding === 'All Buildings') {
+        // Handle "All Buildings" by iterating through all buildings
+        const relevantBuildings = buildingOptions.filter(b => b !== 'All Buildings');
+        const allAlerts = [];
+
+        for (const building of relevantBuildings) {
+          const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              building: building,
+              year: selectedYear,
+              month: selectedMonth,
+              method: detectionMethod,
+              threshold: detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold,
+              time_window: timeWindow,
+              store_results: true,
+              include_stats: true,
+              severity_levels: ['warning', 'critical']
+            })
+          });
+
+          if (response.status === 404) {
+            console.warn(`No data found for building: ${building}`);
+            continue;
+          }
+
+          const result = await response.json();
+
+          if (result.error) {
+            console.error(`Error in anomaly detection for building ${building}: ${result.error}`);
+            continue;
+          }
+
+          allAlerts.push(...result.anomalies);
         }
-        
-        console.log(`Anomaly analysis complete. Found ${result.count} anomalies`);
-        
-        // Fetch alerts to display them
-        fetchAlerts();
+
+        setAlerts(allAlerts);
+        setAlertStats({
+          total: allAlerts.length,
+          critical: allAlerts.filter(a => a.severity === 'Critical').length,
+          warning: allAlerts.filter(a => a.severity === 'Warning').length
+        });
+      } else {
+        // Handle single building case
+        const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            building: selectedBuilding,
+            year: selectedYear,
+            month: selectedMonth,
+            method: detectionMethod,
+            threshold: detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold,
+            time_window: timeWindow,
+            store_results: true,
+            include_stats: true,
+            severity_levels: ['warning', 'critical']
+          })
+        });
+
+        if (response.status === 404) {
+          console.error('No data found for the specified parameters');
+          setAlerts([]);
+          setAlertStats({ total: 0, critical: 0, warning: 0 });
+          return;
+        }
+
+        const result = await response.json();
+
+        if (result.error) {
+          console.error(`Error in anomaly detection: ${result.error}`);
+        } else {
+          setAlerts(result.anomalies);
+          setAlertStats({
+            total: result.anomalies.length,
+            critical: result.anomalies.filter(a => a.severity === 'Critical').length,
+            warning: result.anomalies.filter(a => a.severity === 'Warning').length
+          });
+        }
       }
     } catch (error) {
       console.error('Error running anomaly detection:', error);
@@ -248,6 +287,40 @@ const AlertPage = () => {
   }, [selectedYear, selectedBuilding, availableData]);
   
   // Fetch alerts based on current filters
+  const [severityFilter, setSeverityFilter] = useState({
+    warning: true,
+    critical: true,
+  });
+
+  // Filter alerts based on the selected severity and time range in the frontend
+  const filteredAlerts = alerts.filter(alert => {
+    // Filter by severity
+    const matchesSeverity = (severityFilter.warning && alert.severity === 'Warning') ||
+                            (severityFilter.critical && alert.severity === 'Critical');
+
+    // Filter by time range using the `date` field
+    const alertDate = new Date(alert.date);
+    const now = appDate; // Use the system clock
+    let matchesTimeRange = true;
+
+    if (timeRange === 'past24h') {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      matchesTimeRange = alertDate >= yesterday && alertDate <= now;
+    } else if (timeRange === 'past7d') {
+      const lastWeek = new Date(now);
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      matchesTimeRange = alertDate >= lastWeek && alertDate <= now;
+    } else if (timeRange === 'past30d') {
+      const lastMonth = new Date(now);
+      lastMonth.setDate(lastMonth.getDate() - 30);
+      matchesTimeRange = alertDate >= lastMonth && alertDate <= now;
+    }
+
+    return matchesSeverity && matchesTimeRange;
+  });
+
+  // Update the fetchAlerts function to include severity filtering
   const fetchAlerts = async () => {
     setIsLoading(true);
     
@@ -267,8 +340,8 @@ const AlertPage = () => {
         params.append('month', selectedMonth);
       }
       
-      // Add time range filter
-      const now = new Date();
+      // Add time range filter based on the system clock (appDate)
+      const now = appDate; // Use appDate as the current system clock
       if (timeRange === 'past24h') {
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
@@ -283,8 +356,13 @@ const AlertPage = () => {
         params.append('start_date', lastMonth.toISOString().split('T')[0]);
       }
       
-      // Only get warning and critical alerts (no error)
-      params.append('severity', 'warning,critical');
+      // Add severity filter
+      const selectedSeverities = [];
+      if (severityFilter.warning) selectedSeverities.push('warning');
+      if (severityFilter.critical) selectedSeverities.push('critical');
+      if (selectedSeverities.length > 0) {
+        params.append('severity', selectedSeverities.join(','));
+      }
       
       // Add method parameter to get alerts from the correct method
       params.append('method', detectionMethod);
@@ -294,19 +372,21 @@ const AlertPage = () => {
       const data = await response.json();
       
       if (data.alerts) {
-        // Filter alerts based on search query
-        let filteredAlerts = data.alerts;
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          filteredAlerts = filteredAlerts.filter(alert => 
-            alert.building.toLowerCase().includes(query) ||
-            alert.severity.toLowerCase().includes(query)
-          );
-        }
-        
-        setAlerts(filteredAlerts);
+        // Ensure all alerts are displayed, even with missing fields
+        const normalizedAlerts = data.alerts.map(alert => ({
+          id: alert.id || Math.random(), // Generate a random ID if missing
+          severity: alert.severity || 'N/A',
+          building: alert.building || 'N/A',
+          date: alert.date || 'N/A',
+          detection_time: appDate.toISOString(), // Use the system clock from useAppDate
+          consumption: alert.consumption || 'N/A',
+          expected_low: alert.expected_low !== undefined ? alert.expected_low : 'N/A',
+          expected_high: alert.expected_high !== undefined ? alert.expected_high : 'N/A'
+        }));
+
+        setAlerts(normalizedAlerts);
         setAlertStats({
-          total: data.stats.total,
+          total: data.stats.total || 0,
           critical: data.stats.critical || 0,
           warning: data.stats.warning || 0
         });
@@ -321,7 +401,7 @@ const AlertPage = () => {
   // Apply filters when they change
   useEffect(() => {
     fetchAlerts();
-  }, [selectedBuilding, selectedYear, selectedMonth, timeRange, detectionMethod]);
+  }, [selectedBuilding, selectedYear, selectedMonth, timeRange, detectionMethod, severityFilter]);
   
   // Handle filter change
   const handleFilterChange = (filterName, value) => {
@@ -385,7 +465,27 @@ const AlertPage = () => {
     if (isLoading) return 'Analyzing...';
     return `Run ${detectionMethod === 'LOF' ? 'LOF' : 'Z-Score'} Analysis`;
   };
-  
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const alertsPerPage = 30;
+
+  // Calculate the alerts to display on the current page
+  const indexOfLastAlert = currentPage * alertsPerPage;
+  const indexOfFirstAlert = indexOfLastAlert - alertsPerPage;
+  const currentAlerts = filteredAlerts.slice(indexOfFirstAlert, indexOfLastAlert);
+
+  const handleNextPage = () => {
+    if (currentPage < Math.ceil(filteredAlerts.length / alertsPerPage)) {
+      setCurrentPage(prevPage => prevPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prevPage => prevPage - 1);
+    }
+  };
+
   return (
     <div className="alert-page">
       {/* Alert Statistics Header */}
@@ -469,7 +569,7 @@ const AlertPage = () => {
                     onChange={(e) => setDetectionMethod(e.target.value)}
                   >
                     <option value="LOF">Local Outlier Factor</option>
-                    <option value="ZSCORE">Z-Score Method</option>
+                    <option value="z_score">Z-Score Method</option>
                   </select>
                 </div>
               </div>
@@ -620,8 +720,8 @@ const AlertPage = () => {
                 <input 
                   type="checkbox" 
                   id="severity-critical" 
-                  checked={true}
-                  onChange={() => {}} 
+                  checked={severityFilter.critical}
+                  onChange={() => setSeverityFilter(prev => ({ ...prev, critical: !prev.critical }))}
                 />
                 <label htmlFor="severity-critical">Critical</label>
               </div>
@@ -629,8 +729,8 @@ const AlertPage = () => {
                 <input 
                   type="checkbox" 
                   id="severity-warning" 
-                  checked={true}
-                  onChange={() => {}} 
+                  checked={severityFilter.warning}
+                  onChange={() => setSeverityFilter(prev => ({ ...prev, warning: !prev.warning }))}
                 />
                 <label htmlFor="severity-warning">Warning</label>
               </div>
@@ -655,45 +755,34 @@ const AlertPage = () => {
               <th>Date</th>
               <th>Detection Time</th>
               <th>Value</th>
-              <th>Expected Range</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="6" className="loading-cell">
+                <td colSpan="5" className="loading-cell">
                   <div className="loading-spinner"></div>
                   <p>Loading alerts...</p>
                 </td>
               </tr>
-            ) : alerts.length === 0 ? (
+            ) : filteredAlerts.length === 0 ? (
               <tr>
-                <td colSpan="6" className="empty-cell">
+                <td colSpan="5" className="empty-cell">
                   <p>No alerts found matching your filters.</p>
-                  {detectionMethod === 'LOF' && (
-                    <p className="method-suggestion">Try switching to Z-Score method for more sensitivity to time-based patterns.</p>
-                  )}
                 </td>
               </tr>
             ) : (
-              alerts.map(alert => (
+              currentAlerts.map(alert => (
                 <tr 
                   key={alert.id} 
                   className={`alert-row severity-${alert.severity.toLowerCase()}`}
                 >
                   <td className={`severity-cell ${alert.severity.toLowerCase()}`}>{alert.severity}</td>
                   <td className="building-cell">{alert.building}</td>
-                  <td className="date-cell">{alert.date}</td>
-                  <td className="date-cell">{formatDate(alert.detection_time || alert.created_at)}</td>
+                  <td className="date-cell">{formatDate(alert.date)}</td>
+                  <td className="date-cell">{formatDate(new Date().toISOString())}</td>
                   <td className="value-cell">
-                    {alert.actual_value !== undefined && alert.actual_value !== null
-                      ? alert.actual_value.toFixed(2)
-                      : alert.consumption ? alert.consumption.toFixed(2) : 'N/A'}
-                  </td>
-                  <td className="range-cell">
-                    {alert.expected_low !== undefined && alert.expected_low !== null
-                      ? `${alert.expected_low.toFixed(2)} - ${alert.expected_high.toFixed(2)}`
-                      : ''}
+                    {alert.consumption !== 'N/A' ? parseFloat(alert.consumption).toFixed(2) : 'N/A'}
                   </td>
                 </tr>
               ))
@@ -704,9 +793,23 @@ const AlertPage = () => {
 
       {/* Pagination Controls */}
       <div className="pagination-controls">
-        <button className="page-button" disabled>Previous</button>
-        <span className="page-info">Page 1 of 1</span>
-        <button className="page-button" disabled>Next</button>
+        <button 
+          className="page-button" 
+          onClick={handlePreviousPage} 
+          disabled={currentPage === 1}
+        >
+          Previous
+        </button>
+        <span className="page-info">
+          Page {currentPage} of {Math.ceil(filteredAlerts.length / alertsPerPage)}
+        </span>
+        <button 
+          className="page-button" 
+          onClick={handleNextPage} 
+          disabled={currentPage === Math.ceil(filteredAlerts.length / alertsPerPage)}
+        >
+          Next
+        </button>
       </div>
     </div>
   );
