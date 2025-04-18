@@ -81,6 +81,8 @@ const MapWidget = () => {
         'Building 145': [29.628514, -95.612953],
         'Building 150': [29.627014, -95.611753],
         'Building 155': [29.629514, -95.608553],
+        'Building 170': [29.630124, -95.608653],
+        'Building 180': [29.627124, -95.608253]
       };
 
       const buildingSizes = {
@@ -96,6 +98,8 @@ const MapWidget = () => {
         'Building 145': 0.00048,
         'Building 150': 0.00048,
         'Building 155': 0.00048,
+        'Building 170': 0.00048,    
+        'Building 180': 0.00048    
       };
 
       const newBuildings = {};

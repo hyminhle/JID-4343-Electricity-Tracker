@@ -142,7 +142,7 @@ function Settings() {
               onChange={handleTimeChange}
             />
             <button 
-              className="settings-button reset-button" 
+              className="reset-button" 
               onClick={resetToCurrentDateTime}
               title="Reset to current time"
             >
@@ -207,7 +207,7 @@ function Settings() {
           </div>
           <div className="setting-control">
             <button 
-              className="settings-button clear-all-button" 
+              className="reset-button" 
               onClick={clearAllLocalData}
             >
               Clear All Data
@@ -230,7 +230,7 @@ function Settings() {
             <p>Manage email and in-app notifications</p>
           </div>
           <div className="setting-control">
-            <button className="settings-button">Manage</button>
+            <button className="account-button">Manage</button>
           </div>
         </div>
         
@@ -240,7 +240,7 @@ function Settings() {
             <p>Update your profile information</p>
           </div>
           <div className="setting-control">
-            <button className="settings-button">Edit Profile</button>
+            <button className="account-button">Edit Profile</button>
           </div>
         </div>
       </div>

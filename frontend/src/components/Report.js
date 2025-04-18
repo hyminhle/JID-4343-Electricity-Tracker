@@ -479,7 +479,7 @@ const Report = () => {
           <button className="refresh-button" onClick={handleRefreshData} title="Refresh data">
             ↻ Refresh
           </button>
-          <button className="export-button" onClick={exportToPDF}>
+          <button className="refresh-button" onClick={exportToPDF}>
             Export to PDF
           </button>
           
