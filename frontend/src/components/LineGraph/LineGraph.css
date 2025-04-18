@@ -30,6 +30,7 @@
   --light-bg: #2d3748;
   --dark-bg: #1a202c;
   --card-bg: #2d3748;
+  --linegraph-bg: #e2e8f0;
   --border-color: #4a5568;
   --text-color: #e2e8f0;
   --text-light: #a0aec0;
@@ -245,7 +246,7 @@
 }
 
 .chart-container {
-  background-color: var(--card-bg);
+  background-color: var(--linegraph-bg);
   padding: 20px;
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
