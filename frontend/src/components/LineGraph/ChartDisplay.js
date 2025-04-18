@@ -107,7 +107,7 @@ const ChartDisplay = ({ datasets, height = '600px', showGrid = true, darkMode = 
         borderDash: (ds.building === 'Prediction' || ds.label === 'Average Aggregate') ? [] : [5, 5],
         borderWidth: ds.borderWidth || 2, // Increased line weight
         pointBackgroundColor: ds.pointBackgroundColor || ds.color,
-        pointRadius: ds.pointRadius || 2, // Increased point size
+        pointRadius: ds.pointRadius || 1, // Increased point size
         pointHoverRadius: 4, // Increased hover point size
         pointStyle: ds.pointStyle || 'circle',
         spanGaps: true, // Allow drawing lines between points with null values
@@ -309,16 +309,19 @@ const ChartDisplay = ({ datasets, height = '600px', showGrid = true, darkMode = 
 
   // Apply container styles with white background regardless of theme
   const containerStyle = {
-    height,
+    height: height || '100%', // Use provided height or default to 100%
+    width: '100%',            // Ensure full width
     backgroundColor: 'white', // Always white regardless of dark mode
     borderRadius: '4px',
     padding: '10px',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    display: 'flex',          // Add flex display
+    flexDirection: 'column'   // Stack children vertically
   };
-
+  
   return (
     <div style={containerStyle}>
-      <canvas ref={chartRef}></canvas>
+      <canvas ref={chartRef} style={{ flex: 1 }}></canvas> {/* Make canvas fill available space */}
     </div>
   );
 };

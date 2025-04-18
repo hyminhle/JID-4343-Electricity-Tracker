@@ -86,7 +86,7 @@ const ChartContainer = () => {
       <div style={{ flex: 1 }}>
         <ChartDisplay 
           datasets={datasets} 
-          height="300px" // Adjust height to fit in dashboard card
+          height="350px" // Adjust height to fit in dashboard card
         />
       </div>
     </div>
