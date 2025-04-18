@@ -98,8 +98,25 @@
 }
 
 .reset-button {
-  padding: 0.5rem;
-  font-size: 0.75rem;
+  padding: 8px 16px;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--danger-color);
+  transition: all 0.3s ease;
+}
+
+.account-button {
+  padding: 8px 16px;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
 
 /* Toggle Switch Styles */
@@ -185,6 +202,8 @@ input:checked + .toggle-slider:before {
 .settings-button:hover {
   background-color: var(--button-hover-bg-color);
 }
+
+
 
 /* Color Options */
 .settings-color-options {
