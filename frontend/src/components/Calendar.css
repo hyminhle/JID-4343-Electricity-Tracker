@@ -250,10 +250,23 @@
 }
 
 .react-datepicker__header {
+  color: var(--text-primary);
   background-color: var(--card-background) !important;
   border-bottom: 1px solid var(--border-color) !important;
   padding: 10px !important;
   transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.react-datepicker__current-month {
+  color: var(--text-primary) !important; 
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.react-datepicker__day-name {
+  color: var(--text-primary) !important; 
+  font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 /* Update toggle buttons styles with theme variables */
