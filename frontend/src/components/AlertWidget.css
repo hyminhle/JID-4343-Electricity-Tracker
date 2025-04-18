@@ -244,48 +244,43 @@
     letter-spacing: 0.3px;
   }
 
-  .dashboard.dark .alert-widget {
-    background-color: #1a202c; /* Darker background for contrast */
-    color: #e2e8f0; /* Light text for better visibility */
-}
-
-.dashboard.dark .alert-header h3 {
+[data-theme="dark"] .alert-header h3 {
     color: #ffffff; /* White text for header */
 }
 
-.dashboard.dark .icon-button {
+[data-theme="dark"] .icon-button {
     color: #cbd5e0; /* Lighter grey for icons */
 }
 
-.dashboard.dark .icon-button:hover {
+[data-theme="dark"] .icon-button:hover {
     background-color: rgba(74, 85, 104, 0.3);
     color: #ffffff; /* White on hover */
 }
 
-.dashboard.dark .alert-summary {
-    background-color: #2d3748; /* Darker background for summary */
+[data-theme="dark"] .alert-summary {
+    background-color: #1a202c; /* Darker background for summary */
     color: #e2e8f0; /* Light text for summary */
 }
 
-.dashboard.dark .count-label,
-.dashboard.dark .alert-timeframe {
+[data-theme="dark"] .count-label,
+[data-theme="dark"] .alert-timeframe {
     color: #a0aec0; /* Lighter grey for labels */
 }
 
-.dashboard.dark .recent-alerts h4 {
+[data-theme="dark"] .recent-alerts h4 {
     color: #ffffff; /* White text for recent alerts heading */
 }
 
-.dashboard.dark .alert-date {
+[data-theme="dark"] .alert-date {
     color: #cbd5e0; /* Lighter grey for dates */
 }
 
-.dashboard.dark .view-all-button {
+[data-theme="dark"] .view-all-button {
     background-color: #3182ce; /* Brighter blue for button */
     color: #ffffff; /* White text */
 }
 
-.dashboard.dark .view-all-button:hover {
+[data-theme="dark"]  .view-all-button:hover {
     background-color: #2b6cb0; /* Darker blue on hover */
 }
 
