@@ -162,7 +162,7 @@ function Settings() {
               onChange={handleTimeChange}
             />
             <button 
-              className="reset-button" 
+              className="add-email-button" 
               onClick={resetToCurrentDateTime}
               title="Reset to current time"
             >
@@ -194,7 +194,7 @@ function Settings() {
             <p>Manage email and in-app notifications</p>
           </div>
           <div className="setting-control">
-            <button className="account-button">Manage</button>
+            <button className="add-email-button">Manage</button>
           </div>
         </div>
         
@@ -212,7 +212,7 @@ function Settings() {
               className="email-input"
             />
             <button 
-              className="settings-button add-email-button" 
+              className="add-email-button" 
               onClick={addEmail}
             >
               Add Email
@@ -231,7 +231,7 @@ function Settings() {
                 <li key={index}>
                   {email}
                   <button 
-                    className="settings-button remove-email-button" 
+                    className="remove-email-button" 
                     onClick={() => removeEmail(email)}
                   >
                     Remove
