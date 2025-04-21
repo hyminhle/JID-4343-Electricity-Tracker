@@ -22,7 +22,7 @@ from email.message import EmailMessage
 from flask_mail import Mail, Message
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
 # Add database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://SLB_admin:ElectricitySLB15#@electricitydata-db.cve2k4qgkm75.us-east-2.rds.amazonaws.com/electricitydata'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -32,14 +32,14 @@ db.init_app(app)
 # Add cache
 app.config['CACHE_TYPE'] = 'SimpleCache'
 app.config['CACHE_THRESHOLD'] = 1000
-app.config['CACHE_DEFAULT_TIMEOUT'] = 3600  # Cache timeout in seconds (5 minutes)
+app.config['CACHE_DEFAULT_TIMEOUT'] = 3600  
 cache = Cache(app)
 
 # Configure Flask-Mail
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
-app.config['MAIL_USERNAME'] = 'jdoee1455@gmail.com'  # Replace with your Gmail address
-app.config['MAIL_PASSWORD'] = 'eeid vwqq uniw wpul'     # Replace with your App Password
+app.config['MAIL_USERNAME'] = 'jdoee1455@gmail.com'  
+app.config['MAIL_PASSWORD'] = 'eeid vwqq uniw wpul'     
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
