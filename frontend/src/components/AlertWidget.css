@@ -308,7 +308,70 @@
     gap: 0.75rem;
   }
   
-  .alert-count-item {
-    width: 100%;
+  .loading-spinner {
+    border: 3px solid rgba(243, 243, 243, 0.3);
+    border-top: 3px solid var(--primary-color, #3498db);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 0.75rem;
   }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .no-alerts {
+    text-align: center;
+    padding: 2rem 1.25rem;
+    color: var(--text-secondary, #666);
+  }
+  
+  .no-alerts p {
+    margin: 0;
+    letter-spacing: 0.3px;
+  }
+
+[data-theme="dark"] .alert-header h3 {
+    color: #ffffff; /* White text for header */
+}
+
+[data-theme="dark"] .icon-button {
+    color: #cbd5e0; /* Lighter grey for icons */
+}
+
+[data-theme="dark"] .icon-button:hover {
+    background-color: rgba(74, 85, 104, 0.3);
+    color: #ffffff; /* White on hover */
+}
+
+[data-theme="dark"] .alert-summary {
+    background-color: #1a202c; /* Darker background for summary */
+    color: #e2e8f0; /* Light text for summary */
+}
+
+[data-theme="dark"] .count-label,
+[data-theme="dark"] .alert-timeframe {
+    color: #a0aec0; /* Lighter grey for labels */
+}
+
+[data-theme="dark"] .recent-alerts h4 {
+    color: #ffffff; /* White text for recent alerts heading */
+}
+
+[data-theme="dark"] .alert-date {
+    color: #cbd5e0; /* Lighter grey for dates */
+}
+
+[data-theme="dark"] .view-all-button {
+    background-color: #3182ce; /* Brighter blue for button */
+    color: #ffffff; /* White text */
+}
+
+[data-theme="dark"]  .view-all-button:hover {
+    background-color: #2b6cb0; /* Darker blue on hover */
+}
+
 }
