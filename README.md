@@ -3,13 +3,15 @@
 **Brief Summary**:  
 The Electricity Consumption Tracker is a web application designed to help users monitor and visualize their electricity consumption. The application displays data through a line graph and provides relevant statistics about energy usage, including the average daily consumption, total cost, and more. The data can be uploaded via CSV files for different months, and the system generates real-time visualizations to help users make informed decisions about energy usage.
 
-**Required Installations**
+**Required Installations**  
 Running the code will require users to install these applications first into their virtual environment:
 - pip install flask flask-cors matplotlib panda mysql-connector mysql-connector-python mysql-connector-python-rf pymysql flask-sqlalchemy Flask-Caching apscheduler prophet plotly scikit-learn redis flask-cachin
 - npm install chart.js axios chartjs-plugin-annotation react-router-dom prophet plotly scikit-learn react-leaflet@4 leaflet leaflet.heat react-datepicker 
 
+---
+
 # Release Notes
- **Dynamic Building Colors**: Updated building colors dynamically based on consumption data and average values.
+
 ## Release 0.0.0
 
 This is the initial release of the Electricity Consumption Tracker application.
@@ -28,9 +30,6 @@ This is the initial release of the Electricity Consumption Tracker application.
 - **Graph not displaying on initial load**: Sometimes, the graph may fail to render if the data is not available immediately. This issue will be addressed in the next release.
 - **Stats Box Updates**: The stats box may not reflect updates correctly after new data is uploaded. This will be fixed in future versions to ensure proper reactivity.
 - **Uploaded Data Not Syncing with Graph and Stats box**: The data in the CSV files, while can be uploaded, are not synced with the line graph and stats box. 
-
-
-
 
 ## Release 0.1.0
 
@@ -54,10 +53,6 @@ This is the initial release of the Electricity Consumption Tracker application.
 ### Known Issues
 
 - **Prediction Functionality**: The "Predict" button is currently a placeholder and does not yet trigger any machine learning predictions. This will be implemented in future versions.
-
-
-
-
 
 ## Release 0.2.0
 
@@ -90,9 +85,6 @@ This is the initial release of the Electricity Consumption Tracker application.
 ### Known Issues
 - **Heatmap Performance**: The heatmap view may experience performance issues with a large number of data points. Optimization will be addressed in future releases.
 - **Shape of Building Object**: Buildings in Heat Map feature all have rectangle shape. Improvements can be made to make the overall map looks more realistic by making the buildings into different shapes and positions.  
-
-
-
 
 ## Release 0.3.0
 
@@ -128,7 +120,6 @@ This is the initial release of the Electricity Consumption Tracker application.
 - **Theme Toggle**: Added a light/dark mode toggle for the entire web application. All features have implemented dark mode styling
 - **Built-in System Clock**: Added a System Clock to record the date of today (can be change) so that other features can display today's data. 
 
-
 #### Chatbot
 - **UI**: Design Chatbot button and conversation dialog UI (textbox, messages) with dark/light mode styling
 - **WIP Enhanced Chatbot Functionality**: Improved chatbot responses to provide detailed insights into electricity consumption, building comparisons, and energy metrics.
@@ -142,14 +133,11 @@ This is the initial release of the Electricity Consumption Tracker application.
 - **Dynamic Building Stats**: Enhanced building-specific statistics, including highest and lowest consumption months.
 - **Cache Validation**: Ensures cached data is valid and up-to-date, especially for "All Buildings" selection.
 
-
 #### Report Widget (Dashboard)
 - **Local Storage Caching**: Implemented caching for daily reports to improve performance and reduce API calls.
 - **Data Cleanup**: Automatically removes cached reports older than 7 days to optimize storage usage.
 - **Enhanced Metrics**: Added CO₂ emissions and estimated cost calculations to the widget.
 - **Compact View**: Improved UI for better readability in compact mode.
-
-
 
 ### Bug Fixes
 
@@ -164,3 +152,41 @@ This is the initial release of the Electricity Consumption Tracker application.
 - **Chatbot Controls Overlap**: The theme toggle button and exit button overlaps with eachother
 - **LLaMA Fetching Issue**: There is fetching issue with LLaMA where it have error communicating with the server 
 - **Chatbot Context Limitations**: The chatbot may lose context for long conversations. Future updates will address this limitation.
+
+## Release 0.5.0
+
+### Features
+
+#### Anomaly Detection
+- **Enhanced Anomaly Detection**: Added support for multiple detection methods (`Z-Score` and `Local Outlier Factor (LOF)`), allowing users to choose the method and sensitivity for anomaly detection.
+- **Severity Classification**: Improved severity classification for anomalies into `Critical` and `Warning` levels.
+- **Anomaly Storage**: Detected anomalies are now stored in the database with unique constraints to avoid duplicates.
+- **Anomaly Statistics**: Added detailed statistics for anomalies, including the percentage of anomalies, highest/lowest consumption days, and overall consumption.
+
+#### Alert System
+- **Alert Filters**: Introduced advanced filtering options for alerts, including building, year, month, severity, and time range (e.g., past 24 hours, 7 days, 30 days).
+- **Email Notifications**: Added functionality to send daily reports and specific alerts via email to a configurable list of recipients.
+- **Pagination**: Implemented pagination for the alert table to improve usability when viewing large datasets.
+
+#### Backend Enhancements
+- **Cache Improvements**: Optimized caching for frequently accessed data, including monthly and yearly statistics.
+- **Scheduler Updates**: Enhanced the scheduler to refresh cache periodically and maintain popular data in memory.
+- **Database Enhancements**: Improved database queries for better performance and added checks to prevent duplicate data and statistics.
+
+#### Frontend Improvements
+- **Dynamic UI Updates**: Improved the user interface for anomaly detection and alert management, including real-time updates and better responsiveness.
+- **Settings Panel**: Added a settings panel for configuring anomaly detection methods, thresholds, and time windows.
+- **Analysis Statistics Panel**: Displayed detailed analysis results, including total days analyzed, days with anomalies, and consumption statistics.
+
+### Bug Fixes
+
+- **Anomaly Detection**: Fixed an issue where anomalies were not being classified correctly based on the selected detection method.
+- **Alert Syncing**: Resolved inconsistencies in syncing alerts with the database and frontend filters.
+- **Cache Validation**: Fixed cache validation issues to ensure data is always up-to-date.
+- **Email Notifications**: Addressed errors in email notifications, ensuring proper formatting and delivery.
+- **UI Responsiveness**: Improved layout and responsiveness for smaller screens across 
+all components.
+
+
+
+
