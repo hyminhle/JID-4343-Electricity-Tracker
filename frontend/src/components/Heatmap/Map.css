@@ -349,8 +349,9 @@
 
 [data-theme="dark"] .consumption-value.bad {
   color: #f87171; /* Brighter red for dark mode */
-}.edit-buildings-list 
+}
 
+.edit-buildings-list 
 {
   margin-top: 20px;
 }
@@ -373,4 +374,37 @@
 
 .delete-button:hover {
   background-color: #ff1a1a;
+}
+
+/* Tooltip Styles */
+.building-tooltip {
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.building-tooltip h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.building-tooltip p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Dark mode tooltip adjustments */
+[data-theme="dark"] .building-tooltip {
+  background-color: var(--card-background);
+}
+
+[data-theme="dark"] .building-tooltip h3 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .building-tooltip p {
+  color: var(--text-secondary);
 }
