@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDate } from '../DateContext'; // Import useAppDate
 import './AlertPage.css';
+import { getEmailRecipients } from '../../utils/emailList';
 
 const AlertPage = () => {
   const { appDate } = useAppDate(); // Use the system clock from DateContext
@@ -27,6 +28,7 @@ const AlertPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('all'); // Changed default to 'all'
   const [analysisStats, setAnalysisStats] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false); // NEW: Track if data is loaded
   
   // Add detection method selection
   const [detectionMethod, setDetectionMethod] = useState('z_score'); // Default to z_score instead of LOF
@@ -56,11 +58,18 @@ const AlertPage = () => {
   useEffect(() => {
     const initialize = async () => {
       await fetchAvailableData();
-      await runAnomalyDetection(); // Automatically run anomaly detection
+      // Anomaly detection will be triggered after data is loaded
     };
     
     initialize();
   }, []);
+
+  // When data is loaded, run anomaly detection
+  useEffect(() => {
+    if (dataLoaded) {
+      runAnomalyDetection();
+    }
+  }, [dataLoaded]);
   
   // Fetch available data
   const fetchAvailableData = async () => {
@@ -83,6 +92,8 @@ const AlertPage = () => {
         saveSelectedBuildingToLocalStorage('All Buildings');
       }
       
+      // Mark data as loaded, which will trigger the anomaly detection
+      setDataLoaded(true);
       return buildings.length > 0 ? buildings[0] : null;
     } catch (error) {
       console.error('Error fetching available data:', error);
@@ -99,41 +110,53 @@ const AlertPage = () => {
     try {
       if (selectedBuilding === 'All Buildings') {
         // Handle "All Buildings" by iterating through all buildings
+        // Make sure we actually have building options before proceeding
         const relevantBuildings = buildingOptions.filter(b => b !== 'All Buildings');
+        
+        if (relevantBuildings.length === 0) {
+          console.error('No buildings available for anomaly detection');
+          setIsLoading(false);
+          return;
+        }
+        
         const allAlerts = [];
 
         for (const building of relevantBuildings) {
-          const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              building: building,
-              year: selectedYear,
-              month: selectedMonth,
-              method: detectionMethod,
-              threshold: detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold,
-              time_window: timeWindow,
-              store_results: true,
-              include_stats: true,
-              severity_levels: ['warning', 'critical']
-            })
-          });
+          try {
+            const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                building: building,
+                year: selectedYear,
+                month: selectedMonth,
+                method: detectionMethod,
+                threshold: detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold,
+                time_window: timeWindow,
+                store_results: true,
+                include_stats: true,
+                severity_levels: ['warning', 'critical']
+              })
+            });
 
-          if (response.status === 404) {
-            console.warn(`No data found for building: ${building}`);
-            continue;
+            if (response.status === 404) {
+              console.warn(`No data found for building: ${building}`);
+              continue;
+            }
+
+            const result = await response.json();
+
+            if (result.error) {
+              console.error(`Error in anomaly detection for building ${building}: ${result.error}`);
+              continue;
+            }
+
+            allAlerts.push(...result.anomalies);
+          } catch (error) {
+            console.error(`Error processing building ${building}:`, error);
           }
-
-          const result = await response.json();
-
-          if (result.error) {
-            console.error(`Error in anomaly detection for building ${building}: ${result.error}`);
-            continue;
-          }
-
-          allAlerts.push(...result.anomalies);
         }
 
         setAlerts(allAlerts);
@@ -189,72 +212,6 @@ const AlertPage = () => {
     }
   };
   
-  // Run initial anomaly detection when app opens
-  const runInitialAnomalyDetection = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Wait a moment to ensure selectedBuilding is set
-      setTimeout(async () => {
-        const building = selectedBuilding === 'All Buildings' ? 
-          (buildingOptions.length > 1 ? buildingOptions[1] : '') : 
-          selectedBuilding;
-        
-        if (!building) {
-          console.error('No building available for anomaly detection');
-          setIsLoading(false);
-          return;
-        }
-        
-        const currentYear = new Date().getFullYear();
-        
-        // Get the appropriate threshold based on selected method
-        const threshold = detectionMethod === 'LOF' ? lofSensitivity : zscoreThreshold;
-        
-        // Run anomaly detection with default parameters
-        const response = await fetch('http://127.0.0.1:5000/api/anomalies/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            building: building,
-            year: currentYear,
-            month: 0, // All months
-            method: detectionMethod, // Use selected method
-            threshold: threshold, // Use appropriate threshold
-            time_window: timeWindow, // For Z-score method
-            store_results: true,
-            include_stats: true,
-            cluster_all_buildings: selectedBuilding === 'All Buildings',
-            severity_levels: ['warning', 'critical'] // Only use two severity levels
-          })
-        });
-        
-        const result = await response.json();
-        
-        if (result.error) {
-          console.error(`Error in initial anomaly detection: ${result.error}`);
-        } else {
-          // Store the statistics for display
-          if (result.statistics) {
-            setAnalysisStats(result.statistics);
-          }
-          
-          console.log(`Initial anomaly analysis complete. Found ${result.count} anomalies`);
-          
-          // Fetch alerts to display them
-          fetchAlerts();
-        }
-        
-        setIsLoading(false);
-      }, 500);
-    } catch (error) {
-      console.error('Error running initial anomaly detection:', error);
-      setIsLoading(false);
-    }
-  };
-  
   // Update year options when building changes
   useEffect(() => {
     if (selectedBuilding !== 'All Buildings' && availableData[selectedBuilding]) {
@@ -262,6 +219,22 @@ const AlertPage = () => {
         .map(year => parseInt(year))
         .sort((a, b) => b - a); // Sort in descending order
       
+      setYearOptions(years);
+      
+      if (years.length > 0 && !years.includes(selectedYear)) {
+        setSelectedYear(years[0]);
+      }
+    } else if (selectedBuilding === 'All Buildings') {
+      // For All Buildings, gather all years from all buildings
+      const allYears = new Set();
+      
+      Object.values(availableData).forEach(buildingData => {
+        Object.keys(buildingData).forEach(year => {
+          allYears.add(parseInt(year));
+        });
+      });
+      
+      const years = [...allYears].sort((a, b) => b - a);
       setYearOptions(years);
       
       if (years.length > 0 && !years.includes(selectedYear)) {
@@ -278,6 +251,24 @@ const AlertPage = () => {
         .map(month => parseInt(month))
         .sort((a, b) => a - b);
       
+      setMonthOptions(months);
+      
+      if (!months.includes(selectedMonth) && selectedMonth !== 0) {
+        setSelectedMonth(0); // Default to "All Months"
+      }
+    } else if (selectedBuilding === 'All Buildings') {
+      // For All Buildings, gather all months from all buildings for the selected year
+      const allMonths = new Set();
+      
+      Object.values(availableData).forEach(buildingData => {
+        if (buildingData[selectedYear]) {
+          Object.keys(buildingData[selectedYear]).forEach(month => {
+            allMonths.add(parseInt(month));
+          });
+        }
+      });
+      
+      const months = [...allMonths].sort((a, b) => a - b);
       setMonthOptions(months);
       
       if (!months.includes(selectedMonth) && selectedMonth !== 0) {
@@ -367,7 +358,13 @@ const AlertPage = () => {
       // Add method parameter to get alerts from the correct method
       params.append('method', detectionMethod);
       
-      // Fetch alerts from API
+      if (selectedBuilding === 'All Buildings') {
+        // Special handling for "All Buildings" - we need to manually gather all alerts
+        await runAnomalyDetection(); // This will update the alerts state
+        return;
+      }
+      
+      // Fetch alerts from API for a single building
       const response = await fetch(`http://127.0.0.1:5000/api/anomalies/get-anomalies?${params}`);
       const data = await response.json();
       
@@ -400,8 +397,10 @@ const AlertPage = () => {
   
   // Apply filters when they change
   useEffect(() => {
-    fetchAlerts();
-  }, [selectedBuilding, selectedYear, selectedMonth, timeRange, detectionMethod, severityFilter]);
+    if (dataLoaded) { // Only fetch alerts when data is loaded
+      fetchAlerts();
+    }
+  }, [selectedBuilding, selectedYear, selectedMonth, timeRange, detectionMethod, severityFilter, dataLoaded]);
   
   // Handle filter change
   const handleFilterChange = (filterName, value) => {
@@ -486,6 +485,56 @@ const AlertPage = () => {
     }
   };
 
+  const sendDailyReport = async () => {
+    const emailList = getEmailRecipients();
+    if (emailList.length === 0) {
+      alert('No email recipients found.');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/send-daily-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alerts, emailList })
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        alert('Daily report sent successfully.');
+      } else {
+        alert(`Error sending daily report: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending daily report:', error);
+    }
+  };
+  
+  const sendSpecificAlert = async (alertData) => {
+    const emailList = getEmailRecipients();
+    if (emailList.length === 0) {
+      alert('No email recipients found.');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/send-specific-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert: alertData, emailList })
+      });
+  
+      const result = await response.json();
+      if (response.ok) {
+        alert('Specific alert sent successfully.');
+      } else {
+        alert(`Error sending specific alert: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending specific alert:', error);
+    }
+  };
+
   return (
     <div className="alert-page">
       {/* Alert Statistics Header */}
@@ -505,15 +554,13 @@ const AlertPage = () => {
 
       {/* Filter Settings */}
       <div className="anomaly-settings-bar">
-        
         <button 
           className="settings-toggle" 
           onClick={() => setShowFilters(!showFilters)}
         >
           {showFilters ? 'Hide Filters' : 'Show Alert Filters'}
         </button>
-        
-        
+
         {showFilters && (
           <div className="anomaly-settings-panel">
             <div className="settings-grid">
@@ -533,7 +580,6 @@ const AlertPage = () => {
                     ))}
                   </select>
                 </div>
-                
                 <div className="settings-row">
                   <label>Year:</label>
                   <select 
@@ -546,7 +592,6 @@ const AlertPage = () => {
                     ))}
                   </select>
                 </div>
-                
                 <div className="settings-row">
                   <label>Month:</label>
                   <select 
@@ -560,8 +605,6 @@ const AlertPage = () => {
                     ))}
                   </select>
                 </div>
-                
-                {/* Add method selection */}
                 <div className="settings-row">
                   <label>Detection Method:</label>
                   <select 
@@ -573,10 +616,8 @@ const AlertPage = () => {
                   </select>
                 </div>
               </div>
-
               <div className="settings-group">
                 <h3>{detectionMethod === 'LOF' ? 'LOF Settings' : 'Z-Score Settings'}</h3>
-                
                 {detectionMethod === 'LOF' ? (
                   <>
                     <div className="settings-row">
@@ -631,9 +672,7 @@ const AlertPage = () => {
                 )}
               </div>
             </div>
-            
             <div className="settings-actions">
-              {/* Add Refresh Button */}
               <button 
                 className="refresh-button" 
                 onClick={runAnomalyDetection}
@@ -647,40 +686,13 @@ const AlertPage = () => {
               >
                 Reset Filters
               </button>
+              <button 
+                className="send-report-button" 
+                onClick={sendDailyReport}
+              >
+                Send Daily Report
+              </button>
             </div>
-
-            {/* Analysis Statistics Panel */}
-            {analysisStats && (
-              <div className="analysis-stats-panel">
-                <h3>Analysis Results</h3>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <span className="stat-label">Total Days Analyzed:</span>
-                    <span className="stat-value">{analysisStats.total_days}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Days with Anomalies:</span>
-                    <span className="stat-value">{analysisStats.days_with_anomalies}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Anomaly Percentage:</span>
-                    <span className="stat-value">{analysisStats.anomaly_percentage.toFixed(2)}%</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Total Consumption:</span>
-                    <span className="stat-value">{formatNumber(analysisStats.building_overall_consumption)} kWh</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Highest Consumption Day:</span>
-                    <span className="stat-value">{analysisStats.highest_consumption_day} ({formatNumber(analysisStats.highest_consumption_value)} kWh)</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Lowest Consumption Day:</span>
-                    <span className="stat-value">{analysisStats.lowest_consumption_day} ({formatNumber(analysisStats.lowest_consumption_value)} kWh)</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -698,11 +710,8 @@ const AlertPage = () => {
           <button className="search-button" onClick={fetchAlerts}>
             <span>🔍</span>
           </button>
-          
         </div>
-        
         <div className="filter-options">
-          
           <select 
             className="filter-button" 
             value={timeRange} 
@@ -755,19 +764,20 @@ const AlertPage = () => {
               <th>Date</th>
               <th>Detection Time</th>
               <th>Value</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="5" className="loading-cell">
+                <td colSpan="6" className="loading-cell">
                   <div className="loading-spinner"></div>
                   <p>Loading alerts...</p>
                 </td>
               </tr>
             ) : filteredAlerts.length === 0 ? (
               <tr>
-                <td colSpan="5" className="empty-cell">
+                <td colSpan="6" className="empty-cell">
                   <p>No alerts found matching your filters.</p>
                 </td>
               </tr>
@@ -783,6 +793,14 @@ const AlertPage = () => {
                   <td className="date-cell">{formatDate(new Date().toISOString())}</td>
                   <td className="value-cell">
                     {alert.consumption !== 'N/A' ? parseFloat(alert.consumption).toFixed(2) : 'N/A'}
+                  </td>
+                  <td>
+                    <button 
+                      className="send-alert-button" 
+                      onClick={() => sendSpecificAlert(alert)}
+                    >
+                      Send Alert
+                    </button>
                   </td>
                 </tr>
               ))

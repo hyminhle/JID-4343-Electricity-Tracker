@@ -7,6 +7,7 @@ import MapWidget from './Heatmap/MapWidget';
 import CalendarWidget from './CalendarWidget';
 import ReportWidget from './ReportWidget';
 import ReportSummaryWidget from './ReportSummaryWidget';
+import AlertWidget from './AlertWidget'; // Import the AlertWidget component
 
 const WIDGET_TYPES = {
   ENERGY_USAGE: 'Energy-Usage-Linegraph',
@@ -20,6 +21,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [activeAlert, setActiveAlert] = useState(true);
   const [isCustomizing, setIsCustomizing] = useState(false);
+  const [alertError, setAlertError] = useState(null); // Track errors in AlertWidget
+  const [isAlertLoading, setIsAlertLoading] = useState(true); // Track loading state for AlertWidget
   const [dashboardTheme, setDashboardTheme] = useState('light');
   const [dashboardLayout, setDashboardLayout] = useState([
     { id: 1, type: WIDGET_TYPES.ENERGY_USAGE, visible: true, position: 0 },
@@ -314,8 +317,6 @@ const Dashboard = () => {
   // Get sorted visible widgets
   const visibleWidgets = [...dashboardLayout]
     .filter(widget => widget.visible)
-    .sort((a, b) => a.position - b.position);
-  
   // Get hidden widgets for the customization panel
   const hiddenWidgets = dashboardLayout.filter(widget => !widget.visible);
   
@@ -326,18 +327,6 @@ const Dashboard = () => {
         <div className="dashboard-actions">
           <button className={`action-button customize-button ${isCustomizing ? 'active' : ''}`} onClick={toggleCustomizeMode}>
             {isCustomizing ? 'Save Layout' : 'Customize Dashboard'}
-          </button>
-          <button className="action-button">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-            New Report
-          </button>
-          <button className="action-button">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-            </svg>
-            Export Data
           </button>
         </div>
       </div>
@@ -383,17 +372,9 @@ const Dashboard = () => {
         
         <div className="dashboard-sidebar">
           {activeAlert && userPreferences.alertsEnabled && (
-            <div className="alert-card">
-              <div className="alert-header">
-                <h3>Alert - 10/9/24</h3>
-                <button className="close-button" onClick={closeAlert}>×</button>
-              </div>
-              <p>Detected unusual energy usage pattern</p>
-              <div className="alert-details">
-                <span className="alert-metric">45 kWh</span>
-                <span className="alert-time">2:00 PM - 4:00 PM</span>
-              </div>
-              <button className="review-button">Review Details</button>
+            <div className="sidebar-widget">
+              {/* Replaced placeholder alert with AlertWidget component */}
+              <AlertWidget closeAlert={closeAlert} />
             </div>
           )}
           
