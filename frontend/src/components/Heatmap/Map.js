@@ -798,7 +798,6 @@ const loadSelectedBuildingFromLocalStorage = () => {
       <div className="map-section">
         <div className="map-wrapper">
           <MapContainer 
-          
             center={[29.628014, -95.610553]}
             zoom={16}
             className="leaflet-container"
@@ -816,96 +815,95 @@ const loadSelectedBuildingFromLocalStorage = () => {
                   backgroundColor: '#007bff',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 16px',
+                  padding: '6px 12px',
                   borderRadius: '4px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  width: 'auto',
+                  minWidth: 'fit-content'
                 }}
               >
-                {isHeatmap ? 'Show Points' : 'Show Heatmap'}
+                {isHeatmap ? 'Hide Heatmap' : 'Show Heatmap'}
               </button>
             </div>
             
-            {isHeatmap ? (
-              <HeatmapLayer points={heatmapPoints} />
-            ) : (
-              <>
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            />
+            
+            {filteredBuildings.map((building) => (
+              <Polygon
+                key={building.name}
+                positions={building.coordinates}
+                pathOptions={{ 
+                  color: selectedBuilding === building.name ? '#000' : building.color,
+                  fillColor: buildingStats[building.name]?.average 
+                    ? getHeatmapColor(parseFloat(buildingStats[building.name].consumption), parseFloat(buildingStats[building.name].average))
+                    : building.color,
+                  fillOpacity: isEditing ? 0.8 : 0.6,
+                  weight: 2,
+                  opacity: 1
+                }}
+                draggable={isEditing}
+                eventHandlers={{
+                  dragend: (e) => {
+                    const { lat, lng } = e.target.getLatLngs()[0][0];
+                    handleDragEnd(building.name, { lat, lng });
+                  },
+                  click: () => {
+                    if (!isEditing) {
+                      handleBuildingClick(building.name);
+                    }
+                  }
+                }}
+              >
+                <Tooltip>
+                  {building.name}
+                  {buildingStats[building.name] && 
+                    ` - ${buildingStats[building.name].average} kWh`}
+                  {!isEditing && " (Click for stats)"}
+                </Tooltip>
+              </Polygon>
+            ))}
+
+            {showBuildingNames && filteredBuildings.map((building) => {
+              const buildingNumber = building.name.split(' ')[1];
+              const centerLat = (building.coordinates[0][0] + building.coordinates[2][0]) / 2;
+              const centerLng = (building.coordinates[0][1] + building.coordinates[2][1]) / 2;
+
+              return (
+                <Marker
+                  key={`label-${building.name}`}
+                  position={[centerLat, centerLng]}
+                  icon={L.divIcon({
+                    className: 'building-label',
+                    html: `<div>${buildingNumber}</div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                  })}
+                  interactive={false}
                 />
-                
-                {filteredBuildings.map((building) => (
-                  <Polygon
-                    key={building.name}
-                    positions={building.coordinates}
-                    pathOptions={{ 
-                      color: selectedBuilding === building.name ? '#000' : building.color,
-                      fillColor: buildingStats[building.name]?.average 
-                        ? getHeatmapColor(parseFloat(buildingStats[building.name].consumption), parseFloat(buildingStats[building.name].average))
-                        : building.color,
-                      fillOpacity: isEditing ? 0.8 : 0.6,
-                      weight: 2,
-                      opacity: 1
-                    }}
-                    draggable={isEditing}
-                    eventHandlers={{
-                      dragend: (e) => {
-                        const { lat, lng } = e.target.getLatLngs()[0][0];
-                        handleDragEnd(building.name, { lat, lng });
-                      },
-                      click: () => {
-                        if (!isEditing) {
-                          handleBuildingClick(building.name);
-                        }
-                      }
-                    }}
-                  >
-                    <Tooltip>
-                      {building.name}
-                      {buildingStats[building.name] && 
-                        ` - ${buildingStats[building.name].average} kWh`}
-                      {!isEditing && " (Click for stats)"}
-                    </Tooltip>
-                  </Polygon>
-                ))}
+              );
+            })}
 
-                {!isHeatmap && showBuildingNames && filteredBuildings.map((building) => {
-                  const buildingNumber = building.name.split(' ')[1]; // Extract the number from the building name
-                  const centerLat = (building.coordinates[0][0] + building.coordinates[2][0]) / 2;
-                  const centerLng = (building.coordinates[0][1] + building.coordinates[2][1]) / 2;
+            {isEditing && Object.values(buildings).map((building) => (
+              <Marker
+                key={`marker-${building.name}`}
+                position={building.coordinates[0]}
+                draggable={true}
+                eventHandlers={{
+                  dragend: (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    handleDragEnd(building.name, { lat, lng });
+                  }
+                }}
+              >
+                <Popup>Drag to move building</Popup>
+              </Marker>
+            ))}
 
-                  return (
-                    <Marker
-                      key={`label-${building.name}`}
-                      position={[centerLat, centerLng]}
-                      icon={L.divIcon({
-                        className: 'building-label',
-                        html: `<div>${buildingNumber}</div>`,
-                        iconSize: [40, 40],
-                        iconAnchor: [20, 20]
-                      })}
-                      interactive={false}
-                    />
-                  );
-                })}
-
-                {isEditing && Object.values(buildings).map((building) => (
-                  <Marker
-                    key={`marker-${building.name}`}
-                    position={building.coordinates[0]}
-                    draggable={true}
-                    eventHandlers={{
-                      dragend: (e) => {
-                        const { lat, lng } = e.target.getLatLng();
-                        handleDragEnd(building.name, { lat, lng });
-                      }
-                    }}
-                  >
-                    <Popup>Drag to move building</Popup>
-                  </Marker>
-                ))}
-              </>
-            )}
+            {isHeatmap && <HeatmapLayer points={heatmapPoints} />}
           </MapContainer>
         </div>
       </div>
