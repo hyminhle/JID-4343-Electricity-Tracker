@@ -13,11 +13,6 @@ Ensure the following software and hardware configurations are met before install
 4. **MySQL** (version 8.x or higher) - [Download MySQL](https://dev.mysql.com/downloads/)
 5. **Git** - [Download Git](https://git-scm.com/)
 
-### Hardware Requirements
-- **Processor**: Quad-core CPU or higher
-- **Memory**: Minimum 8 GB RAM
-- **Storage**: At least 10 GB of free disk space
-- **Operating System**: Windows 10/11, macOS, or Linux
 
 ## Dependent Libraries
 
